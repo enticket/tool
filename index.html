@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f4f1f8; color: #1a1a1a; padding: 20px; line-height: 1.5;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 21px; color: #602b89; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #666; margin-bottom: 18px; }
+  .drop {
+    border: 2px dashed #b89cd6; border-radius: 14px; background: #fff;
+    padding: 34px 20px; text-align: center; cursor: pointer; transition: .15s; margin-bottom: 18px;
+  }
+  .drop.hover { border-color: #602b89; background: #f3eef8; }
+  .drop .big { font-size: 16px; font-weight: 700; color: #602b89; margin-bottom: 6px; }
+  .drop .small { font-size: 13px; color: #888; }
+  .drop input { display: none; }
+  .panel { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .hidden { display: none; }
+  .summary { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 14px; }
+  .stat { background: #f3eef8; border-radius: 10px; padding: 10px 16px; }
+  .stat .n { font-size: 22px; font-weight: 800; color: #602b89; }
+  .stat .l { font-size: 12px; color: #777; }
+  .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 14px; }
+  .toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #444; cursor: pointer; user-select: none; }
+  .toggle input { width: 16px; height: 16px; accent-color: #602b89; cursor: pointer; }
+  .btn {
+    background: #602b89; color: #fff; border: none; border-radius: 9px;
+    padding: 11px 22px; font-size: 14px; font-weight: 700; cursor: pointer; transition: .15s;
+  }
+  .btn:hover { background: #4e2270; }
+  .btn:disabled { background: #c4b5d4; cursor: default; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  .fname { font-size: 13px; color: #888; }
+  .fname b { color: #602b89; }
+  .table-scroll { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-top: 6px; }
+  table { border-collapse: collapse; font-size: 12.5px; white-space: nowrap; width: 100%; }
+  th, td { border: 1px solid #ececec; padding: 7px 11px; text-align: left; }
+  th { background: #602b89; color: #fff; font-weight: 600; position: sticky; top: 0; }
+  tr:nth-child(even) td { background: #faf8fc; }
+  .meta { font-size: 12px; color: #999; margin-top: 6px; }
+  .warn { background: #fff3e0; border-left: 3px solid #fb8c00; color: #8a4b00; padding: 9px 13px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
+  .privacy { font-size: 12px; color: #aaa; margin-top: 14px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>엔티켓 예매자 명단 변환기</h1>
+  <div class="sub">관리자 페이지에서 받은 명단 파일을 넣으면, 외부 공연장 전달용으로 자동 정리합니다. (.xls / .xlsx)</div>
+
+  <label class="drop" id="drop">
+    <div class="big">📂 예매자 명단 파일 넣기</div>
+    <div class="small">여기에 끌어다 놓거나 클릭해서 선택</div>
+    <input type="file" id="fileInput" accept=".xls,.xlsx" />
+  </label>
+
+  <div class="panel hidden" id="result">
+    <div class="summary" id="summary"></div>
+
+    <div class="controls">
+      <label class="toggle"><input type="checkbox" id="sortSeat"> 좌석순 정렬 (층·열·번)</label>
+      <label class="toggle"><input type="checkbox" id="maskPhone"> 연락처 가운데 가리기</label>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="downloadBtn">정리본 엑셀 다운로드</button>
+      <span class="fname" id="fnameLabel"></span>
+    </div>
+
+    <div id="warnBox"></div>
+
+    <div class="table-scroll" id="tableBox"></div>
+    <div class="meta" id="previewMeta"></div>
+    <div class="privacy">모든 처리는 이 브라우저 안에서만 이루어집니다. 파일이 외부로 전송되지 않습니다.</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// 정리본에 들어갈 컬럼 (이 순서대로 출력)
+const TARGET_COLS = ["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
+
+const drop = document.getElementById("drop");
+const input = document.getElementById("fileInput");
+const resultPanel = document.getElementById("result");
+const summaryEl = document.getElementById("summary");
+const tableBox = document.getElementById("tableBox");
+const previewMeta = document.getElementById("previewMeta");
+const warnBox = document.getElementById("warnBox");
+const downloadBtn = document.getElementById("downloadBtn");
+const fnameLabel = document.getElementById("fnameLabel");
+const sortSeatChk = document.getElementById("sortSeat");
+const maskPhoneChk = document.getElementById("maskPhone");
+
+let processedRows = [];   // [{공연명:..,...}, ...]
+let outFilename = "예매자명단_정리본.xlsx";
+
+function esc(s){ if(s==null) return ""; return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function norm(s){ return String(s==null?"":s).replace(/\s+/g,"").trim(); }
+
+// 좌석명 파싱: "(1층) A열 18번" → {floor, col, num}
+function parseSeat(s){
+  s = String(s||"");
+  const f = s.match(/(\d+)\s*층/);
+  const c = s.match(/([A-Za-z가-힣]+)\s*열/);
+  const n = s.match(/(\d+)\s*번/);
+  return {
+    floor: f ? parseInt(f[1],10) : 9999,
+    col: c ? c[1] : "",
+    num: n ? parseInt(n[1],10) : 9999
+  };
+}
+
+function seatCompare(a,b){
+  const pa=parseSeat(a["좌석명"]), pb=parseSeat(b["좌석명"]);
+  if(pa.floor!==pb.floor) return pa.floor-pb.floor;
+  if(pa.col!==pb.col) return pa.col.localeCompare(pb.col,"ko");
+  return pa.num-pb.num;
+}
+
+function maskPhone(v){
+  const s=String(v||"");
+  // 010-1234-5678 / 01012345678 형태의 가운데를 가림
+  return s.replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/, (m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
+}
+
+function handleFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""});
+      if(rows.length<2){ alert("데이터가 없는 파일이에요."); return; }
+
+      // 헤더 위치를 이름으로 매핑
+      const headers=rows[0].map(h=>norm(h));
+      const colIndex={};
+      const missing=[];
+      TARGET_COLS.forEach(name=>{
+        const idx=headers.indexOf(norm(name));
+        if(idx===-1) missing.push(name);
+        else colIndex[name]=idx;
+      });
+
+      // 데이터 행 추출
+      processedRows=[];
+      for(let r=1;r<rows.length;r++){
+        const row=rows[r];
+        if(!row || row.every(c=>String(c).trim()==="")) continue; // 빈 행 skip
+        const obj={};
+        TARGET_COLS.forEach(name=>{
+          obj[name] = (colIndex[name]!==undefined) ? (row[colIndex[name]] ?? "") : "";
+        });
+        processedRows.push(obj);
+      }
+
+      // 파일명: 공연명 기반
+      const showName = processedRows.length ? String(processedRows[0]["공연명"]||"").trim() : "";
+      outFilename = (showName ? showName+"_예매자명단" : "예매자명단_정리본") + ".xlsx";
+
+      // 경고 (누락 컬럼)
+      warnBox.innerHTML = missing.length
+        ? `<div class="warn">다음 컬럼을 원본에서 못 찾았어요: <b>${missing.map(esc).join(", ")}</b> · 해당 칸은 비워둡니다. 원본 헤더 이름이 바뀌었는지 확인해 주세요.</div>`
+        : "";
+
+      resultPanel.classList.remove("hidden");
+      render();
+    }catch(err){
+      alert("파일을 읽는 중 오류가 났어요: "+(err.message||err));
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function getViewRows(){
+  let rows=processedRows.map(r=>({...r}));
+  if(sortSeatChk.checked) rows.sort(seatCompare);
+  if(maskPhoneChk.checked) rows=rows.map(r=>({...r, "연락처": maskPhone(r["연락처"])}));
+  return rows;
+}
+
+function render(){
+  const rows=getViewRows();
+
+  // 요약
+  const total=rows.length;
+  const sessions=new Set(rows.map(r=>`${r["공연일"]} ${r["공연시간"]}`.trim())).size;
+  const tickets=rows.length; // 1행=1좌석 기준
+  summaryEl.innerHTML=`
+    <div class="stat"><div class="n">${total}</div><div class="l">총 좌석/건수</div></div>
+    <div class="stat"><div class="n">${sessions}</div><div class="l">회차 수</div></div>
+  `;
+
+  // 미리보기 (최대 30행)
+  const preview=rows.slice(0,30);
+  let html="<table><tr>"+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+  preview.forEach(r=>{
+    html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>";
+  });
+  html+="</table>";
+  tableBox.innerHTML=html;
+  previewMeta.textContent = rows.length>30 ? `미리보기 30행 표시 · 전체 ${rows.length}행은 다운로드 파일에 포함됩니다.` : `전체 ${rows.length}행`;
+
+  fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
+}
+
+function download(){
+  const rows=getViewRows();
+  const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  // 열 너비 살짝 조정
+  ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:9},{wch:10},{wch:16},{wch:10},{wch:15},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
+  XLSX.writeFile(wb,outFilename);
+}
+
+input.addEventListener("change",e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
+drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+sortSeatChk.addEventListener("change",render);
+maskPhoneChk.addEventListener("change",render);
+downloadBtn.addEventListener("click",download);
+</script>
+</body>
+</html>
