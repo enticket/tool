@@ -7,20 +7,52 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    background: #f4f1f8; color: #1a1a1a; padding: 20px; line-height: 1.5;
+    background: #f4f1f8; color: #1a1a1a; line-height: 1.5;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; }
-  h1 { font-size: 21px; color: #602b89; margin-bottom: 4px; }
+  /* ===== 상단 헤더 / 탭 ===== */
+  .topbar { background: #602b89; color: #fff; box-shadow: 0 2px 8px rgba(96,43,137,.18); }
+  .topbar-inner {
+    max-width: 1080px; margin: 0 auto; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { font-size: 18px; font-weight: 800; padding: 15px 0; letter-spacing: -.3px; }
+  .tabs { display: flex; gap: 2px; }
+  .tab {
+    background: transparent; border: none; color: #d9c6ee;
+    padding: 16px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: .15s;
+  }
+  .tab:hover { color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 40px; }
+  .panel-view { display: none; }
+  .panel-view.active { display: block; }
+
+  h2 { font-size: 19px; color: #602b89; margin-bottom: 4px; }
   .sub { font-size: 13px; color: #666; margin-bottom: 18px; }
+
+  /* ===== 공통 ===== */
   .drop {
     display: block; width: 100%;
     border: 2px dashed #b89cd6; border-radius: 14px; background: #fff;
-    padding: 34px 20px; text-align: center; cursor: pointer; transition: .15s; margin-bottom: 18px;
+    padding: 32px 20px; text-align: center; cursor: pointer; transition: .15s; margin-bottom: 16px;
   }
   .drop.hover { border-color: #602b89; background: #f3eef8; }
   .drop .big { font-size: 16px; font-weight: 700; color: #602b89; margin-bottom: 6px; }
   .drop .small { font-size: 13px; color: #888; }
   .drop input { display: none; }
+  .btn {
+    background: #602b89; color: #fff; border: none; border-radius: 9px;
+    padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; transition: .15s;
+  }
+  .btn:hover { background: #4e2270; }
+  .btn:disabled { background: #c4b5d4; cursor: default; }
+  .btn.ghost { background: #fff; color: #602b89; border: 1px solid #cdb8e3; }
+  .btn.ghost:hover { background: #f3eef8; }
+  .privacy { font-size: 12px; color: #aaa; margin-top: 16px; text-align: center; }
+
+  /* ===== 엑셀 정리 ===== */
   .panel { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .hidden { display: none; }
   .summary { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 14px; }
@@ -30,12 +62,6 @@
   .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 14px; }
   .toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #444; cursor: pointer; user-select: none; }
   .toggle input { width: 16px; height: 16px; accent-color: #602b89; cursor: pointer; }
-  .btn {
-    background: #602b89; color: #fff; border: none; border-radius: 9px;
-    padding: 11px 22px; font-size: 14px; font-weight: 700; cursor: pointer; transition: .15s;
-  }
-  .btn:hover { background: #4e2270; }
-  .btn:disabled { background: #c4b5d4; cursor: default; }
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
   .fname { font-size: 13px; color: #888; }
   .fname b { color: #602b89; }
@@ -46,221 +72,349 @@
   tr:nth-child(even) td { background: #faf8fc; }
   .meta { font-size: 12px; color: #999; margin-top: 6px; }
   .warn { background: #fff3e0; border-left: 3px solid #fb8c00; color: #8a4b00; padding: 9px 13px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
-  .privacy { font-size: 12px; color: #aaa; margin-top: 14px; text-align: center; }
+
+  /* ===== 포스터 변환 ===== */
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .count { font-size: 13px; color: #777; }
+  .cols { display: flex; gap: 16px; }
+  .col { flex: 1; min-width: 0; }
+  .col-head {
+    font-size: 14px; font-weight: 800; color: #fff; background: #602b89;
+    padding: 9px 14px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between;
+  }
+  .col-head .tag { font-weight: 600; opacity: .85; font-size: 12px; }
+  .col-body { background: #fff; border-radius: 0 0 10px 10px; padding: 10px; min-height: 80px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .empty { color: #bbb; font-size: 13px; text-align: center; padding: 20px 0; }
+  .card { display: flex; gap: 10px; align-items: center; padding: 8px; border-bottom: 1px solid #f0ecf5; }
+  .card:last-child { border-bottom: none; }
+  .thumb { width: 52px; height: 52px; object-fit: contain; background: #f7f4fb; border-radius: 6px; flex-shrink: 0; border: 1px solid #eee; }
+  .info { flex: 1; min-width: 0; }
+  .fn { font-size: 12.5px; font-weight: 600; color: #333; word-break: break-all; }
+  .dim { font-size: 11.5px; color: #999; margin-top: 2px; }
+  .dl { background: none; border: 1px solid #cdb8e3; color: #602b89; border-radius: 7px; padding: 6px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+  .dl:hover { background: #f3eef8; }
+
+  @media (max-width: 768px){
+    .cols { flex-direction: column; }
+    .topbar-inner { justify-content: center; }
+    .brand { padding-bottom: 0; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>엔티켓 예매자 명단 변환기</h1>
-  <div class="sub">관리자 페이지에서 받은 명단 파일을 넣으면, 외부 공연장 전달용으로 자동 정리합니다. (.xls / .xlsx)</div>
 
-  <label class="drop" id="drop">
-    <div class="big">📂 예매자 명단 파일 넣기</div>
-    <div class="small">여기에 끌어다 놓거나 클릭해서 선택</div>
-    <input type="file" id="fileInput" accept=".xls,.xlsx" />
-  </label>
-
-  <div class="panel hidden" id="result">
-    <div class="summary" id="summary"></div>
-
-    <div class="controls">
-      <label class="toggle"><input type="checkbox" id="sortSeat"> 좌석순 정렬 (층·열·번)</label>
-      <label class="toggle"><input type="checkbox" id="sortName"> 관람자명 오름차순 (가나다)</label>
-      <label class="toggle"><input type="checkbox" id="maskPhone"> 연락처 가운데 가리기</label>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn" id="downloadBtn">정리본 엑셀 다운로드</button>
-      <span class="fname" id="fnameLabel"></span>
-    </div>
-
-    <div id="warnBox"></div>
-
-    <div class="table-scroll" id="tableBox"></div>
-    <div class="meta" id="previewMeta"></div>
-    <div class="privacy">모든 처리는 이 브라우저 안에서만 이루어집니다. 파일이 외부로 전송되지 않습니다.</div>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">🎫 엔티켓 업무 도구</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="excel">예매자 명단 정리</button>
+      <button class="tab" data-tab="poster">포스터 이미지 변환</button>
+    </nav>
   </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ 탭 1: 예매자 명단 정리 ============ -->
+  <section class="panel-view active" id="panel-excel">
+    <h2>예매자 명단 정리</h2>
+    <div class="sub">관리자 페이지에서 받은 명단 파일을 넣으면, 외부 공연장 전달용으로 자동 정리합니다. (.xls / .xlsx)</div>
+
+    <label class="drop" id="xlDrop">
+      <div class="big">📂 예매자 명단 파일 넣기</div>
+      <div class="small">여기에 끌어다 놓거나 클릭해서 선택</div>
+      <input type="file" id="xlFile" accept=".xls,.xlsx" />
+    </label>
+
+    <div class="panel hidden" id="xlResult">
+      <div class="summary" id="xlSummary"></div>
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="xlSortSeat"> 좌석순 정렬 (층·열·번)</label>
+        <label class="toggle"><input type="checkbox" id="xlSortName"> 관람자명 오름차순 (가나다)</label>
+        <label class="toggle"><input type="checkbox" id="xlMask"> 연락처 가운데 가리기</label>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
+        <span class="fname" id="xlFname"></span>
+      </div>
+      <div id="xlWarn"></div>
+      <div class="table-scroll" id="xlTable"></div>
+      <div class="meta" id="xlMeta"></div>
+      <div class="privacy">모든 처리는 이 브라우저 안에서만 이루어집니다. 파일이 외부로 전송되지 않습니다.</div>
+    </div>
+  </section>
+
+  <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
+  <section class="panel-view" id="panel-poster">
+    <h2>포스터 이미지 변환</h2>
+    <div class="sub">기획사에서 받은 포스터를 넣으면 238px·650px 두 버전으로 한꺼번에 변환합니다. (JPG · 1MB 이하 · 비율 유지)</div>
+
+    <label class="drop" id="imDrop">
+      <div class="big">🖼️ 포스터 이미지 넣기</div>
+      <div class="small">여러 장 한꺼번에 끌어다 놓거나 클릭해서 선택 (JPG · PNG 등)</div>
+      <input type="file" id="imFile" accept="image/*" multiple />
+    </label>
+
+    <div class="bar">
+      <button class="btn ghost" id="imClear" disabled>초기화</button>
+      <span class="count" id="imCount"></span>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <div class="col-head"><span>238px</span><span class="tag">가로 238 고정</span></div>
+        <div class="col-body" id="imCol238"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      </div>
+      <div class="col">
+        <div class="col-head"><span>650px</span><span class="tag">가로 650 고정</span></div>
+        <div class="col-body" id="imCol650"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      </div>
+    </div>
+    <div class="privacy">모든 변환은 이 브라우저 안에서만 이루어집니다. 이미지가 외부로 전송되지 않습니다.</div>
+  </section>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// 정리본에 들어갈 컬럼 (이 순서대로 출력)
-const TARGET_COLS = ["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
+/* ===== 탭 전환 ===== */
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById("panel-"+t.dataset.tab).classList.add("active");
+  });
+});
 
-const drop = document.getElementById("drop");
-const input = document.getElementById("fileInput");
-const resultPanel = document.getElementById("result");
-const summaryEl = document.getElementById("summary");
-const tableBox = document.getElementById("tableBox");
-const previewMeta = document.getElementById("previewMeta");
-const warnBox = document.getElementById("warnBox");
-const downloadBtn = document.getElementById("downloadBtn");
-const fnameLabel = document.getElementById("fnameLabel");
-const sortSeatChk = document.getElementById("sortSeat");
-const sortNameChk = document.getElementById("sortName");
-const maskPhoneChk = document.getElementById("maskPhone");
+/* ===== 도구 1: 예매자 명단 정리 ===== */
+(function(){
+  const TARGET_COLS=["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
+  const drop=document.getElementById("xlDrop");
+  const input=document.getElementById("xlFile");
+  const resultPanel=document.getElementById("xlResult");
+  const summaryEl=document.getElementById("xlSummary");
+  const tableBox=document.getElementById("xlTable");
+  const previewMeta=document.getElementById("xlMeta");
+  const warnBox=document.getElementById("xlWarn");
+  const downloadBtn=document.getElementById("xlDownload");
+  const fnameLabel=document.getElementById("xlFname");
+  const sortSeatChk=document.getElementById("xlSortSeat");
+  const sortNameChk=document.getElementById("xlSortName");
+  const maskPhoneChk=document.getElementById("xlMask");
 
-let processedRows = [];
-let outFilename = "예매자명단_정리본.xlsx";
+  let processedRows=[];
+  let outFilename="예매자명단_정리본.xlsx";
 
-function esc(s){ if(s==null) return ""; return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-function norm(s){ return String(s==null?"":s).replace(/\s+/g,"").trim(); }
-function pad(n){ return String(n).padStart(2,"0"); }
+  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
+  const pad=n=>String(n).padStart(2,"0");
 
-// 날짜를 YYYY-MM-DD 로 통일 (서양식/점/슬래시 등 어떤 형식이 와도 정규화)
-function fmtDate(v){
-  if(v==null) return "";
-  if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
-  let s=String(v).trim();
-  if(!s) return "";
-  let m;
-  // 2026-06-06 / 2026.06.06 / 2026/06/06
-  m=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
-  if(m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
-  // 6/6/2026 (월/일/년 서양식)
-  m=s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})/);
-  if(m) return `${m[3]}-${pad(m[1])}-${pad(m[2])}`;
-  // 6/6/26
-  m=s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2})$/);
-  if(m) return `20${m[3]}-${pad(m[1])}-${pad(m[2])}`;
-  // 그 외: 브라우저 파싱 시도
-  const d=new Date(s);
-  if(!isNaN(d)) return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  return s; // 끝내 못 알아보면 원본 유지
-}
-
-// 시간을 HH:MM 으로 통일
-function fmtTime(v){
-  if(v==null) return "";
-  if(v instanceof Date && !isNaN(v)) return `${pad(v.getHours())}:${pad(v.getMinutes())}`;
-  let s=String(v).trim();
-  if(!s) return "";
-  let m;
-  // 4:00 PM / 4:00 오후
-  m=s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|오전|오후)$/i);
-  if(m){ let h=parseInt(m[1],10)%12; if(/PM|오후/i.test(m[3])) h+=12; return `${pad(h)}:${m[2]}`; }
-  // 16:00 / 16:00:00
-  m=s.match(/^(\d{1,2}):(\d{2})/);
-  if(m) return `${pad(m[1])}:${m[2]}`;
-  return s;
-}
-
-function parseSeat(s){
-  s=String(s||"");
-  const f=s.match(/(\d+)\s*층/), c=s.match(/([A-Za-z가-힣]+)\s*열/), n=s.match(/(\d+)\s*번/);
-  return { floor:f?parseInt(f[1],10):9999, col:c?c[1]:"", num:n?parseInt(n[1],10):9999 };
-}
-function seatCompare(a,b){
-  const pa=parseSeat(a["좌석명"]), pb=parseSeat(b["좌석명"]);
-  if(pa.floor!==pb.floor) return pa.floor-pb.floor;
-  if(pa.col!==pb.col) return pa.col.localeCompare(pb.col,"ko");
-  return pa.num-pb.num;
-}
-function maskPhone(v){
-  return String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/, (m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
-}
-
-function handleFile(file){
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
-      if(rows.length<2){ alert("데이터가 없는 파일이에요."); return; }
-
-      const headers=rows[0].map(h=>norm(h));
-      const colIndex={};
-      const missing=[];
-      TARGET_COLS.forEach(name=>{
-        const idx=headers.indexOf(norm(name));
-        if(idx===-1) missing.push(name); else colIndex[name]=idx;
-      });
-
-      processedRows=[];
-      for(let r=1;r<rows.length;r++){
-        const row=rows[r];
-        if(!row || row.every(c=>String(c).trim()==="")) continue;
-        const get=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
-        const obj={};
-        TARGET_COLS.forEach(name=>{ obj[name]=get(name); });
-        // 날짜/시간 정규화
-        obj["공연일"]=fmtDate(obj["공연일"]);
-        obj["공연시간"]=fmtTime(obj["공연시간"]);
-        // 나머지는 문자열화 (숫자로 읽힌 예매번호 등 안전 처리)
-        TARGET_COLS.forEach(name=>{
-          if(name!=="공연일" && name!=="공연시간"){
-            const v=obj[name];
-            obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v));
-          }
-        });
-        processedRows.push(obj);
-      }
-
-      const showName=processedRows.length?String(processedRows[0]["공연명"]||"").trim():"";
-      outFilename=(showName?showName+"_예매자명단":"예매자명단_정리본")+".xlsx";
-
-      warnBox.innerHTML=missing.length
-        ? `<div class="warn">다음 컬럼을 원본에서 못 찾았어요: <b>${missing.map(esc).join(", ")}</b> · 해당 칸은 비워둡니다. 원본 헤더 이름이 바뀌었는지 확인해 주세요.</div>`
-        : "";
-
-      resultPanel.classList.remove("hidden");
-      render();
-    }catch(err){
-      alert("파일을 읽는 중 오류가 났어요: "+(err.message||err));
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function getViewRows(){
-  let rows=processedRows.map(r=>({...r}));
-  if(sortNameChk.checked){
-    rows.sort((a,b)=>String(a["관람자명"]||"").localeCompare(String(b["관람자명"]||""),"ko"));
-  }else if(sortSeatChk.checked){
-    rows.sort(seatCompare);
+  function fmtDate(v){
+    if(v==null) return "";
+    if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
+    let s=String(v).trim(); if(!s) return ""; let m;
+    m=s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/); if(m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+    m=s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})/); if(m) return `${m[3]}-${pad(m[1])}-${pad(m[2])}`;
+    m=s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2})$/); if(m) return `20${m[3]}-${pad(m[1])}-${pad(m[2])}`;
+    const d=new Date(s); if(!isNaN(d)) return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    return s;
   }
-  if(maskPhoneChk.checked) rows=rows.map(r=>({...r,"연락처":maskPhone(r["연락처"])}));
-  return rows;
-}
+  function fmtTime(v){
+    if(v==null) return "";
+    if(v instanceof Date && !isNaN(v)) return `${pad(v.getHours())}:${pad(v.getMinutes())}`;
+    let s=String(v).trim(); if(!s) return ""; let m;
+    m=s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|오전|오후)$/i);
+    if(m){ let h=parseInt(m[1],10)%12; if(/PM|오후/i.test(m[3])) h+=12; return `${pad(h)}:${m[2]}`; }
+    m=s.match(/^(\d{1,2}):(\d{2})/); if(m) return `${pad(m[1])}:${m[2]}`;
+    return s;
+  }
+  function parseSeat(s){
+    s=String(s||"");
+    const f=s.match(/(\d+)\s*층/), c=s.match(/([A-Za-z가-힣]+)\s*열/), n=s.match(/(\d+)\s*번/);
+    return { floor:f?parseInt(f[1],10):9999, col:c?c[1]:"", num:n?parseInt(n[1],10):9999 };
+  }
+  function seatCompare(a,b){
+    const pa=parseSeat(a["좌석명"]), pb=parseSeat(b["좌석명"]);
+    if(pa.floor!==pb.floor) return pa.floor-pb.floor;
+    if(pa.col!==pb.col) return pa.col.localeCompare(pb.col,"ko");
+    return pa.num-pb.num;
+  }
+  const maskPhone=v=>String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/,(m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
 
-function render(){
-  const rows=getViewRows();
-  const total=rows.length;
-  const sessions=new Set(rows.map(r=>`${r["공연일"]} ${r["공연시간"]}`.trim())).size;
-  summaryEl.innerHTML=`
-    <div class="stat"><div class="n">${total}</div><div class="l">총 좌석/건수</div></div>
-    <div class="stat"><div class="n">${sessions}</div><div class="l">회차 수</div></div>`;
+  function handleFile(file){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+        if(rows.length<2){ alert("데이터가 없는 파일이에요."); return; }
+        const headers=rows[0].map(h=>norm(h));
+        const colIndex={}, missing=[];
+        TARGET_COLS.forEach(name=>{ const idx=headers.indexOf(norm(name)); if(idx===-1) missing.push(name); else colIndex[name]=idx; });
+        processedRows=[];
+        for(let r=1;r<rows.length;r++){
+          const row=rows[r];
+          if(!row || row.every(c=>String(c).trim()==="")) continue;
+          const get=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
+          const obj={}; TARGET_COLS.forEach(name=>{ obj[name]=get(name); });
+          obj["공연일"]=fmtDate(obj["공연일"]);
+          obj["공연시간"]=fmtTime(obj["공연시간"]);
+          TARGET_COLS.forEach(name=>{
+            if(name!=="공연일" && name!=="공연시간"){
+              const v=obj[name]; obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v));
+            }
+          });
+          processedRows.push(obj);
+        }
+        const showName=processedRows.length?String(processedRows[0]["공연명"]||"").trim():"";
+        outFilename=(showName?showName+"_예매자명단":"예매자명단_정리본")+".xlsx";
+        warnBox.innerHTML=missing.length
+          ? `<div class="warn">다음 컬럼을 원본에서 못 찾았어요: <b>${missing.map(esc).join(", ")}</b> · 해당 칸은 비워둡니다. 원본 헤더 이름이 바뀌었는지 확인해 주세요.</div>` : "";
+        resultPanel.classList.remove("hidden");
+        render();
+      }catch(err){ alert("파일을 읽는 중 오류가 났어요: "+(err.message||err)); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-  const preview=rows.slice(0,30);
-  let html="<table><tr>"+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
-  preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
-  html+="</table>";
-  tableBox.innerHTML=html;
-  previewMeta.textContent=rows.length>30?`미리보기 30행 표시 · 전체 ${rows.length}행은 다운로드 파일에 포함됩니다.`:`전체 ${rows.length}행`;
-  fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
-}
+  function getViewRows(){
+    let rows=processedRows.map(r=>({...r}));
+    if(sortNameChk.checked) rows.sort((a,b)=>String(a["관람자명"]||"").localeCompare(String(b["관람자명"]||""),"ko"));
+    else if(sortSeatChk.checked) rows.sort(seatCompare);
+    if(maskPhoneChk.checked) rows=rows.map(r=>({...r,"연락처":maskPhone(r["연락처"])}));
+    return rows;
+  }
+  function render(){
+    const rows=getViewRows();
+    const sessions=new Set(rows.map(r=>`${r["공연일"]} ${r["공연시간"]}`.trim())).size;
+    summaryEl.innerHTML=`
+      <div class="stat"><div class="n">${rows.length}</div><div class="l">총 좌석/건수</div></div>
+      <div class="stat"><div class="n">${sessions}</div><div class="l">회차 수</div></div>`;
+    const preview=rows.slice(0,30);
+    let html="<table><tr>"+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+    preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
+    html+="</table>";
+    tableBox.innerHTML=html;
+    previewMeta.textContent=rows.length>30?`미리보기 30행 표시 · 전체 ${rows.length}행은 다운로드 파일에 포함됩니다.`:`전체 ${rows.length}행`;
+    fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
+  }
+  function download(){
+    const rows=getViewRows();
+    const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:9},{wch:10},{wch:16},{wch:10},{wch:15},{wch:12}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
+    XLSX.writeFile(wb,outFilename);
+  }
 
-function download(){
-  const rows=getViewRows();
-  const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:9},{wch:10},{wch:16},{wch:10},{wch:15},{wch:12}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
-  XLSX.writeFile(wb,outFilename);
-}
+  input.addEventListener("change",e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
+  drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  sortSeatChk.addEventListener("change",()=>{ if(sortSeatChk.checked) sortNameChk.checked=false; render(); });
+  sortNameChk.addEventListener("change",()=>{ if(sortNameChk.checked) sortSeatChk.checked=false; render(); });
+  maskPhoneChk.addEventListener("change",render);
+  downloadBtn.addEventListener("click",download);
+})();
 
-input.addEventListener("change",e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
-["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
-["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
-drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+/* ===== 도구 2: 포스터 이미지 변환 ===== */
+(function(){
+  const TARGETS=[238,650];
+  const MAX_BYTES=1024*1024;
+  const drop=document.getElementById("imDrop");
+  const input=document.getElementById("imFile");
+  const col238=document.getElementById("imCol238");
+  const col650=document.getElementById("imCol650");
+  const clearBtn=document.getElementById("imClear");
+  const countEl=document.getElementById("imCount");
 
-// 정렬 체크박스는 하나만 켜지도록
-sortSeatChk.addEventListener("change",()=>{ if(sortSeatChk.checked) sortNameChk.checked=false; render(); });
-sortNameChk.addEventListener("change",()=>{ if(sortNameChk.checked) sortSeatChk.checked=false; render(); });
-maskPhoneChk.addEventListener("change",render);
-downloadBtn.addEventListener("click",download);
+  let results=[];
+  const usedNames=new Set();
+
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const baseName=name=>name.replace(/\.[^.]+$/,"");
+  function uniqueName(name){
+    let n=name,i=2;
+    while(usedNames.has(n)){ n=name.replace(/\.jpg$/i,`_${i}.jpg`); i++; }
+    usedNames.add(n); return n;
+  }
+  function loadImage(file){
+    return new Promise((res,rej)=>{
+      const url=URL.createObjectURL(file);
+      const img=new Image();
+      img.onload=()=>{ URL.revokeObjectURL(url); res(img); };
+      img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("이미지 로드 실패")); };
+      img.src=url;
+    });
+  }
+  const toBlobAsync=(canvas,type,q)=>new Promise(res=>canvas.toBlob(res,type,q));
+  async function encodeUnderLimit(canvas){
+    let q=0.92, blob=await toBlobAsync(canvas,"image/jpeg",q);
+    while(blob && blob.size>MAX_BYTES && q>0.4){ q-=0.08; blob=await toBlobAsync(canvas,"image/jpeg",q); }
+    return blob;
+  }
+  async function makeVersion(img,targetW,srcName){
+    const ratio=targetW/img.width;
+    const w=targetW, h=Math.max(1,Math.round(img.height*ratio));
+    const canvas=document.createElement("canvas");
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext("2d");
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+    ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0,w,h);
+    const blob=await encodeUnderLimit(canvas);
+    const filename=uniqueName(`${targetW}_${baseName(srcName)}.jpg`);
+    return { width:targetW, filename, blob, url:URL.createObjectURL(blob), w, h, kb:Math.round(blob.size/1024) };
+  }
+  async function handleFiles(files){
+    const imgs=[...files].filter(f=>f.type.startsWith("image/"));
+    if(!imgs.length) return;
+    for(const file of imgs){
+      try{
+        const img=await loadImage(file);
+        for(const t of TARGETS){ const r=await makeVersion(img,t,file.name); results.push(r); addCard(r); }
+      }catch(e){ console.error(file.name,e); }
+    }
+    updateBar();
+  }
+  function addCard(r){
+    const target=r.width===238?col238:col650;
+    const empty=target.querySelector(".empty"); if(empty) empty.remove();
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <img class="thumb" src="${r.url}" alt="">
+      <div class="info"><div class="fn">${esc(r.filename)}</div><div class="dim">${r.w}×${r.h}px · ${r.kb}KB</div></div>
+      <button class="dl">저장</button>`;
+    card.querySelector(".dl").addEventListener("click",()=>downloadOne(r));
+    target.appendChild(card);
+  }
+  function downloadOne(r){
+    const a=document.createElement("a");
+    a.href=r.url; a.download=r.filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function updateBar(){
+    const has=results.length>0;
+    clearBtn.disabled=!has;
+    countEl.textContent=has?`원본 ${results.length/2}장 → 결과 ${results.length}개`:"";
+  }
+  function clearAll(){
+    results.forEach(r=>URL.revokeObjectURL(r.url));
+    results=[]; usedNames.clear();
+    col238.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>';
+    col650.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>';
+    updateBar();
+  }
+  input.addEventListener("change",e=>{ handleFiles(e.target.files); input.value=""; });
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
+  drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+  clearBtn.addEventListener("click",clearAll);
+})();
 </script>
 </body>
 </html>
