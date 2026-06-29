@@ -373,10 +373,8 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   function render(){
     const rows=getViewRows();
-    const sessions=new Set(rows.map(r=>`${r["공연일"]} ${r["공연시간"]}`.trim())).size;
     summaryEl.innerHTML=`
-      <div class="stat"><div class="n">${rows.length}</div><div class="l">총 좌석/건수</div></div>
-      <div class="stat"><div class="n">${sessions}</div><div class="l">회차 수</div></div>`;
+      <div class="stat"><div class="n">${rows.length}</div><div class="l">총 좌석/건수</div></div>`;
     const preview=rows.slice(0,30);
     let html="<table><tr>"+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
     preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
