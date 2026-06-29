@@ -443,19 +443,36 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   const toBlobAsync=(canvas,type,q)=>new Promise(res=>canvas.toBlob(res,type,q));
   async function encodeUnderLimit(canvas){
-    let q=0.92, blob=await toBlobAsync(canvas,"image/jpeg",q);
-    while(blob && blob.size>MAX_BYTES && q>0.4){ q-=0.08; blob=await toBlobAsync(canvas,"image/jpeg",q); }
+    let q=0.95, blob=await toBlobAsync(canvas,"image/jpeg",q);
+    while(blob && blob.size>MAX_BYTES && q>0.4){ q-=0.05; blob=await toBlobAsync(canvas,"image/jpeg",q); }
     return blob;
   }
+  // 단계적 축소: 절반씩 줄여 다운스케일 화질 손실을 최소화
+  function resizeStepped(img,targetW,targetH){
+    let cw=img.width, ch=img.height;
+    let cur=document.createElement("canvas");
+    cur.width=cw; cur.height=ch;
+    cur.getContext("2d").drawImage(img,0,0);
+    while(cw>targetW*2 && ch>targetH*2){
+      const nw=Math.max(targetW,Math.round(cw/2)), nh=Math.max(targetH,Math.round(ch/2));
+      const next=document.createElement("canvas");
+      next.width=nw; next.height=nh;
+      const nctx=next.getContext("2d");
+      nctx.imageSmoothingEnabled=true; nctx.imageSmoothingQuality="high";
+      nctx.drawImage(cur,0,0,nw,nh);
+      cur=next; cw=nw; ch=nh;
+    }
+    const out=document.createElement("canvas");
+    out.width=targetW; out.height=targetH;
+    const octx=out.getContext("2d");
+    octx.imageSmoothingEnabled=true; octx.imageSmoothingQuality="high";
+    octx.fillStyle="#ffffff"; octx.fillRect(0,0,targetW,targetH);
+    octx.drawImage(cur,0,0,targetW,targetH);
+    return out;
+  }
   async function makeVersion(img,targetW,srcName){
-    const ratio=targetW/img.width;
-    const w=targetW, h=Math.max(1,Math.round(img.height*ratio));
-    const canvas=document.createElement("canvas");
-    canvas.width=w; canvas.height=h;
-    const ctx=canvas.getContext("2d");
-    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-    ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,w,h);
-    ctx.drawImage(img,0,0,w,h);
+    const w=targetW, h=Math.max(1,Math.round(img.height*targetW/img.width));
+    const canvas=resizeStepped(img,w,h);
     const blob=await encodeUnderLimit(canvas);
     const filename=uniqueName(`${targetW}_${baseName(srcName)}.jpg`);
     return { width:targetW, filename, blob, url:URL.createObjectURL(blob), w, h, kb:Math.round(blob.size/1024) };
