@@ -108,8 +108,8 @@
   #panel-settlement .node-del:hover { background: #fdecea; }
   #panel-settlement .channels { display: flex; gap: 12px; }
   #panel-settlement .channel { flex: 1; min-width: 0; border: 1px solid #ece6f3; border-radius: 10px; padding: 12px; background: #fbfaff; transition: opacity .15s; }
-  #panel-settlement .channel.hidden { opacity: .5; }
-  #panel-settlement .channel.hidden .ch-name::after { content: " (제외)"; font-size: 11px; color: #999; }
+  #panel-settlement .channel.ch-hidden { opacity: .5; }
+  #panel-settlement .channel.ch-hidden .ch-name::after { content: " (제외)"; font-size: 11px; color: #999; }
   #panel-settlement .ch-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
   #panel-settlement .ch-name { font-size: 13px; font-weight: 700; color: #4e2270; }
   #panel-settlement .ch-eye { background: none; border: 1px solid #d9cae8; color: #4e2270; border-radius: 6px; padding: 2px 6px; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
@@ -629,7 +629,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function buildChannel(session, ch){
     const sid=session.id, data=session.channels[ch], loaded=!!data.name;
     const wrap=document.createElement("div");
-    wrap.className="channel"+(data.hidden?" hidden":"");
+    wrap.className="channel"+(data.hidden?" ch-hidden":"");
     wrap.innerHTML=`<div class="ch-head"><div class="ch-name">${ch}</div>
         <button class="ch-eye" title="${data.hidden?'정산표에 다시 포함':'검산 시 정산표에서 제외'}">${eyeSVG(!data.hidden)}</button></div>
       <div class="slot"></div>
