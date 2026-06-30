@@ -93,6 +93,10 @@
   .dim { font-size: 11.5px; color: #999; margin-top: 2px; }
   .dl { background: none; border: 1px solid #cdb8e3; color: #602b89; border-radius: 7px; padding: 6px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
   .dl:hover { background: #f3eef8; }
+  .card-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .card-actions .dl, .card-actions .rm { width: 100%; }
+  .rm { background: none; border: 1px solid #e3c4c4; color: #c0392b; border-radius: 7px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+  .rm:hover { background: #fdecea; }
   .imgbox { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); padding: 14px 16px; margin-bottom: 14px; }
   .imgbox-title { font-size: 14px; font-weight: 800; color: #602b89; margin-bottom: 10px; }
   .imgbox .drop { margin-bottom: 0; }
@@ -509,8 +513,19 @@ document.querySelectorAll(".tab").forEach(t=>{
     card.innerHTML=`
       <img class="thumb" src="${r.url}" alt="">
       <div class="info"><div class="fn">${esc(r.filename)}</div><div class="dim">${r.w}×${r.h}px · ${r.kb}KB</div></div>
-      <button class="dl">저장</button>`;
+      <div class="card-actions">
+        <button class="rm" title="제거">✕</button>
+        <button class="dl">저장</button>
+      </div>`;
     card.querySelector(".dl").addEventListener("click",()=>downloadOne(r));
+    card.querySelector(".rm").addEventListener("click",()=>{
+      URL.revokeObjectURL(r.url);
+      results=results.filter(x=>x!==r);
+      usedNames.delete(r.filename);
+      card.remove();
+      if(!resultsEl.querySelector(".card")) resultsEl.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>';
+      updateBar();
+    });
     resultsEl.appendChild(card);
   }
   function downloadOne(r){
