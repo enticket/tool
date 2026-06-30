@@ -128,8 +128,8 @@
   #panel-settlement .ch-drop { border: 1.5px dashed #c4aee0; border-radius: 8px; padding: 14px 8px; text-align: center; font-size: 12px; color: #8a76a8; cursor: pointer; background:#fff; min-height: 46px; display:flex; align-items:center; justify-content:center; gap:6px; }
   #panel-settlement .ch-drop.loaded { border-style: solid; border-color: #7fc08a; background: #f1fbf2; color: #2e7d32; font-weight: 600; cursor: move; word-break: break-all; }
   #panel-settlement .ch-drop.loaded.dragging { opacity: .4; }
-  #panel-settlement .ch-drop .rm { cursor:pointer; color:#c0392b; border:1px solid #e3c4c4; border-radius:50%; width:17px; height:17px; line-height:15px; text-align:center; font-size:11px; background:#fff; flex-shrink:0; }
-  #panel-settlement .ch-drop .rm:hover { background:#fdecea; }
+  #panel-settlement .ch-drop .rm { cursor:pointer; color:#c0392b; border:none; background:none; width:17px; height:17px; line-height:17px; text-align:center; font-size:13px; font-weight:700; flex-shrink:0; opacity:.65; }
+  #panel-settlement .ch-drop .rm:hover { opacity:1; }
   #panel-settlement .map-summary { font-size: 11.5px; margin-top: 8px; color:#666; }
   #panel-settlement .map-summary .ok { color:#2e7d32; font-weight:600; }
   #panel-settlement .map-summary .bad { color:#c0392b; font-weight:600; }
@@ -709,9 +709,11 @@ const COL = {}; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((l,i)=>COL[l]=i);
 const ws = {}; const merges = [];
 function M(a,b){ const A=XLSX.utils.decode_cell(a),Bc=XLSX.utils.decode_cell(b); merges.push({s:{r:A.r,c:A.c},e:{r:Bc.r,c:Bc.c}}); }
 function excelDate(d){ return (d.getTime()/86400000) + 25569 - (d.getTimezoneOffset()/1440); }
+// xlsx-js-style의 f 속성은 선행 '='를 받지 않음 (붙으면 출력 시 '=='로 중복됨)
+function fClean(v){ return (typeof v==='string' && v[0]==='=') ? v.slice(1) : v; }
 function put(addr,v,style,isF){
   let cell;
-  if(isF){ cell={t:'n',f:v,s:style}; }
+  if(isF){ cell={t:'n',f:fClean(v),s:style}; }
   else if(v instanceof Date){ cell={t:'n',v:excelDate(v),s:style}; }
   else { cell={t:(typeof v==='number'?'n':'s'),v:(v==null?'':v),s:style}; }
   ws[addr]=cell;
@@ -738,7 +740,7 @@ function row(addr1,addr2,v,style,isF){
       bottom:R===Bc.r? bd.bottom: inner,
     };
     if(isFirst){
-      if(isF) ws[ref]={t:'n',f:v,s};
+      if(isF) ws[ref]={t:'n',f:fClean(v),s};
       else if(v instanceof Date) ws[ref]={t:'n',v:excelDate(v),s};
       else ws[ref]={t:(typeof v==='number'?'n':'s'),v:(v==null?'':v),s};
     } else {
@@ -766,7 +768,7 @@ row('N3','Q3','담당자',S({fill:FILL.gray})); row('R3','Y3',data.담당자,S()
 row('Z3','AC3','청구문의',S({fill:FILL.gray})); row('AD3','AK3','E-mail: enticket@daum.net\nTEL: 1588-2341',S({wrap:true}));
 lbl('B4','E4','공연장소'); val('F4','M4',data.공연장소);
 row('N4','Q4','E-mail',S({fill:FILL.gray})); row('R4','Y4',data.email,S({font:'나눔고딕',sz:11}));
-row('Z4','AC4','지급계좌',S({fill:FILL.gray})); row('AD4','AK4','인천광역시 경제자유구역청\n (미디어문화과) 100-035-743953',S({wrap:true}));
+row('Z4','AC4','지급계좌',S({fill:FILL.gray})); row('AD4','AK4','',S({wrap:true}));
 lbl('B5','E5','기획사명'); val('F5','M5',data.기획사명);
 row('N5','Q5','연락처',S({fill:FILL.gray})); row('R5','Y5',data.연락처,S());
 row('Z5','AC5','지급금액',S({fill:FILL.gray,font:'나눔고딕'})); row('AD5','AK5','=AG11',S({fmt:F.won,border:B(thin,thin,thin,thick)}),true);
@@ -1086,11 +1088,26 @@ function injectPageSetup(xlsxBytes, lastRow) {
   const pageSetup = '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="1" orientation="portrait"/>';
   const printOpts = '<printOptions horizontalCentered="1"/>';
 
-  // 3) print_area를 정의 (defined name) — workbook.xml에
-  // sheet XML에는 dimension만, print area는 workbook에 정의
-  // sheetData 닫힌 뒤에 margins+pageSetup 삽입
-  if (xml.includes('</sheetData>')) {
-    xml = xml.replace('</sheetData>', '</sheetData>' + printOpts + margins + pageSetup);
+  // 3) printOptions/pageMargins/pageSetup 삽입
+  // ⚠ OOXML 스키마는 sheet 자식 요소 순서가 엄격함:
+  //   sheetData → mergeCells → ... → printOptions → pageMargins → pageSetup → headerFooter → drawing ...
+  // </sheetData> 바로 뒤에 넣으면 mergeCells보다 앞서 순서가 깨져 엑셀이 "복구" 모드로 내용을 버림.
+  // → pageSetup 뒤에 올 수 있는 요소(headerFooter/drawing 등) 앞, 그 외엔 </worksheet> 직전에 삽입.
+  const pageBlock = printOpts + margins + pageSetup;
+  const afterTags = ['<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties',
+                     '<cellWatches', '<ignoredErrors', '<smartTags', '<drawing',
+                     '<legacyDrawing', '<picture', '<oleObjects', '<controls'];
+  let insertPos = -1;
+  for (const t of afterTags) {
+    const p = xml.indexOf(t);
+    if (p !== -1 && (insertPos === -1 || p < insertPos)) insertPos = p;
+  }
+  if (insertPos !== -1) {
+    // pageSetup보다 뒤에 와야 하는 요소 바로 앞에 삽입
+    xml = xml.slice(0, insertPos) + pageBlock + xml.slice(insertPos);
+  } else {
+    // 후속 요소가 없으면 </worksheet> 직전에 삽입 (mergeCells 등 모든 요소 뒤)
+    xml = xml.replace('</worksheet>', pageBlock + '</worksheet>');
   }
 
   files[sheetPath] = enc.encode(xml);
@@ -1238,6 +1255,7 @@ function renderValidationCard(result) {
   let dragSource=null;
   let mergeMap={};
   let mergeOpen=false;
+  let inviteEdited=false;  // 초대좌석권 입력란을 직원이 수동 편집했는지
 
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
@@ -1454,6 +1472,15 @@ function renderValidationCard(result) {
     return "";
   }
 
+  // 권종 분류: 홀딩=완전제외, 초대=초대좌석권으로 별도집계, 일반=정상집계
+  // 공백 제거 후 '초대'/'홀딩' 포함 여부로 판별 (초대석·홀딩석·초대권 등 변형 포함)
+  function classifyGrade(name){
+    const n=norm(name);
+    if(n.includes("홀딩")) return "hold";   // 완전 제외
+    if(n.includes("초대")) return "invite"; // 초대좌석권으로 집계
+    return "normal";
+  }
+
   function aggregate(list){
     const map=new Map();
     list.forEach(s=>{
@@ -1463,6 +1490,7 @@ function renderValidationCard(result) {
         d.rows.forEach(r=>{
           const 권종=canonName(r[d.map.권종]);
           if(!권종) return;
+          if(classifyGrade(권종)!=="normal") return;  // 초대·홀딩은 권종 집계에서 제외
           const 가격=d.map.가격>=0?parseNum(r[d.map.가격]):0;
           const 수=d.map.수>=0?parseNum(r[d.map.수]):1;
           const k=권종+"||"+가격;
@@ -1473,6 +1501,51 @@ function renderValidationCard(result) {
     });
     return [...map.values()].map(o=>({...o, 합계:o.엔티켓+o.예술회관+o.폐쇄몰}))
       .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
+  }
+
+  // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
+  // 초대좌석권 = 초대 + 홀딩 수량 합 (둘 다 권종 행 집계에선 빠지지만 초대좌석권으로 모음)
+  function countInvite(list){
+    let total=0;
+    list.forEach(s=>{
+      CHANNELS.forEach(ch=>{
+        const d=s.channels[ch];
+        if(!d.name || d.map.권종<0 || d.hidden) return;
+        d.rows.forEach(r=>{
+          const 권종=canonName(r[d.map.권종]);
+          if(!권종) return;
+          const cls=classifyGrade(권종);
+          if(cls!=="invite" && cls!=="hold") return;
+          // 초대·홀딩은 무료라 수량 칸이 비어있는 경우가 많음 → 빈칸/0이면 행당 1장으로 셈
+          let 수=d.map.수>=0?parseNum(r[d.map.수]):1;
+          if(!(수>0)) 수=1;
+          total+=수;
+        });
+      });
+    });
+    return total;
+  }
+
+  // 제외/별도집계 현황 (초대·홀딩 수량과 권종명 모음) — 화면 안내용
+  function specialGradeStats(list){
+    const inv={qty:0,names:new Set()}, hold={qty:0,names:new Set()};
+    const allNames=new Set();
+    list.forEach(s=>{
+      CHANNELS.forEach(ch=>{
+        const d=s.channels[ch];
+        if(!d.name || d.map.권종<0 || d.hidden) return;
+        d.rows.forEach(r=>{
+          const 권종=canonName(r[d.map.권종]);
+          if(!권종) return;
+          allNames.add(권종);
+          const cls=classifyGrade(권종);
+          let 수=d.map.수>=0?parseNum(r[d.map.수]):1;
+          if(cls==="invite"){ if(!(수>0)) 수=1; inv.qty+=수; inv.names.add(권종); }
+          else if(cls==="hold"){ hold.qty+=수; hold.names.add(권종); }
+        });
+      });
+    });
+    return { inv, hold, allNames };
   }
 
   function recompute(){
@@ -1512,7 +1585,14 @@ function renderValidationCard(result) {
       });
     });
     let total=`<tr class="total"><td colspan="4">계</td><td>${dash(g.엔티켓)}</td><td>${dash(g.예술회관)}</td><td>${dash(g.폐쇄몰)}</td><td>${won(g.합계)}</td><td>${money(g.금액)}</td></tr>`;
-    outputEl.innerHTML=`<div class="table-scroll"><table>${thead}<tbody>${body}${total}</tbody></table></div>`;
+    // 초대·홀딩 처리 현황 안내
+    const sp=specialGradeStats(withData);
+    let note="";
+    const parts=[];
+    if(sp.inv.qty>0) parts.push(`<span style="color:#2e7d32">초대 ${won(sp.inv.qty)}</span>`);
+    if(sp.hold.qty>0) parts.push(`<span style="color:#c0392b">홀딩 ${won(sp.hold.qty)}</span>`);
+    if(parts.length) note=`<div style="font-size:12px;color:#555;margin-top:8px;padding:8px 11px;background:#f3eef8;border-radius:7px;line-height:1.6">${parts.join(" · ")}</div>`;
+    outputEl.innerHTML=`<div class="table-scroll"><table>${thead}<tbody>${body}${total}</tbody></table></div>${note}`;
   }
 
   function renderMerge(rows){
@@ -1654,6 +1734,7 @@ function renderValidationCard(result) {
     });
     const etc={};
     ETC_DEF.forEach(e=>{ etc[e.key]={단가:parseNum(etcState[e.key].단가), 수량:parseNum(etcState[e.key].수량)}; });
+    // 초대좌석권 = 입력란 값 (파일의 초대·초대권 수량이 입력란에 자동 반영되어 있음)
     return {
       공연명: gv('sf_title'), 공연장소: gv('sf_place'), 기획사명: gv('sf_org'),
       담당자: gv('sf_mgr'), email: gv('sf_email'), 연락처: gv('sf_tel'),
@@ -1673,6 +1754,12 @@ function renderValidationCard(result) {
   function updateSettlementLive(){
     const hasAgg=sessions.some(sessionHasData);
     const genBtn=document.getElementById("genSettlement");
+    // 초대좌석권 입력란 자동 채움 (직원이 수동 편집하지 않은 경우에만)
+    const invField=document.getElementById("sf_invite");
+    if(invField && !inviteEdited){
+      const auto=countInvite(sessions.filter(sessionHasData));
+      invField.value=String(auto);
+    }
     if(!hasAgg){
       document.getElementById("livePayout").textContent="₩0";
       document.getElementById("checkResult").innerHTML="";
@@ -1707,11 +1794,21 @@ function renderValidationCard(result) {
     }
     try{
       const wb=buildSettlementWorkbook(data);
-      let bytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
-      const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
-      const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
-      const lastRow=16+grades+1+3+3+prices.size+1+1+12;
-      bytes=injectPageSetup(new Uint8Array(bytes), lastRow);
+      if(typeof XLSX==='undefined' || !XLSX.write){ alert('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); return; }
+      const baseBytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+      if(!baseBytes || baseBytes.byteLength<2000){ alert('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); return; }
+      // 페이지설정 주입은 부가 기능 — 실패하면 주입 없이 정상 파일을 내보냄
+      let bytes=baseBytes;
+      try{
+        if(typeof fflate!=='undefined' && fflate.unzipSync){
+          const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
+          const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
+          const lastRow=16+grades+1+3+3+prices.size+1+1+12;
+          const injected=injectPageSetup(new Uint8Array(baseBytes), lastRow);
+          // 주입 결과가 정상(원본의 절반 이상 압축돼도 최소 크기 확보)일 때만 채택
+          if(injected && injected.byteLength>1000) bytes=injected;
+        }
+      }catch(e){ console.warn('페이지설정 주입 건너뜀:', e); bytes=baseBytes; }
       const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       const today=new Date(); const stamp=`${today.getFullYear()}${p2(today.getMonth()+1)}${p2(today.getDate())}`;
       const t=(data.공연명||'공연').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
@@ -1732,6 +1829,11 @@ function renderValidationCard(result) {
   // 이벤트 바인딩
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
+  // 초대좌석권 입력란: 직원이 직접 입력하면 자동 채움 중단, 그 값 우선
+  (function(){
+    const inv=document.getElementById("sf_invite");
+    inv.addEventListener("input",()=>{ inviteEdited=true; updateSettlementLive(); });
+  })();
 
   // 초기화
   renderEtc();
