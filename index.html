@@ -848,15 +848,6 @@ for(let i=0;i<roundEndRows.length-1;i++){
     if(ws[ref]){ if(!ws[ref].s) ws[ref].s={}; if(!ws[ref].s.border) ws[ref].s.border={}; ws[ref].s.border.bottom=medGreen; }
   }
 }
-// 입력 여유분 빈 행 1개 (원본 빈양식 방식)
-row(`B${r}`,`C${r}`,'',S({fill:FILL.greenL}));
-row(`D${r}`,`H${r}`,'',S({fill:FILL.greenL}));
-row(`I${r}`,`L${r}`,'',S({fill:FILL.greenL,h:'left'}));
-row(`M${r}`,`O${r}`,'',S({fill:FILL.greenL,fmt:F.won}));
-[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']].forEach(([a,bb])=>row(`${a}${r}`,`${bb}${r}`,'',S({fill:FILL.greenL,fmt:F.num})));
-row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
-row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
-r++;
 const tEnd=r-1;
 // 계행
 row(`B${r}`,`O${r}`,'계',S());
@@ -914,15 +905,6 @@ prices.forEach(p=>{
   row(`AH${r}`,`AK${r}`,`AD${r}*I${r}`,S({fmt:F.won1}),true);
   r++;
 });
-// 입력 여유분 빈 행 1개
-row(`B${r}`,`D${r}`,'',S());
-row(`E${r}`,`H${r}`,'',S({fmt:F.won}));
-row(`I${r}`,`K${r}`,data.수수료율,S({fmt:F.pct}));
-feeCh.forEach((cc)=>row(`${cc[0]}${r}`,`${cc[1]}${r}`,'',S({fmt:F.num})));
-row(`AA${r}`,`AC${r}`,`SUM(L${r}:Z${r})`,S({fmt:F.num}),true);
-row(`AD${r}`,`AG${r}`,`E${r}*AA${r}`,S({fmt:F.won}),true);
-row(`AH${r}`,`AK${r}`,`AD${r}*I${r}`,S({fmt:F.won1}),true);
-r++;
 const fEnd=r-1;
 row(`B${r}`,`Z${r}`,'총계',S({fill:FILL.yellow}));
 row(`AA${r}`,`AC${r}`,`SUM(AA${fStart}:AC${fEnd})`,S({fill:FILL.yellow,fmt:F.num}),true);
@@ -955,7 +937,7 @@ etcRows.forEach(([item,sub,d])=>{
   row(`F${r}`,`I${r}`,sub,S());
   if(d){
     row(`J${r}`,`M${r}`,d.단가,S({fmt:F.won}));
-    row(`N${r}`,`P${r}`,d.수량||'',S({fmt:F.num}));
+    row(`N${r}`,`P${r}`,d.수량||0,S({fmt:F.num}));
     row(`Q${r}`,`AG${r}`,'',S());
     row(`AH${r}`,`AK${r}`,`J${r}*N${r}`,S({fmt:F.won}),true);
   } else {
@@ -1803,7 +1785,7 @@ function renderValidationCard(result) {
         if(typeof fflate!=='undefined' && fflate.unzipSync){
           const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
           const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
-          const lastRow=16+grades+1+3+3+prices.size+1+1+12;
+          const lastRow=16+grades+3+3+prices.size+1+12;
           const injected=injectPageSetup(new Uint8Array(baseBytes), lastRow);
           // 주입 결과가 정상(원본의 절반 이상 압축돼도 최소 크기 확보)일 때만 채택
           if(injected && injected.byteLength>1000) bytes=injected;
