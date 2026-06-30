@@ -176,6 +176,48 @@
   #panel-settlement .rule .undo { margin-left: auto; cursor: pointer; color: #c0392b; border: 1px solid #e3c4c4; border-radius: 6px; padding: 2px 9px; font-size: 11.5px; background: #fff; flex-shrink:0; }
   #panel-settlement .rule .undo:hover { background: #fdecea; }
   #panel-settlement .sim-hint { font-size: 11.5px; color: #a35bce; margin-left: 4px; }
+
+  /* ===== 정산 정보 보충 패널 ===== */
+  .st-supp { background:#fff; border-radius:14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); overflow:hidden; margin-bottom:14px; }
+  .supp-head { padding:14px 18px; font-size:15px; font-weight:800; color:#602b89; cursor:pointer; user-select:none;
+    display:flex; align-items:center; gap:9px; }
+  .supp-head .chev { display:inline-block; transition:.15s; font-size:13px; }
+  .supp-head .supp-sub { font-weight:400; font-size:12px; color:#999; margin-left:2px; }
+  .supp-body { padding:0 18px 18px; display:none; }
+  .supp-body.open { display:block; }
+  .supp-sec { border-top:1px solid #f0ecf5; padding:14px 0; }
+  .supp-sec:first-child { border-top:none; }
+  .supp-sec-t { font-size:13px; font-weight:700; color:#4e2270; margin-bottom:10px; }
+  .supp-sec-t .supp-note { font-weight:400; font-size:11.5px; color:#a08bbb; margin-left:6px; }
+  .supp-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+  .sfld { display:block; margin-bottom:10px; }
+  .sfld>span { display:block; font-size:12px; color:#8a7f97; margin-bottom:4px; }
+  .sfld input { width:100%; border:1px solid #e3dcec; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; }
+  .sfld input:focus { outline:none; border-color:#602b89; }
+  .supp-empty { font-size:12.5px; color:#bbb; padding:8px 0; }
+  .onsite-row { display:grid; grid-template-columns:90px 1fr; gap:10px; align-items:center; margin-bottom:8px; }
+  .onsite-row .rl { font-size:12.5px; color:#555; }
+  .onsite-row input { border:1px solid #e3dcec; border-radius:8px; padding:7px 10px; font-size:13px; width:100%; }
+  .etc-row2 { display:grid; grid-template-columns:1.5fr 1fr 0.8fr; gap:8px; align-items:center; margin-bottom:8px; }
+  .etc-row2 .el { font-size:12.5px; color:#333; }
+  .etc-row2 input { border:1px solid #e3dcec; border-radius:8px; padding:7px 10px; font-size:13px; width:100%; text-align:right; }
+
+  /* ===== 정산서 생성 바 ===== */
+  .st-gen { display:flex; align-items:center; justify-content:flex-end; gap:18px; padding:4px 2px 0; margin-bottom:8px; }
+  .st-gen-live { font-size:13px; color:#8a7f97; }
+  .st-gen-live b { color:#602b89; font-size:16px; margin-left:4px; }
+  #genSettlement { padding:11px 26px; font-size:14px; }
+  #checkResult { margin-top:6px; }
+  .chk { border-radius:10px; padding:14px; font-size:13px; margin-top:6px; }
+  .chk.ok { background:#e8f5e9; border:1px solid #c8e6c9; }
+  .chk.warn { background:#fdecea; border:1px solid #f5c6c0; }
+  .chk h4 { font-size:13px; margin-bottom:8px; }
+  .chk.ok h4 { color:#2e7d32; } .chk.warn h4 { color:#c0392b; }
+  .chk table { width:100%; font-size:12.5px; border-collapse:collapse; }
+  .chk table td { padding:2px 0; border:none; }
+  .chk table td:last-child { text-align:right; font-weight:600; }
+  .chk .ct td { border-top:1px solid rgba(0,0,0,.12); padding-top:5px; font-weight:700; }
+  .chk ul { margin:8px 0 0; padding-left:18px; color:#c0392b; font-size:12px; }
 </style>
 </head>
 <body>
@@ -264,25 +306,80 @@
   <!-- ============ 탭 3: 정산서 도구 ============ -->
   <section class="panel-view" id="panel-settlement">
     <h2>공연 정산서</h2>
+    <div class="sub">정산 정보를 먼저 채우고, 회차 노드에 예매처별 판매 명단을 넣으면 정산서가 만들어집니다.</div>
+
+    <!-- 정산 정보 보충 입력 (접이식) -->
+    <div class="st-supp" id="suppPanel">
+      <div class="supp-head" id="suppToggle">
+        <span class="chev" id="suppChev">▸</span>
+        정산 정보 입력
+        <span class="supp-sub">공연정보 · 수수료 · 현장판매 · 기타거래 — 정산서 생성에 필요</span>
+      </div>
+      <div class="supp-body" id="suppBody">
+
+        <div class="supp-sec">
+          <div class="supp-sec-t">공연 정보</div>
+          <div class="supp-grid2">
+            <label class="sfld"><span>공연명</span><input type="text" id="sf_title" placeholder="예: 판뮤지컬 ＜이상한 나라의 숨바꼭질＞"></label>
+            <label class="sfld"><span>공연장소</span><input type="text" id="sf_place" value="트라이보울 공연장"></label>
+            <label class="sfld"><span>기획사명</span><input type="text" id="sf_org" value="(재)인천문화재단 트라이보울"></label>
+            <label class="sfld"><span>담당자</span><input type="text" id="sf_mgr" placeholder="담당자명"></label>
+            <label class="sfld"><span>담당자 E-mail</span><input type="email" id="sf_email" placeholder="name@ifac.or.kr"></label>
+            <label class="sfld"><span>연락처</span><input type="text" id="sf_tel" placeholder="032-000-0000"></label>
+          </div>
+        </div>
+
+        <div class="supp-sec">
+          <div class="supp-sec-t">수수료 · 정산 외 발권</div>
+          <div class="supp-grid2">
+            <label class="sfld"><span>수수료율 (%)</span><input type="number" id="sf_rate" value="6.6" step="0.01"></label>
+            <label class="sfld"><span>초대좌석권 (장)</span><input type="number" id="sf_invite" value="0"></label>
+          </div>
+        </div>
+
+        <div class="supp-sec">
+          <div class="supp-sec-t">현장판매 <span class="supp-note">예매처 파일로 들어오지 않아 회차별로 직접 입력합니다</span></div>
+          <div id="onsiteWrap"><div class="supp-empty">회차를 추가하면 입력란이 생깁니다.</div></div>
+        </div>
+
+        <div class="supp-sec">
+          <div class="supp-sec-t">기타거래내역 <span class="supp-note">단가·수량 입력 시 금액 자동 계산</span></div>
+          <div id="etcWrap"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="connector">▼</div>
+
+    <!-- 회차 노드 -->
     <div id="sessions"></div>
     <div class="add-row">
       <button class="btn ghost" id="addSession">＋ 회차 추가</button>
     </div>
     <div class="connector">▼</div>
-    <div class="out-head"></div>
+
+    <!-- 집계 결과 -->
+    <div class="out-head">집계 결과</div>
     <div class="out-body">
-      <div class="out-controls">
-        <button class="btn" id="dlBtn" disabled>엑셀 다운로드</button>
-      </div>
       <div id="output"><div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div></div>
       <div id="merge"></div>
     </div>
+
+    <!-- 정산서 생성 -->
+    <div class="st-gen">
+      <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
+      <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
+    </div>
+    <div id="checkResult"></div>
+
     <div class="privacy"></div>
   </section>
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-js-style/1.2.0/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <script>
 /* ===== 탭 전환 ===== */
 document.querySelectorAll(".tab").forEach(t=>{
@@ -293,7 +390,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     document.getElementById("panel-"+t.dataset.tab).classList.add("active");
   });
 });
-
 /* ===== 도구 1: 예매자 명단 정리 ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
@@ -306,8 +402,6 @@ document.querySelectorAll(".tab").forEach(t=>{
   const warnBox=document.getElementById("xlWarn");
   const downloadBtn=document.getElementById("xlDownload");
   const fnameLabel=document.getElementById("xlFname");
-  const sortSeatChk=document.getElementById("xlSortSeat");
-  const sortNameChk=document.getElementById("xlSortName");
   const maskPhoneChk=document.getElementById("xlMask");
 
   let processedRows=[];
@@ -335,17 +429,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     if(m){ let h=parseInt(m[1],10)%12; if(/PM|오후/i.test(m[3])) h+=12; return `${pad(h)}:${m[2]}`; }
     m=s.match(/^(\d{1,2}):(\d{2})/); if(m) return `${pad(m[1])}:${m[2]}`;
     return s;
-  }
-  function parseSeat(s){
-    s=String(s||"");
-    const f=s.match(/(\d+)\s*층/), c=s.match(/([A-Za-z가-힣]+)\s*열/), n=s.match(/(\d+)\s*번/);
-    return { floor:f?parseInt(f[1],10):9999, col:c?c[1]:"", num:n?parseInt(n[1],10):9999 };
-  }
-  function seatCompare(a,b){
-    const pa=parseSeat(a["좌석명"]), pb=parseSeat(b["좌석명"]);
-    if(pa.floor!==pb.floor) return pa.floor-pb.floor;
-    if(pa.col!==pb.col) return pa.col.localeCompare(pb.col,"ko");
-    return pa.num-pb.num;
   }
   const maskPhone=v=>String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/,(m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
 
@@ -466,7 +549,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     while(blob && blob.size>MAX_BYTES && q>0.4){ q-=0.05; blob=await toBlobAsync(canvas,"image/jpeg",q); }
     return blob;
   }
-  // 단계적 축소: 절반씩 줄여 다운스케일 화질 손실을 최소화
   function resizeStepped(img,targetW,targetH){
     let cw=img.width, ch=img.height;
     let cur=document.createElement("canvas");
@@ -556,7 +638,577 @@ document.querySelectorAll(".tab").forEach(t=>{
   clearBtn.addEventListener("click",clearAll);
 })();
 
-/* ===== 도구 3: 정산서 도구 ===== */
+// ===== 정산서 레시피 빌더 =====
+// ============================================================
+// 트라이보울 정산서 빌더 (브라우저용)
+// buildSettlementWorkbook(data) → xlsx-js-style workbook 반환
+// ============================================================
+function buildSettlementWorkbook(data){
+
+// ============ 트라이보울 정산서 전체 재생성 레시피 ============
+// 헤더 ~ 4번 표 전체, 회차·권종 가변 동적 생성
+
+// ---- 색 팔레트 (원본 추출, 테마색 tint 해소) ----
+const FILL = {
+  gray:   'D9D9D9',  // 항목 라벨 헤더 (theme0 tint-0.15)
+  purple: 'CCC1DA',  // 1.요약 헤더 (theme7 tint0.6)
+  green:  'CCFFCC',  // 2.표 헤더
+  greenL: 'D7E4BD',  // 총판매수/금액 강조 (theme6 tint0.6)
+  white:  'FFFFFF',
+  yellow: 'FFFF99',  // 3.수수료 헤더
+  cyan:   'CCFFFF',  // 4.기타거래 헤더
+};
+// ---- 숫자서식 ----
+const F = {
+  won:  '_-"₩"* #,##0_-;\\-"₩"* #,##0_-;_-"₩"* "-"_-;_-@_-',
+  won1: '_-"₩"* #,##0.0_-;\\-"₩"* #,##0.0_-;_-"₩"* "-"_-;_-@_-',
+  wonS: '"₩"#,##0',
+  num:  '_-* #,##0_-;\\-* #,##0_-;_-* "-"_-;_-@_-',
+  numU: '#,##0_ ',
+  pct:  '0.00%',
+  dt:   'yyyy/mm/dd hh:mm',
+};
+const thin = { style: 'thin', color: { rgb: '000000' } };
+const med  = { style: 'medium', color: { rgb: '000000' } };
+const thick= { style: 'thick', color: { rgb: '000000' } };
+const B = (l,r,t,b) => ({ left:l, right:r, top:t, bottom:b });
+const allThin = B(thin,thin,thin,thin);
+// 영역별 테두리 색
+const BC = { head:'A6A6A6', sum:'9933FF', t2:'92D050', t3:'FFCC00', t4:'8EB4E3' };
+function thinC(rgb){ return { style:'thin', color:{ rgb } }; }
+function allThinC(rgb){ const t=thinC(rgb); return B(t,t,t,t); }
+let curBC = null;  // 현재 영역 테두리 색 (null이면 검정)
+
+function S(o={}) {
+  let border;
+  if (o.border) border = o.border;
+  else if (o.bc) border = allThinC(o.bc);
+  else if (curBC) border = allThinC(curBC);
+  else border = allThin;
+  const s = {
+    font: { name: o.font||'나눔고딕', sz: o.sz||10, bold: !!o.bold, color:{rgb:o.color||'000000'} },
+    alignment: { horizontal: o.h||'center', vertical: o.v||'center', wrapText: !!o.wrap },
+    border,
+  };
+  if (o.fill) s.fill = { patternType:'solid', fgColor:{rgb:o.fill} };
+  if (o.fmt) s.numFmt = o.fmt;
+  return s;
+}
+
+// ---------- 시트 빌더 ----------
+const COL = {}; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((l,i)=>COL[l]=i);
+['AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL'].forEach((l,i)=>COL[l]=26+i);
+const ws = {}; const merges = [];
+function M(a,b){ const A=XLSX.utils.decode_cell(a),Bc=XLSX.utils.decode_cell(b); merges.push({s:{r:A.r,c:A.c},e:{r:Bc.r,c:Bc.c}}); }
+function excelDate(d){ return (d.getTime()/86400000) + 25569 - (d.getTimezoneOffset()/1440); }
+function put(addr,v,style,isF){
+  let cell;
+  if(isF){ cell={t:'n',f:v,s:style}; }
+  else if(v instanceof Date){ cell={t:'n',v:excelDate(v),s:style}; }
+  else { cell={t:(typeof v==='number'?'n':'s'),v:(v==null?'':v),s:style}; }
+  ws[addr]=cell;
+}
+function row(addr1,addr2,v,style,isF){
+  const A=XLSX.utils.decode_cell(addr1), Bc=XLSX.utils.decode_cell(addr2);
+  const bd=style.border||allThin;
+  const inner=bd.left||thin;  // 내부 경계도 외곽과 같은 색 사용
+  const single=(A.r===Bc.r&&A.c===Bc.c);
+  for(let R=A.r;R<=Bc.r;R++) for(let Cc=A.c;Cc<=Bc.c;Cc++){
+    const ref=XLSX.utils.encode_cell({r:R,c:Cc});
+    const isFirst=(R===A.r&&Cc===A.c);
+    const s={
+      font: Object.assign({},style.font),
+      alignment: Object.assign({},style.alignment),
+    };
+    if(style.fill) s.fill=Object.assign({},style.fill);
+    if(style.numFmt) s.numFmt=style.numFmt;
+    // 외곽 방향엔 지정 테두리, 내부 경계엔 같은 색 thin
+    s.border={
+      left:  Cc===A.c ? bd.left  : inner,
+      right: Cc===Bc.c? bd.right : inner,
+      top:   R===A.r ? bd.top   : inner,
+      bottom:R===Bc.r? bd.bottom: inner,
+    };
+    if(isFirst){
+      if(isF) ws[ref]={t:'n',f:v,s};
+      else if(v instanceof Date) ws[ref]={t:'n',v:excelDate(v),s};
+      else ws[ref]={t:(typeof v==='number'?'n':'s'),v:(v==null?'':v),s};
+    } else {
+      ws[ref]={t:'s',v:'',s};
+    }
+  }
+  if(!single) M(addr1,addr2);
+}
+
+
+// ================= 1) 헤더 (1~7행) =================
+curBC=null;  // 헤더 내부선은 검정, 외곽 thick만 회색(후처리)
+// 제목: 위만 medium 검정, 좌우는 흰색(구분선 안 보이게)
+const whiteThin={style:'thin',color:{rgb:'FFFFFF'}};
+const titleB = B(whiteThin,whiteThin,med,whiteThin);
+row('B1','Q1','㈜엔엔터테인먼트  ',S({sz:26,bold:true,h:'right',border:titleB}));
+row('R1','U1','판 매',S({sz:26,bold:true,border:titleB}));
+row('V1','AK1','정  산  서',S({sz:26,bold:true,h:'left',border:titleB}));
+const lbl = (a,b,t)=>row(a,b,t,S({fill:FILL.gray}));
+const val = (a,b,t,o={})=>row(a,b,t,S(Object.assign({},o)));
+lbl('B2','E2','공연명'); val('F2','Y2',data.공연명);
+row('Z2','AC2','정산문의',S({fill:FILL.gray})); row('AD2','AK2','E-mail: enticket@daum.net\nTEL: 1588-2341',S({wrap:true}));
+lbl('B3','E3','공연일시'); val('F3','M3',data.공연일시,{wrap:true});
+row('N3','Q3','담당자',S({fill:FILL.gray})); row('R3','Y3',data.담당자,S());
+row('Z3','AC3','청구문의',S({fill:FILL.gray})); row('AD3','AK3','E-mail: enticket@daum.net\nTEL: 1588-2341',S({wrap:true}));
+lbl('B4','E4','공연장소'); val('F4','M4',data.공연장소);
+row('N4','Q4','E-mail',S({fill:FILL.gray})); row('R4','Y4',data.email,S({font:'나눔고딕',sz:11}));
+row('Z4','AC4','지급계좌',S({fill:FILL.gray})); row('AD4','AK4','인천광역시 경제자유구역청\n (미디어문화과) 100-035-743953',S({wrap:true}));
+lbl('B5','E5','기획사명'); val('F5','M5',data.기획사명);
+row('N5','Q5','연락처',S({fill:FILL.gray})); row('R5','Y5',data.연락처,S());
+row('Z5','AC5','지급금액',S({fill:FILL.gray,font:'나눔고딕'})); row('AD5','AK5','=AG11',S({fmt:F.won,border:B(thin,thin,thin,thick)}),true);
+const whiteB=B(whiteThin,whiteThin,whiteThin,whiteThin);
+row('B6','AK6','* 원 단위 절사',S({font:'나눔고딕',sz:9,h:'right',fill:'FFFFFF',border:whiteB,color:'FF0000'}));
+row('B7','AK7','=IF(Z4="지급계좌", "정산내역 이상 있으시면 반드시 연락바랍니다. 확인하시고 메일`회신` 주셔야 지급처리가 가능합니다. \n회신주실때 결제계좌 확인 부탁드립니다. 공연 종료 후 10일이내에 정산됩니다.","")',S({font:'나눔고딕',sz:9,h:'left',wrap:true,fill:'FFFFFF',border:whiteB}),true);
+
+// ================= 2) 1.정산요약정보 (8~11행) =================
+curBC=BC.sum;
+row('B8','AK8','1. 정산요약정보',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
+row('B9','H10','=IF(Z5="청구금액","총판매금액(원)",IF(Z5="지급금액","(a)총판매금액(원)"))',S({fill:FILL.purple}),true);
+row('I9','L10','총판매매수(장)',S({fill:FILL.purple}));
+row('M9','P10','=IF(Z5="청구금액","(a)판매수수료(원)",IF(Z5="지급금액","(b)판매수수료(원)"))',S({fill:FILL.purple}),true);
+row('Q9','AF9','=IF(Z5="청구금액","(b)기타거래내역(원)",IF(Z5="지급금액","(c)기타거래내역(원)"))',S({fill:FILL.purple}),true);
+row('AG9','AK10','=IF(Z5="청구금액","(a+b)청구금액(원)",IF(Z5="지급금액","(a-b-c)지급금액(원)"))',S({fill:FILL.purple}),true);
+row('Q10','T10','총계',S({fill:FILL.purple}));
+row('U10','X10','발권수수료',S({fill:FILL.purple}));
+row('Y10','AB10','현장지원',S({fill:FILL.purple}));
+row('AC10','AF10','기타',S({fill:FILL.purple}));
+row('B11','H11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.wonS}),true);
+row('I11','L11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
+row('M11','P11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
+row('Q11','T11','=U11+Y11+AC11',S({fill:FILL.white,fmt:F.won}),true);
+row('U11','X11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
+row('Y11','AB11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
+row('AC11','AF11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
+row('AG11','AK11','=IF(Z5="청구금액",M11+Q11,IF(Z5="지급금액",B11-M11-Q11))',S({fill:FILL.white,fmt:F.won}),true);
+
+// ================= 3) 2.회차·등급별 판매내역 (13행~) =================
+curBC=BC.t2;
+row('B13','AK13','2. 회차 및 등급별 판매내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
+const gh=(a,b,t)=>row(a,b,t,S({fill:FILL.green,font:'나눔고딕'}));
+gh('B14','C15','회차'); gh('D14','H15','공연일시'); gh('I14','L15','권종'); gh('M14','O15','판매(원)');
+gh('P14','AD14','예매처별 판매수(장)'); gh('AE14','AG15','총판매수(장)'); gh('AH14','AK15','총판매금액(원)');
+// 채널 배치 규칙: 예매처(온라인)는 왼쪽 슬롯부터, 현장판매는 항상 맨 끝(슬롯4=AB)
+const ONSITE='현장판매';
+const onlineCh=data.channels.filter(c=>c!==ONSITE);
+const hasOnsite=data.channels.includes(ONSITE);
+// 슬롯 인덱스 매핑: [엔티켓,놀티켓,...]→0,1,2,3 / 현장판매→4
+const slotOf=(chName)=>{
+  if(chName===ONSITE) return 4;
+  return onlineCh.indexOf(chName);
+};
+const chCols=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
+// 채널 헤더 (가변, 규칙 적용)
+data.channels.forEach((ch)=>{ const sl=slotOf(ch); gh(chCols[sl][0]+'15',chCols[sl][1]+'15',ch); });
+for(let i=0;i<5;i++){ if(!data.channels.some(ch=>slotOf(ch)===i)) gh(chCols[i][0]+'15',chCols[i][1]+'15',' '); }
+
+let r=16; const tStart=r;
+const roundEndRows=[];
+data.rounds.forEach((rd,ri)=>{
+  const rs=r;
+  rd.items.forEach((it,idx)=>{
+    // 회차·공연일시: 행별 가로병합, 값은 첫 행에만 (세로병합 안 함 - 원본 방식)
+    row(`B${r}`,`C${r}`, idx===0?(ri+1):'', S({fill:FILL.greenL}));
+    row(`D${r}`,`H${r}`, idx===0?rd.dt:'', S({fill:FILL.greenL,fmt:F.dt}));
+    row(`I${r}`,`L${r}`,it.name,S({fill:FILL.greenL,h:'left'}));
+    row(`M${r}`,`O${r}`,it.price,S({fill:FILL.greenL,fmt:F.won}));
+    const ch=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
+    // 채널별 판매수를 규칙 슬롯에 배치
+    const slotVals=[null,null,null,null,null];
+    data.channels.forEach((c,i)=>{ slotVals[slotOf(c)]=it.s[i]??0; });
+    for(let i=0;i<5;i++) row(`${ch[i][0]}${r}`,`${ch[i][1]}${r}`, slotVals[i]==null?'':slotVals[i], S({fill:FILL.greenL,fmt:F.num}));
+    row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
+    if(it.fixedAmount!=null) row(`AH${r}`,`AK${r}`,it.fixedAmount,S({fill:FILL.greenL,fmt:F.wonS}));
+    else row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
+    r++;
+  });
+  roundEndRows.push(r-1);  // 이 회차의 마지막 행
+});
+// 회차 구분선: 마지막 회차 제외, 각 회차 끝 행 bottom을 medium 초록
+const medGreen={style:'medium',color:{rgb:BC.t2}};
+for(let i=0;i<roundEndRows.length-1;i++){
+  const er=roundEndRows[i];
+  for(let Cc=COL.B;Cc<=COL.AK;Cc++){
+    const ref=XLSX.utils.encode_cell({r:er-1,c:Cc});  // er은 1-base, 0-base는 er-1
+    if(ws[ref]){ if(!ws[ref].s) ws[ref].s={}; if(!ws[ref].s.border) ws[ref].s.border={}; ws[ref].s.border.bottom=medGreen; }
+  }
+}
+// 입력 여유분 빈 행 1개 (원본 빈양식 방식)
+row(`B${r}`,`C${r}`,'',S({fill:FILL.greenL}));
+row(`D${r}`,`H${r}`,'',S({fill:FILL.greenL}));
+row(`I${r}`,`L${r}`,'',S({fill:FILL.greenL,h:'left'}));
+row(`M${r}`,`O${r}`,'',S({fill:FILL.greenL,fmt:F.won}));
+[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']].forEach(([a,bb])=>row(`${a}${r}`,`${bb}${r}`,'',S({fill:FILL.greenL,fmt:F.num})));
+row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
+row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
+r++;
+const tEnd=r-1;
+// 계행
+row(`B${r}`,`O${r}`,'계',S());
+[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']].forEach(([a,b])=>
+  row(`${a}${r}`,`${b}${r}`,`SUM(${a}${tStart}:${b}${tEnd})`,S({fmt:F.num}),true));
+row(`AE${r}`,`AG${r}`,`SUM(AE${tStart}:AG${tEnd})`,S({fmt:F.num}),true);
+row(`AH${r}`,`AK${r}`,`SUM(AH${tStart}:AK${tEnd})`,S({fmt:F.wonS}),true);
+const calcRow=r; r++;
+// 정산외발권
+row(`B${r}`,`H${r}`,'정산 외 발권',S({h:'center'}));
+row(`I${r}`,`AD${r}`,'초대좌석권',S({h:'center'}));
+row(`AE${r}`,`AG${r}`,data.초대좌석권,S({fmt:F.num}));
+row(`AH${r}`,`AK${r}`,'',S());
+const inviteRow=r; r++;
+row(`B${r}`,`AD${r}`,'총발권수(총판매수+정산외발권)',S({h:'center',fill:'EBF1DE'}));
+row(`AE${r}`,`AG${r}`,'',S({fmt:F.num,fill:'EBF1DE'}));  // 원본은 공란 (AH칸에만 값)
+// 원본 구조: 총발권수 행은 AH열에 =AE28+AE29
+row(`AH${r}`,`AK${r}`,`AE${calcRow}+AE${inviteRow}`,S({fmt:F.numU}),true);
+const totalIssueRow=r; r+=2;
+
+// ================= 4) 3.수수료 내역 =================
+curBC=BC.t3;
+row(`B${r}`,`AK${r}`,'3. 수수료 내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'})); r++;
+const yh=(a,b,t,f)=>row(a,b,t,S({fill:FILL.yellow,font:f||'나눔고딕'}));
+// 33~34행 헤더
+yh(`B${r}`,`D${r+1}`,'구분'); yh(`E${r}`,`H${r+1}`,'단가(원)'); yh(`I${r}`,`K${r+1}`,'수수료율');
+yh(`L${r}`,`Z${r}`,'예매처별 판매수(장)','나눔고딕');
+yh(`AA${r}`,`AC${r+1}`,'총판매수(장)','나눔고딕'); yh(`AD${r}`,`AG${r+1}`,'총판매금액(원)','나눔고딕');
+yh(`AH${r}`,`AK${r+1}`,'수수료 합계(원)');
+// 34행: 채널명 (예매처별 판매수 하위), 슬롯 규칙 적용
+const feeCh=[['L','N'],['O','Q'],['R','T'],['U','W'],['X','Z']];
+const fr2=r+1;
+data.channels.forEach((c)=>{ const sl=slotOf(c); row(`${feeCh[sl][0]}${fr2}`,`${feeCh[sl][1]}${fr2}`,c,S({fill:FILL.yellow,font:'나눔고딕'})); });
+for(let i=0;i<5;i++){ if(!data.channels.some(c=>slotOf(c)===i)) row(`${feeCh[i][0]}${fr2}`,`${feeCh[i][1]}${fr2}`,' ',S({fill:FILL.yellow,font:'나눔고딕'})); }
+const feeHeadRow=r; r+=2;
+// 권종별 수수료 행: 고유 단가별로 집계 (원본은 단가별 1행)
+const priceMap={};
+data.rounds.forEach(rd=>rd.items.forEach(it=>{
+  const key = it.fixedAmount!=null ? '차액' : it.price;
+  if(!priceMap[key]) priceMap[key]={price:it.price,ch:[0,0,0,0,0],fixedAmount:it.fixedAmount};
+  it.s.forEach((v,i)=>{ priceMap[key].ch[slotOf(data.channels[i])]+=v; });
+}));
+const fStart=r;
+const prices=Object.values(priceMap).sort((a,b)=>b.price-a.price);
+prices.forEach(p=>{
+  row(`B${r}`,`D${r}`,'',S());
+  // 차액 행은 단가=금액(fixedAmount), 일반 행은 권종 단가
+  const unitPrice = p.fixedAmount!=null ? p.fixedAmount : p.price;
+  row(`E${r}`,`H${r}`,unitPrice,S({fmt:F.won}));
+  row(`I${r}`,`K${r}`,data.수수료율,S({fmt:F.pct}));
+  feeCh.forEach((cc,i)=>{ const used=data.channels.some(c=>slotOf(c)===i); row(`${cc[0]}${r}`,`${cc[1]}${r}`, used?p.ch[i]:'', S({fmt:F.num})); });
+  row(`AA${r}`,`AC${r}`,`SUM(L${r}:Z${r})`,S({fmt:F.num}),true);
+  if(p.fixedAmount!=null) row(`AD${r}`,`AG${r}`,p.fixedAmount,S({fmt:F.won}));
+  else row(`AD${r}`,`AG${r}`,`E${r}*AA${r}`,S({fmt:F.won}),true);
+  row(`AH${r}`,`AK${r}`,`AD${r}*I${r}`,S({fmt:F.won1}),true);
+  r++;
+});
+// 입력 여유분 빈 행 1개
+row(`B${r}`,`D${r}`,'',S());
+row(`E${r}`,`H${r}`,'',S({fmt:F.won}));
+row(`I${r}`,`K${r}`,data.수수료율,S({fmt:F.pct}));
+feeCh.forEach((cc)=>row(`${cc[0]}${r}`,`${cc[1]}${r}`,'',S({fmt:F.num})));
+row(`AA${r}`,`AC${r}`,`SUM(L${r}:Z${r})`,S({fmt:F.num}),true);
+row(`AD${r}`,`AG${r}`,`E${r}*AA${r}`,S({fmt:F.won}),true);
+row(`AH${r}`,`AK${r}`,`AD${r}*I${r}`,S({fmt:F.won1}),true);
+r++;
+const fEnd=r-1;
+row(`B${r}`,`Z${r}`,'총계',S({fill:FILL.yellow}));
+row(`AA${r}`,`AC${r}`,`SUM(AA${fStart}:AC${fEnd})`,S({fill:FILL.yellow,fmt:F.num}),true);
+row(`AD${r}`,`AG${r}`,`SUM(AD${fStart}:AG${fEnd})`,S({fill:FILL.yellow,fmt:F.won}),true);
+row(`AH${r}`,`AK${r}`,`SUM(AH${fStart}:AK${fEnd})`,S({fill:FILL.yellow,fmt:F.won1}),true);
+const feeTotalRow=r; r+=2;
+
+// ================= 5) 4.기타거래내역 =================
+curBC=BC.t4;
+row(`B${r}`,`AK${r}`,'4. 기타거래내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'})); r++;
+const ch4=(a,b,t)=>row(a,b,t,S({fill:FILL.cyan}));
+ch4(`B${r}`,`E${r}`,'항목'); ch4(`F${r}`,`I${r}`,'세목'); ch4(`J${r}`,`M${r}`,'단가(원)');
+ch4(`N${r}`,`P${r}`,'수량'); ch4(`Q${r}`,`AG${r}`,'내역'); ch4(`AH${r}`,`AK${r}`,'금액(원)');
+r++;
+const etcRows=[
+  ['현장판매','1회',data.기타거래.현장판매],
+  ['현장배부','1회',data.기타거래.현장배부],
+  ['발권료','지정석',data.기타거래.발권료지정],
+  [null,'비지정석',data.기타거래.발권료비지정],
+  [null,' ',null],
+  ['기타','MMS문자홍보',data.기타거래.MMS],
+  [null,'무료공연등록비',data.기타거래.무료등록],
+];
+const eStart=r;
+const etcRowPos={};
+etcRows.forEach(([item,sub,d])=>{
+  const key = item==='현장판매'?'현장판매':item==='현장배부'?'현장배부':sub==='지정석'?'발권료지정':sub==='비지정석'?'발권료비지정':sub==='MMS문자홍보'?'MMS':sub==='무료공연등록비'?'무료등록':null;
+  if(key) etcRowPos[key]=r;
+  row(`B${r}`,`E${r}`,item||'',S({h:'center'}));
+  row(`F${r}`,`I${r}`,sub,S());
+  if(d){
+    row(`J${r}`,`M${r}`,d.단가,S({fmt:F.won}));
+    row(`N${r}`,`P${r}`,d.수량||'',S({fmt:F.num}));
+    row(`Q${r}`,`AG${r}`,'',S());
+    row(`AH${r}`,`AK${r}`,`J${r}*N${r}`,S({fmt:F.won}),true);
+  } else {
+    row(`J${r}`,`M${r}`,' ',S()); row(`N${r}`,`P${r}`,'',S());
+    row(`Q${r}`,`AG${r}`,'',S()); row(`AH${r}`,`AK${r}`,' ',S());
+  }
+  r++;
+});
+const eEnd=r-1;
+row(`B${r}`,`AG${r}`,'합계',S({fill:FILL.cyan}));
+row(`AH${r}`,`AK${r}`,`SUM(AH${eStart}:AK${eEnd})`,S({fill:FILL.cyan,fmt:F.won}),true);
+
+// ---- 플레이스홀더 → 실제 동적 행번호 치환 ----
+ws['B11'].f = `AH${calcRow}`;                          // 총판매금액 = 2번 계행
+ws['I11'].f = `AE${calcRow}`;                          // 총판매매수 = 2번 계행
+ws['M11'].f = `ROUNDDOWN(AH${feeTotalRow},-1)`;        // 판매수수료 = 3번 총계(절사)
+ws['U11'].f = `AH${etcRowPos.발권료지정}+AH${etcRowPos.발권료비지정}`;  // 발권수수료
+ws['Y11'].f = `AH${etcRowPos.현장판매}+AH${etcRowPos.현장배부}`;       // 현장지원
+ws['AC11'].f = `AH${etcRowPos.MMS}+AH${etcRowPos.무료등록}`;          // 기타
+
+// ---- 헤더 박스(2~5행) 바깥 둘레 (원본 그대로: 좌·상·하 회색thick, 우 검정thin) ----
+const thickGray={style:'thick',color:{rgb:BC.head}};
+const medBlack={style:'medium',color:{rgb:'000000'}};
+const thinBlack={style:'thin',color:{rgb:'000000'}};
+function setBorder(ref,side,style){
+  if(!ws[ref]) ws[ref]={t:'s',v:'',s:{border:{}}};
+  if(!ws[ref].s) ws[ref].s={};
+  if(!ws[ref].s.border) ws[ref].s.border={};
+  ws[ref].s.border[side]=style;
+}
+for(let R=1;R<=4;R++){ // 2~5행 (0-base 1~4)
+  setBorder(XLSX.utils.encode_cell({r:R,c:COL.B}),'left',thickGray);   // 좌: 회색 thick
+  setBorder(XLSX.utils.encode_cell({r:R,c:COL.AK}),'right',thinBlack); // 우 내측: 검정 thin
+  setBorder(XLSX.utils.encode_cell({r:R,c:COL.AL}),'left',thickGray);  // 우 외측: 회색 thick (원본은 AL열 left에 위치)
+}
+for(let Cc=COL.B;Cc<=COL.AK;Cc++){
+  setBorder(XLSX.utils.encode_cell({r:1,c:Cc}),'top',thickGray);       // 상: 회색 thick (원본)
+  setBorder(XLSX.utils.encode_cell({r:4,c:Cc}),'bottom',thickGray);    // 하: 회색 thick
+}
+
+// ---- 페이지 최외곽 테두리 (A1:AL{끝} medium 검정) ----
+// r은 1-base 합계행 번호. 합계 바로 아래 행 = 0-base 인덱스로 r.
+const pageEndRow = r;  // 0-base: 합계행(1-base r) 바로 아래
+const colA=0, colAL=37;
+for(let R=0;R<=pageEndRow;R++){
+  setBorder(XLSX.utils.encode_cell({r:R,c:colA}),'left',medBlack);
+  setBorder(XLSX.utils.encode_cell({r:R,c:colAL}),'right',medBlack);
+}
+for(let Cc=colA;Cc<=colAL;Cc++){
+  setBorder(XLSX.utils.encode_cell({r:0,c:Cc}),'top',medBlack);
+  setBorder(XLSX.utils.encode_cell({r:pageEndRow,c:Cc}),'bottom',medBlack);
+}
+
+// ---- 테두리 안 색 없는 빈 셀 모두 흰색 채우기 ----
+for(let R=0;R<=pageEndRow;R++){
+  for(let Cc=colA;Cc<=colAL;Cc++){
+    const ref=XLSX.utils.encode_cell({r:R,c:Cc});
+    if(!ws[ref]){
+      // 빈 셀 생성 + 흰색
+      ws[ref]={t:'s',v:'',s:{fill:{patternType:'solid',fgColor:{rgb:'FFFFFF'}}}};
+    } else {
+      if(!ws[ref].s) ws[ref].s={};
+      if(!ws[ref].s.fill){
+        ws[ref].s.fill={patternType:'solid',fgColor:{rgb:'FFFFFF'}};
+      }
+    }
+  }
+}
+
+// ---- 시트 마무리 ----
+ws['!merges']=merges;
+ws['!ref']='A1:AL'+(r+3);
+const cols=[]; for(let i=0;i<38;i++) cols.push({wch:3.5});
+cols[0]={wch:3.62}; cols[1]={wch:3.88}; cols[8]={wch:5.38}; cols[9]={wch:4.88}; cols[10]={wch:3.88}; cols[37]={wch:3.62};
+ws['!cols']=cols;
+const rows=[]; const lastRow=r+3;
+for(let i=0;i<lastRow;i++) rows[i]={hpt:16.5};
+rows[0]={hpt:55};
+[1,2,3,4].forEach(i=>rows[i]={hpt:30}); rows[5]={hpt:17.25}; rows[6]={hpt:30}; rows[10]={hpt:24.95};
+ws['!rows']=rows;
+
+// fitToPage 설정 (A4 가로·세로 맞춤)
+ws['!margins']={left:0.25,right:0.25,top:0.5,bottom:0.5};
+const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,'정산서');
+// 페이지 설정은 xlsx-js-style 제약상 Props로
+if(!wb.Workbook) wb.Workbook={};
+if(!wb.Workbook.Sheets) wb.Workbook.Sheets=[{}];
+ws['!pageSetup']={scale:0,fitToWidth:1,fitToHeight:1,orientation:'portrait',paperSize:9};
+return wb;
+
+}
+
+// ===== 페이지 설정 주입 =====
+// ============================================================
+// 페이지 설정 주입 (브라우저, fflate 사용)
+// xlsx-js-style이 pageSetup을 안 써주므로, 생성된 xlsx(zip)의
+// sheet XML에 fitToPage 설정을 직접 주입.
+// ============================================================
+
+/**
+ * @param {Uint8Array} xlsxBytes  xlsx-js-style이 만든 .xlsx 바이트
+ * @param {number} lastRow  인쇄영역 마지막 행 (A1:AL{lastRow})
+ * @returns {Uint8Array} 페이지설정이 주입된 .xlsx
+ */
+function injectPageSetup(xlsxBytes, lastRow) {
+  // fflate는 전역 fflate.unzipSync / zipSync 사용
+  const files = fflate.unzipSync(xlsxBytes);
+  const dec = new TextDecoder();
+  const enc = new TextEncoder();
+
+  const sheetPath = 'xl/worksheets/sheet1.xml';
+  let xml = dec.decode(files[sheetPath]);
+
+  // 1) <sheetPr>에 fitToPage 추가 (없으면 생성)
+  if (xml.includes('<sheetPr')) {
+    if (!xml.includes('pageSetUpPr')) {
+      xml = xml.replace(/<sheetPr([^>]*)>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/>');
+      xml = xml.replace(/<sheetPr([^>]*)\/>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/></sheetPr>');
+    }
+  } else {
+    // dimension 앞에 sheetPr 삽입
+    xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+  }
+
+  // 2) 기존 pageSetup 제거 후 새로 삽입 (fitToWidth=1, fitToHeight=1, scale 없음)
+  xml = xml.replace(/<pageSetup[^/]*\/>/g, '');
+  xml = xml.replace(/<pageMargins[^/]*\/>/g, '');
+  const margins = '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>';
+  const pageSetup = '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="1" orientation="portrait"/>';
+  const printOpts = '<printOptions horizontalCentered="1"/>';
+
+  // 3) print_area를 정의 (defined name) — workbook.xml에
+  // sheet XML에는 dimension만, print area는 workbook에 정의
+  // sheetData 닫힌 뒤에 margins+pageSetup 삽입
+  if (xml.includes('</sheetData>')) {
+    xml = xml.replace('</sheetData>', '</sheetData>' + printOpts + margins + pageSetup);
+  }
+
+  files[sheetPath] = enc.encode(xml);
+
+  // 4) workbook.xml에 Print_Area 정의
+  const wbPath = 'xl/workbook.xml';
+  let wbXml = dec.decode(files[wbPath]);
+  const printArea = `<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">정산서!$A$1:$AL$${lastRow}</definedName></definedNames>`;
+  if (!wbXml.includes('definedNames')) {
+    // <sheets>...</sheets> 다음에 삽입
+    wbXml = wbXml.replace('</sheets>', '</sheets>' + printArea);
+  }
+  files[wbPath] = enc.encode(wbXml);
+
+  return fflate.zipSync(files);
+}
+
+// ===== 정산 검산 =====
+// ============================================================
+// 정산서 브라우저 내 즉시 검산 (A층)
+// 생성 직후 호출 → 입력값으로 기대값 독립 계산 + 구조 검증
+// 결과를 직원에게 표시. 이상 시 경고.
+// ============================================================
+
+/**
+ * @param {Object} data  생성에 사용한 입력 데이터 (rounds, channels, 수수료율, 기타거래 등)
+ * @param {Object} ws    생성된 xlsx-js-style 워크시트 객체 (셀 검증용)
+ * @returns {Object} { ok, expected, issues:[] }
+ */
+function validateSettlement(data, ws) {
+  const issues = [];
+  const ONSITE = '현장판매';
+
+  // ---- 1. 입력 무결성 ----
+  data.rounds.forEach((rd, ri) => {
+    rd.items.forEach((it, ii) => {
+      if (it.fixedAmount == null) {
+        if (!(it.price > 0))
+          issues.push(`회차${ri+1} ${it.name||ii+1}: 단가가 0 이하 (${it.price})`);
+      }
+      (it.s || it.sales || []).forEach((v, ci) => {
+        if (v < 0) issues.push(`회차${ri+1} ${it.name}: 채널${ci+1} 판매수 음수 (${v})`);
+      });
+    });
+  });
+  if (!(data.수수료율 >= 0 && data.수수료율 <= 1))
+    issues.push(`수수료율 범위 이상: ${data.수수료율}`);
+
+  // ---- 2. 합계 독립 계산 (기대값) ----
+  let expTotal = 0, expCount = 0;
+  const priceSales = {};
+  data.rounds.forEach(rd => rd.items.forEach(it => {
+    if (it.fixedAmount != null) return; // 차액 제외
+    const s = (it.s || it.sales).reduce((a, b) => a + (b || 0), 0);
+    expTotal += it.price * s;
+    expCount += s;
+    priceSales[it.price] = (priceSales[it.price] || 0) + s;
+  }));
+  const rate = data.수수료율;
+  let expFee = 0;
+  Object.entries(priceSales).forEach(([p, c]) => { expFee += Math.round(p * c * rate * 10) / 10; });
+  const expFeeRounded = Math.floor(expFee / 10) * 10; // ROUNDDOWN(-1)
+
+  // 기타거래 총계
+  const etc = data.기타거래 || {};
+  const etcSum = Object.values(etc).reduce((a, d) => a + ((d.단가 || 0) * (d.수량 || 0)), 0);
+  const expPayout = expTotal - expFeeRounded - etcSum;
+
+  const expected = {
+    총판매금액: expTotal,
+    총판매수: expCount,
+    판매수수료: expFeeRounded,
+    기타거래총계: etcSum,
+    지급금액: expPayout,
+  };
+
+  // ---- 3. 구조 검증 (셀 직접 확인) ----
+  if (ws) {
+    // 채널 헤더: 현장판매가 마지막 슬롯(AB15)에 있는지
+    const onsiteUsed = data.channels.includes(ONSITE);
+    if (onsiteUsed) {
+      const ab15 = ws['AB15'];
+      if (!ab15 || ab15.v !== ONSITE)
+        issues.push(`현장판매가 마지막 슬롯(AB15)에 없음: ${ab15 ? ab15.v : '빈칸'}`);
+    }
+    // 요약 교차참조가 빈 셀 가리키지 않는지 (수식 문자열 확인)
+    ['B11', 'M11', 'AG11'].forEach(addr => {
+      const cell = ws[addr];
+      if (!cell || !cell.f) issues.push(`${addr} 수식 누락`);
+    });
+  }
+
+  return { ok: issues.length === 0, expected, issues };
+}
+
+/**
+ * 결과를 직원용 카드 HTML로 — 기대값을 보여줘서 엑셀과 대조 가능하게
+ */
+function renderValidationCard(result) {
+  const won = n => '₩' + (n || 0).toLocaleString('ko-KR');
+  const e = result.expected;
+  let html = `<div style="border:2px solid ${result.ok ? '#2e7d32' : '#c62828'};border-radius:10px;padding:14px;margin-top:12px;background:${result.ok ? '#e8f5e9' : '#ffebee'};">`;
+  html += `<div style="font-weight:700;color:${result.ok ? '#2e7d32' : '#c62828'};margin-bottom:8px;">`;
+  html += result.ok ? '✓ 검산 완료 — 아래 값이 정산서와 일치하는지 확인하세요' : '⚠ 검산 경고 — 확인 필요';
+  html += `</div>`;
+  html += `<table style="font-size:13px;width:100%;border-collapse:collapse;">`;
+  html += `<tr><td>총판매금액</td><td style="text-align:right;font-weight:600;">${won(e.총판매금액)}</td></tr>`;
+  html += `<tr><td>총판매수</td><td style="text-align:right;font-weight:600;">${(e.총판매수||0).toLocaleString()}장</td></tr>`;
+  html += `<tr><td>판매수수료</td><td style="text-align:right;font-weight:600;">${won(e.판매수수료)}</td></tr>`;
+  html += `<tr><td>기타거래총계</td><td style="text-align:right;font-weight:600;">${won(e.기타거래총계)}</td></tr>`;
+  html += `<tr style="border-top:1px solid #ccc;"><td style="font-weight:700;">지급금액</td><td style="text-align:right;font-weight:700;">${won(e.지급금액)}</td></tr>`;
+  html += `</table>`;
+  if (result.issues.length) {
+    html += `<ul style="margin:8px 0 0;padding-left:18px;color:#c62828;font-size:12px;">`;
+    result.issues.forEach(i => { html += `<li>${i}</li>`; });
+    html += `</ul>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+// 노드 환경 테스트용 export
+
+
+// ===== 정산서 도구 (통합) =====
+/* ===== 도구 3: 정산서 도구 (통합: 집계 + 정산서 생성) ===== */
 (function(){
   const CHANNELS=["엔티켓","예술회관","폐쇄몰"];
   const KW={
@@ -571,13 +1223,13 @@ document.querySelectorAll(".tab").forEach(t=>{
   const sessionsEl=document.getElementById("sessions");
   const outputEl=document.getElementById("output");
   const mergeEl=document.getElementById("merge");
-  const dlBtn=document.getElementById("dlBtn");
 
   let sessions=[];
   let seq=0;
   let dragSource=null;
   let mergeMap={};
   let mergeOpen=false;
+  let onsiteByRound={};   // {sessionId: 현장판매 수량}
 
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
@@ -646,11 +1298,12 @@ document.querySelectorAll(".tab").forEach(t=>{
   function makeSession(){
     const id=++seq; const obj={ id, channels:{} };
     CHANNELS.forEach(ch=>obj.channels[ch]=emptyChannel());
-    sessions.push(obj); renderSessions(); recompute();
+    sessions.push(obj); renderSessions(); renderOnsite(); recompute();
   }
   function removeSession(id){
     sessions=sessions.filter(s=>s.id!==id);
-    if(!sessions.length) makeSession(); else { renderSessions(); recompute(); }
+    delete onsiteByRound[id];
+    if(!sessions.length) makeSession(); else { renderSessions(); renderOnsite(); recompute(); }
   }
   function moveChannel(src,dst){
     if(src.sid===dst.sid && src.ch===dst.ch) return;
@@ -805,12 +1458,12 @@ document.querySelectorAll(".tab").forEach(t=>{
     window.__stRows=aggregate(sessions);
     renderOutput();
     renderMerge(window.__stRows);
+    updateSettlementLive();   // 정산 미리보기 갱신
   }
 
   function renderOutput(){
     const withData=sessions.filter(sessionHasData);
-    if(!withData.length){ outputEl.innerHTML='<div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div>'; dlBtn.disabled=true; return; }
-    dlBtn.disabled=false;
+    if(!withData.length){ outputEl.innerHTML='<div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div>'; return; }
     const money=n=>`₩${won(n)}`;
     const dash=v=>v?won(v):"-";
     let thead=`<thead>
@@ -933,35 +1586,158 @@ document.querySelectorAll(".tab").forEach(t=>{
     }));
   }
 
-  function download(){
-    const withData=sessions.filter(sessionHasData);
-    if(!withData.length) return;
-    const dash=v=>v?v:"-";
-    const aoa=[["회차","공연일시","권종","판매(원)","엔티켓","예술회관","폐쇄몰","총판매수","총판매금액"]];
-    let g={엔티켓:0,예술회관:0,폐쇄몰:0,합계:0,금액:0};
-    withData.forEach(s=>{
-      const idx=sessions.indexOf(s)+1;
-      const dt=sessionDateTime(s);
-      const rows=aggregate([s]);
-      rows.forEach((r,ri)=>{
-        const amt=r.가격*r.합계;
-        g.엔티켓+=r.엔티켓; g.예술회관+=r.예술회관; g.폐쇄몰+=r.폐쇄몰; g.합계+=r.합계; g.금액+=amt;
-        aoa.push([ ri===0?idx:"", ri===0?dt:"", r.권종, r.가격, dash(r.엔티켓), dash(r.예술회관), dash(r.폐쇄몰), r.합계, amt ]);
+  // ============================================================
+  // 보충 입력 패널 + 정산서 생성
+  // ============================================================
+
+  // 현장판매 입력란 (회차별)
+  function renderOnsite(){
+    const wrap=document.getElementById("onsiteWrap");
+    if(!sessions.length){ wrap.innerHTML='<div class="supp-empty">회차를 추가하면 입력란이 생깁니다.</div>'; return; }
+    wrap.innerHTML="";
+    sessions.forEach((s,i)=>{
+      const row=document.createElement("div");
+      row.className="onsite-row";
+      row.innerHTML=`<div class="rl">회차 ${i+1}</div>
+        <input type="number" min="0" placeholder="현장판매 수량(장)" value="${onsiteByRound[s.id]??''}"
+          data-sid="${s.id}">`;
+      row.querySelector("input").addEventListener("input",e=>{
+        onsiteByRound[s.id]=e.target.value; updateSettlementLive();
       });
+      wrap.appendChild(row);
     });
-    aoa.push(["계","","","",dash(g.엔티켓),dash(g.예술회관),dash(g.폐쇄몰),g.합계,g.금액]);
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:5},{wch:17},{wch:20},{wch:11},{wch:8},{wch:9},{wch:8},{wch:10},{wch:13}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"정산표");
-    const d=new Date(); const stamp=`${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}`;
-    XLSX.writeFile(wb,`정산표_${stamp}.xlsx`);
   }
 
+  // 기타거래 입력란
+  const ETC_DEF=[
+    {key:'현장판매',  label:'현장판매',  sub:'1회'},
+    {key:'현장배부',  label:'현장배부',  sub:'1회'},
+    {key:'발권료지정',label:'발권료',    sub:'지정석'},
+    {key:'발권료비지정',label:'',        sub:'비지정석'},
+    {key:'MMS',       label:'기타',      sub:'MMS문자홍보'},
+    {key:'무료등록',  label:'',          sub:'무료공연등록비'},
+  ];
+  const etcState={}; ETC_DEF.forEach(e=>etcState[e.key]={단가:'',수량:''});
+  function renderEtc(){
+    const wrap=document.getElementById("etcWrap");
+    wrap.innerHTML="";
+    ETC_DEF.forEach(e=>{
+      const row=document.createElement("div");
+      row.className="etc-row2";
+      row.innerHTML=`<div class="el">${e.label?`<b>${e.label}</b> · `:''}${e.sub}</div>
+        <input type="number" min="0" placeholder="단가" value="${etcState[e.key].단가}" data-k="${e.key}" data-f="단가">
+        <input type="number" min="0" placeholder="수량" value="${etcState[e.key].수량}" data-k="${e.key}" data-f="수량">`;
+      row.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",ev=>{
+        etcState[ev.target.dataset.k][ev.target.dataset.f]=ev.target.value; updateSettlementLive();
+      }));
+      wrap.appendChild(row);
+    });
+  }
+
+  // 집계 결과 → buildSettlementWorkbook 입력 데이터로 변환
+  function buildSettlementData(){
+    const rate=parseNum(document.getElementById("sf_rate").value)/100;
+    const withData=sessions.filter(sessionHasData);
+    // 정산서 채널: 노드 채널 + 현장판매
+    const channels=[...CHANNELS, "현장판매"];
+    const rounds=withData.map(s=>{
+      const dt=sessionDateTime(s);
+      const rows=aggregate([s]);
+      const onsiteQty=parseNum(onsiteByRound[s.id]);
+      // 현장판매는 회차 첫 권종 행에만 넣지 않고, 별도 처리 어려우므로
+      // 현장판매 수량은 가장 비싼(첫) 권종에 귀속 (실무상 일반권)
+      const items=rows.map((r,idx)=>({
+        name:r.권종, price:r.가격,
+        s:[r.엔티켓, r.예술회관, r.폐쇄몰, idx===0?onsiteQty:0],
+      }));
+      return { dt: dt?parseDateTime(dt):null, items };
+    });
+    const etc={};
+    ETC_DEF.forEach(e=>{ etc[e.key]={단가:parseNum(etcState[e.key].단가), 수량:parseNum(etcState[e.key].수량)}; });
+    return {
+      공연명: gv('sf_title'), 공연장소: gv('sf_place'), 기획사명: gv('sf_org'),
+      담당자: gv('sf_mgr'), email: gv('sf_email'), 연락처: gv('sf_tel'),
+      공연일시: rounds.map(r=>r.dt?fmtDt(r.dt):'').filter(Boolean).join('\n'),
+      channels, rounds, 초대좌석권: parseNum(gv('sf_invite')), 수수료율: rate, 기타거래: etc,
+    };
+  }
+  function gv(id){ return (document.getElementById(id).value||'').trim(); }
+  function parseDateTime(s){
+    const m=String(s).match(/(\d{4})-(\d{1,2})-(\d{1,2})\s*(\d{1,2}):(\d{2})/);
+    if(m) return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+    const d=new Date(s); return isNaN(d)?null:d;
+  }
+  function fmtDt(d){ return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+
+  // 실시간 검산 + 버튼 활성화
+  function updateSettlementLive(){
+    const hasAgg=sessions.some(sessionHasData);
+    const genBtn=document.getElementById("genSettlement");
+    if(!hasAgg){
+      document.getElementById("livePayout").textContent="₩0";
+      document.getElementById("checkResult").innerHTML="";
+      genBtn.disabled=true; return;
+    }
+    const data=buildSettlementData();
+    const r=validateSettlement(data, null);
+    document.getElementById("livePayout").textContent=wonS(r.expected.지급금액);
+    document.getElementById("checkResult").innerHTML=renderCheck(r);
+    genBtn.disabled=false;
+  }
+  function wonS(n){ return '₩'+(Math.round(n||0)).toLocaleString('ko-KR'); }
+  function renderCheck(r){
+    const cls=r.ok?'ok':'warn'; const e=r.expected;
+    let h=`<div class="chk ${cls}"><h4>${r.ok?'✓ 정산 검산 — 생성될 값':'⚠ 입력 확인 필요'}</h4>`;
+    h+=`<table>
+      <tr><td>총판매금액</td><td>${wonS(e.총판매금액)}</td></tr>
+      <tr><td>총판매수</td><td>${(e.총판매수||0).toLocaleString()}장</td></tr>
+      <tr><td>판매수수료</td><td>${wonS(e.판매수수료)}</td></tr>
+      <tr><td>기타거래총계</td><td>${wonS(e.기타거래총계)}</td></tr>
+      <tr class="ct"><td>지급금액</td><td>${wonS(e.지급금액)}</td></tr></table>`;
+    if(r.issues.length) h+='<ul>'+r.issues.map(i=>`<li>${esc(i)}</li>`).join('')+'</ul>';
+    h+='</div>'; return h;
+  }
+
+  // 정산서 생성
+  function generateSettlement(){
+    const data=buildSettlementData();
+    const check=validateSettlement(data, null);
+    if(!check.ok){
+      if(!confirm('확인할 항목이 있습니다:\n\n'+check.issues.join('\n')+'\n\n그래도 생성할까요?')) return;
+    }
+    try{
+      const wb=buildSettlementWorkbook(data);
+      let bytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+      const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
+      const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
+      const lastRow=16+grades+1+3+3+prices.size+1+1+12;
+      bytes=injectPageSetup(new Uint8Array(bytes), lastRow);
+      const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const today=new Date(); const stamp=`${today.getFullYear()}${p2(today.getMonth()+1)}${p2(today.getDate())}`;
+      const t=(data.공연명||'공연').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob); a.download=`엔티켓_정산서_${t}_${stamp}.xlsx`;
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
+    }catch(err){ alert('정산서 생성 중 오류: '+err.message); console.error(err); }
+  }
+
+  // 접이식 패널 토글
+  document.getElementById("suppToggle").addEventListener("click",()=>{
+    const body=document.getElementById("suppBody");
+    const open=body.classList.toggle("open");
+    document.getElementById("suppChev").style.transform=`rotate(${open?90:0}deg)`;
+  });
+
+  // 이벤트 바인딩
   document.getElementById("addSession").addEventListener("click",makeSession);
-  dlBtn.addEventListener("click",download);
+  document.getElementById("genSettlement").addEventListener("click",generateSettlement);
+
+  // 초기화
+  renderEtc();
   makeSession();
 })();
+
 </script>
 </body>
 </html>
