@@ -195,9 +195,6 @@
   .sfld input { width:100%; border:1px solid #e3dcec; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit; }
   .sfld input:focus { outline:none; border-color:#602b89; }
   .supp-empty { font-size:12.5px; color:#bbb; padding:8px 0; }
-  .onsite-row { display:grid; grid-template-columns:90px 1fr; gap:10px; align-items:center; margin-bottom:8px; }
-  .onsite-row .rl { font-size:12.5px; color:#555; }
-  .onsite-row input { border:1px solid #e3dcec; border-radius:8px; padding:7px 10px; font-size:13px; width:100%; }
   .etc-row2 { display:grid; grid-template-columns:1.5fr 1fr 0.8fr; gap:8px; align-items:center; margin-bottom:8px; }
   .etc-row2 .el { font-size:12.5px; color:#333; }
   .etc-row2 input { border:1px solid #e3dcec; border-radius:8px; padding:7px 10px; font-size:13px; width:100%; text-align:right; }
@@ -306,26 +303,31 @@
   <!-- ============ 탭 3: 정산서 도구 ============ -->
   <section class="panel-view" id="panel-settlement">
     <h2>공연 정산서</h2>
-    <div class="sub">정산 정보를 먼저 채우고, 회차 노드에 예매처별 판매 명단을 넣으면 정산서가 만들어집니다.</div>
+
+    <!-- 회차 노드 -->
+    <div id="sessions"></div>
+    <div class="add-row">
+      <button class="btn ghost" id="addSession">＋ 회차 추가</button>
+    </div>
+    <div class="connector">▼</div>
 
     <!-- 정산 정보 보충 입력 (접이식) -->
     <div class="st-supp" id="suppPanel">
       <div class="supp-head" id="suppToggle">
         <span class="chev" id="suppChev">▸</span>
-        정산 정보 입력
-        <span class="supp-sub">공연정보 · 수수료 · 현장판매 · 기타거래 — 정산서 생성에 필요</span>
+        기본 정보 입력
       </div>
       <div class="supp-body" id="suppBody">
 
         <div class="supp-sec">
           <div class="supp-sec-t">공연 정보</div>
           <div class="supp-grid2">
-            <label class="sfld"><span>공연명</span><input type="text" id="sf_title" placeholder="예: 판뮤지컬 ＜이상한 나라의 숨바꼭질＞"></label>
-            <label class="sfld"><span>공연장소</span><input type="text" id="sf_place" value="트라이보울 공연장"></label>
-            <label class="sfld"><span>기획사명</span><input type="text" id="sf_org" value="(재)인천문화재단 트라이보울"></label>
-            <label class="sfld"><span>담당자</span><input type="text" id="sf_mgr" placeholder="담당자명"></label>
-            <label class="sfld"><span>담당자 E-mail</span><input type="email" id="sf_email" placeholder="name@ifac.or.kr"></label>
-            <label class="sfld"><span>연락처</span><input type="text" id="sf_tel" placeholder="032-000-0000"></label>
+            <label class="sfld"><span>공연명</span><input type="text" id="sf_title"></label>
+            <label class="sfld"><span>공연장소</span><input type="text" id="sf_place"></label>
+            <label class="sfld"><span>기획사명</span><input type="text" id="sf_org"></label>
+            <label class="sfld"><span>담당자</span><input type="text" id="sf_mgr"></label>
+            <label class="sfld"><span>담당자 E-mail</span><input type="email" id="sf_email"></label>
+            <label class="sfld"><span>연락처</span><input type="text" id="sf_tel"></label>
           </div>
         </div>
 
@@ -338,11 +340,6 @@
         </div>
 
         <div class="supp-sec">
-          <div class="supp-sec-t">현장판매 <span class="supp-note">예매처 파일로 들어오지 않아 회차별로 직접 입력합니다</span></div>
-          <div id="onsiteWrap"><div class="supp-empty">회차를 추가하면 입력란이 생깁니다.</div></div>
-        </div>
-
-        <div class="supp-sec">
           <div class="supp-sec-t">기타거래내역 <span class="supp-note">단가·수량 입력 시 금액 자동 계산</span></div>
           <div id="etcWrap"></div>
         </div>
@@ -350,13 +347,6 @@
       </div>
     </div>
 
-    <div class="connector">▼</div>
-
-    <!-- 회차 노드 -->
-    <div id="sessions"></div>
-    <div class="add-row">
-      <button class="btn ghost" id="addSession">＋ 회차 추가</button>
-    </div>
     <div class="connector">▼</div>
 
     <!-- 집계 결과 -->
@@ -378,9 +368,27 @@
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-js-style/1.2.0/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <script>
+/* ===== 라이브러리 로드 확인 ===== */
+(function(){
+  const missing=[];
+  if(typeof XLSX==='undefined') missing.push('XLSX(xlsx-js-style)');
+  if(typeof fflate==='undefined') missing.push('fflate');
+  if(missing.length){
+    const msg='필수 라이브러리를 불러오지 못했습니다: '+missing.join(', ')+
+      '\n인터넷 연결을 확인하거나, 사내망에서 외부 CDN이 차단됐는지 확인해 주세요.';
+    document.addEventListener('DOMContentLoaded',()=>{
+      const bar=document.createElement('div');
+      bar.style.cssText='background:#fdecea;color:#c0392b;padding:12px 18px;font-size:13px;text-align:center;font-weight:600';
+      bar.textContent='⚠ '+msg.replace(/\n/g,' ');
+      document.body.prepend(bar);
+    });
+    console.error(msg);
+  }
+})();
+
 /* ===== 탭 전환 ===== */
 document.querySelectorAll(".tab").forEach(t=>{
   t.addEventListener("click",()=>{
@@ -820,7 +828,7 @@ data.rounds.forEach((rd,ri)=>{
     const ch=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
     // 채널별 판매수를 규칙 슬롯에 배치
     const slotVals=[null,null,null,null,null];
-    data.channels.forEach((c,i)=>{ slotVals[slotOf(c)]=it.s[i]??0; });
+    data.channels.forEach((c,i)=>{ const v=it.s[i]; slotVals[slotOf(c)]=(v===null||v===undefined)?null:v; });
     for(let i=0;i<5;i++) row(`${ch[i][0]}${r}`,`${ch[i][1]}${r}`, slotVals[i]==null?'':slotVals[i], S({fill:FILL.greenL,fmt:F.num}));
     row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
     if(it.fixedAmount!=null) row(`AH${r}`,`AK${r}`,it.fixedAmount,S({fill:FILL.greenL,fmt:F.wonS}));
@@ -1216,7 +1224,8 @@ function renderValidationCard(result) {
     가격:["구매가격","판매가격","권종가격","단가","가격","금액"],
     수:["티켓수","판매매수","매수","수량","장수","좌석수","판매수"],
     일:["공연일자","공연일","날짜","일자"],
-    시:["공연시간","공연시각","시간","시각"]
+    시:["공연시간","공연시각","시간","시각"],
+    공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"]
   };
   const SIM_COLORS=["#c084e8","#5bb6c4","#e0a23c","#7f8ce0","#d96aa0","#5fae6f"];
 
@@ -1229,7 +1238,6 @@ function renderValidationCard(result) {
   let dragSource=null;
   let mergeMap={};
   let mergeOpen=false;
-  let onsiteByRound={};   // {sessionId: 현장판매 수량}
 
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
@@ -1289,7 +1297,16 @@ function renderValidationCard(result) {
     const hr=detectHeaderRow(aoa);
     const headers=(aoa[hr]||[]).map(h=>String(h));
     const rows=aoa.slice(hr+1).filter(r=>r && r.some(c=>String(c).trim()!==""));
-    return { headers, rows, map:{
+    // 공연명 컬럼 탐지 → 첫 비어있지 않은 데이터 값 추출
+    const titleCol=findCol(headers,KW.공연명);
+    let showTitle="";
+    if(titleCol>=0){
+      for(const r of rows){
+        const v=String(r[titleCol]==null?"":r[titleCol]).trim();
+        if(v){ showTitle=v; break; }
+      }
+    }
+    return { headers, rows, showTitle, map:{
       권종:findCol(headers,KW.권종), 가격:findCol(headers,KW.가격), 수:findCol(headers,KW.수),
       일:findCol(headers,KW.일), 시:findCol(headers,KW.시)
     }};
@@ -1298,12 +1315,11 @@ function renderValidationCard(result) {
   function makeSession(){
     const id=++seq; const obj={ id, channels:{} };
     CHANNELS.forEach(ch=>obj.channels[ch]=emptyChannel());
-    sessions.push(obj); renderSessions(); renderOnsite(); recompute();
+    sessions.push(obj); renderSessions(); recompute();
   }
   function removeSession(id){
     sessions=sessions.filter(s=>s.id!==id);
-    delete onsiteByRound[id];
-    if(!sessions.length) makeSession(); else { renderSessions(); renderOnsite(); recompute(); }
+    if(!sessions.length) makeSession(); else { renderSessions(); recompute(); }
   }
   function moveChannel(src,dst){
     if(src.sid===dst.sid && src.ch===dst.ch) return;
@@ -1348,6 +1364,11 @@ function renderValidationCard(result) {
         const parsed=parseWorkbook(new Uint8Array(e.target.result));
         if(!parsed){ alert("읽을 데이터가 없어요."); return; }
         data.name=file.name; data.headers=parsed.headers; data.rows=parsed.rows; data.map=parsed.map;
+        // 공연명 자동 추출 → 입력란이 비어 있을 때만 채움 (직원 입력 보호)
+        if(parsed.showTitle){
+          const tf=document.getElementById("sf_title");
+          if(tf && !tf.value.trim()) tf.value=parsed.showTitle;
+        }
         renderSessions(); recompute();
       };
       reader.readAsArrayBuffer(file);
@@ -1590,34 +1611,16 @@ function renderValidationCard(result) {
   // 보충 입력 패널 + 정산서 생성
   // ============================================================
 
-  // 현장판매 입력란 (회차별)
-  function renderOnsite(){
-    const wrap=document.getElementById("onsiteWrap");
-    if(!sessions.length){ wrap.innerHTML='<div class="supp-empty">회차를 추가하면 입력란이 생깁니다.</div>'; return; }
-    wrap.innerHTML="";
-    sessions.forEach((s,i)=>{
-      const row=document.createElement("div");
-      row.className="onsite-row";
-      row.innerHTML=`<div class="rl">회차 ${i+1}</div>
-        <input type="number" min="0" placeholder="현장판매 수량(장)" value="${onsiteByRound[s.id]??''}"
-          data-sid="${s.id}">`;
-      row.querySelector("input").addEventListener("input",e=>{
-        onsiteByRound[s.id]=e.target.value; updateSettlementLive();
-      });
-      wrap.appendChild(row);
-    });
-  }
-
-  // 기타거래 입력란
+  // 기타거래 입력란 (defPrice: 트라이보울 정산서 원본 기준 기본 단가)
   const ETC_DEF=[
-    {key:'현장판매',  label:'현장판매',  sub:'1회'},
-    {key:'현장배부',  label:'현장배부',  sub:'1회'},
-    {key:'발권료지정',label:'발권료',    sub:'지정석'},
-    {key:'발권료비지정',label:'',        sub:'비지정석'},
-    {key:'MMS',       label:'기타',      sub:'MMS문자홍보'},
-    {key:'무료등록',  label:'',          sub:'무료공연등록비'},
+    {key:'현장판매',  label:'현장판매',  sub:'1회',     defPrice:44000},
+    {key:'현장배부',  label:'현장배부',  sub:'1회',     defPrice:33000},
+    {key:'발권료지정',label:'발권료',    sub:'지정석',   defPrice:170},
+    {key:'발권료비지정',label:'',        sub:'비지정석', defPrice:120},
+    {key:'MMS',       label:'기타',      sub:'MMS문자홍보', defPrice:77},
+    {key:'무료등록',  label:'',          sub:'무료공연등록비', defPrice:''},
   ];
-  const etcState={}; ETC_DEF.forEach(e=>etcState[e.key]={단가:'',수량:''});
+  const etcState={}; ETC_DEF.forEach(e=>etcState[e.key]={단가:(e.defPrice===''||e.defPrice==null)?'':String(e.defPrice),수량:''});
   function renderEtc(){
     const wrap=document.getElementById("etcWrap");
     wrap.innerHTML="";
@@ -1638,17 +1641,14 @@ function renderValidationCard(result) {
   function buildSettlementData(){
     const rate=parseNum(document.getElementById("sf_rate").value)/100;
     const withData=sessions.filter(sessionHasData);
-    // 정산서 채널: 노드 채널 + 현장판매
+    // 정산서 채널: 노드 채널 + 현장판매(칸은 유지하되 비워둠 → 엑셀에서 수동 기입)
     const channels=[...CHANNELS, "현장판매"];
     const rounds=withData.map(s=>{
       const dt=sessionDateTime(s);
       const rows=aggregate([s]);
-      const onsiteQty=parseNum(onsiteByRound[s.id]);
-      // 현장판매는 회차 첫 권종 행에만 넣지 않고, 별도 처리 어려우므로
-      // 현장판매 수량은 가장 비싼(첫) 권종에 귀속 (실무상 일반권)
-      const items=rows.map((r,idx)=>({
+      const items=rows.map(r=>({
         name:r.권종, price:r.가격,
-        s:[r.엔티켓, r.예술회관, r.폐쇄몰, idx===0?onsiteQty:0],
+        s:[r.엔티켓, r.예술회관, r.폐쇄몰, null],   // 현장판매 빈 칸 (엑셀에서 수동 기입)
       }));
       return { dt: dt?parseDateTime(dt):null, items };
     });
