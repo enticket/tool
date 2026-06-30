@@ -156,6 +156,32 @@
   #panel-settlement tr.total td { background: #f3eef8 !important; font-weight: 800; color: #602b89; }
   #panel-settlement .empty { color: #bbb; font-size: 13px; text-align: center; padding: 24px 0; }
   #panel-settlement .privacy { font-size: 12px; color: #aaa; margin-top: 18px; text-align: center; }
+
+  /* ===== 문자발송명단 탭 ===== */
+  #panel-sms .node { background: #fff; border-radius: 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.07); padding: 14px 16px; }
+  #panel-sms .node-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #panel-sms .node-title { font-size: 13px; font-weight: 700; color: #4e2270; flex-shrink: 0; }
+  #panel-sms .node-del { background: none; border: none; color: #c0392b; font-size: 13px; font-weight: 700; cursor: pointer; opacity: .65; flex-shrink: 0; }
+  #panel-sms .node-del:hover { opacity: 1; }
+  #panel-sms .slot { flex: 1; min-width: 0; }
+  #panel-sms .slot.hover .ch-drop { border-color: #602b89; background: #f3eef8; }
+  #panel-sms .ch-drop { border: 1.5px dashed #c4aee0; border-radius: 8px; padding: 12px 10px; text-align: center; font-size: 12.5px; color: #8a76a8; cursor: pointer; background:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
+  #panel-sms .ch-drop.loaded { border-style: solid; border-color: #7fc08a; background: #f1fbf2; color: #2e7d32; font-weight: 600; word-break: break-all; cursor: default; }
+  #panel-sms .ch-drop .rm { cursor:pointer; color:#c0392b; border:none; background:none; font-size:13px; font-weight:700; flex-shrink:0; opacity:.65; }
+  #panel-sms .ch-drop .rm:hover { opacity:1; }
+  #panel-sms .sms-row { display: flex; align-items: center; gap: 10px; }
+  #panel-sms .ch-info { font-size: 11.5px; color: #999; margin-top: 7px; }
+  #panel-sms .connector { text-align: center; color: #b89cd6; font-size: 18px; margin: 5px 0; }
+  #panel-sms .add-row { text-align: center; margin: 14px 0; }
+  #panel-sms .out-head { background: #602b89; color: #fff; border-radius: 14px 14px 0 0; padding: 12px 18px; font-size: 15px; font-weight: 800; }
+  #panel-sms .out-body { background: #fff; border-radius: 0 0 14px 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.07); padding: 16px 18px; }
+  #panel-sms table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  #panel-sms th, #panel-sms td { border: 1px solid #ececec; padding: 7px 12px; text-align: left; }
+  #panel-sms th { background: #602b89; color: #fff; font-weight: 600; position: sticky; top: 0; }
+  #panel-sms tr:nth-child(even) td { background: #faf8fc; }
+  #panel-sms .empty { color: #bbb; font-size: 13px; text-align: center; padding: 24px 0; }
+  #panel-sms .warn { background: #fff3e0; border-left: 3px solid #fb8c00; color: #8a4b00; padding: 9px 13px; border-radius: 6px; font-size: 12.5px; margin-top: 10px; }
+  #panel-sms .privacy { font-size: 12px; color: #aaa; margin-top: 18px; text-align: center; }
   #panel-settlement .merge { margin-top: 18px; border-top: 1px dashed #e3d9ef; padding-top: 14px; }
   #panel-settlement .merge h3 { font-size: 14px; color: #602b89; margin-bottom: 3px; }
   #panel-settlement .merge .note { font-size: 12px; color: #888; margin-bottom: 10px; }
@@ -226,6 +252,7 @@
       <button class="tab active" data-tab="excel">예매자 명단 정리</button>
       <button class="tab" data-tab="poster">이미지 변환</button>
       <button class="tab" data-tab="settlement">공연 정산서</button>
+      <button class="tab" data-tab="sms">문자발송명단</button>
     </nav>
   </div>
 </div>
@@ -362,6 +389,35 @@
       <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
     </div>
     <div id="checkResult"></div>
+
+    <div class="privacy"></div>
+  </section>
+
+  <!-- ============ 탭 4: 문자발송명단 ============ -->
+  <section class="panel-view" id="panel-sms">
+    <h2>문자발송명단</h2>
+
+    <!-- 상시 드롭존: 드래그/선택하면 파일이 계속 추가됨 -->
+    <label class="drop" id="smsDrop">
+      <div class="big">📂 예매자 명단 파일 넣기</div>
+      <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
+      <input type="file" id="smsFileInput" accept=".xls,.xlsx" multiple />
+    </label>
+
+    <!-- 추가된 파일 목록 -->
+    <div id="smsNodes"></div>
+    <div class="connector">▼</div>
+
+    <!-- 결과 -->
+    <div class="out-head">추출 결과 <span id="smsCount" style="font-weight:400;font-size:13px;opacity:.85"></span></div>
+    <div class="out-body">
+      <div id="smsOutput"><div class="empty">파일을 넣으면 이름·전화번호가 자동으로 추출됩니다.</div></div>
+      <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
+        <button class="btn" id="smsDlTxt">txt 다운로드</button>
+        <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
+        <span class="fname" id="smsDlInfo"></span>
+      </div>
+    </div>
 
     <div class="privacy"></div>
   </section>
@@ -1820,6 +1876,208 @@ function renderValidationCard(result) {
   // 초기화
   renderEtc();
   makeSession();
+})();
+
+/* ===== 도구 4: 문자발송명단 (노드식 추합 + 중복제거) ===== */
+(function(){
+  // 이름·전화 컬럼 인식 키워드 (예매처마다 컬럼명이 달라 넓게 잡음)
+  const KW_NAME=["관람자명","예매자명","구매자명","수령자명","고객명","성명","이름","예매자","구매자","관람자","회원명"];
+  const KW_TEL =["연락처","휴대폰","휴대전화","핸드폰","전화번호","전화","핸드폰번호","휴대폰번호","수신번호","mobile","phone","tel"];
+
+  const nodesEl=document.getElementById("smsNodes");
+  const outputEl=document.getElementById("smsOutput");
+  const countEl=document.getElementById("smsCount");
+  const dlRow=document.getElementById("smsDownloadRow");
+  const dlInfo=document.getElementById("smsDlInfo");
+
+  let nodes=[];   // {id, name, headers, rows, map:{이름,전화}}
+  let seq=0;
+
+  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
+  const won=n=>Number(n).toLocaleString("ko-KR");
+
+  // 전화번호 정규화: 숫자만 추출 → 010-XXXX-XXXX 형태로. 중복 판정은 숫자열 기준.
+  function normTel(v){
+    let digits=String(v==null?"":v).replace(/[^\d]/g,"");
+    if(!digits) return {key:"", disp:""};
+    // 국가코드 +82 → 0
+    if(digits.startsWith("82")) digits="0"+digits.slice(2);
+    // 표시용 하이픈
+    let disp=digits;
+    if(/^01\d{8,9}$/.test(digits)){
+      disp = digits.length===11 ? digits.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3")
+                                : digits.replace(/(\d{3})(\d{3})(\d{4})/,"$1-$2-$3");
+    } else if(/^0\d{8,10}$/.test(digits)){
+      disp = digits.replace(/(\d{2,3})(\d{3,4})(\d{4})$/,"$1-$2-$3");
+    }
+    return {key:digits, disp};
+  }
+
+  function findCol(headers, keywords){
+    const lc=s=>norm(s).toLowerCase();
+    // 정확 일치 우선 → 부분 포함 (대소문자 무시)
+    for(const kw of keywords){ const i=headers.findIndex(h=>lc(h)===lc(kw)); if(i>=0) return i; }
+    for(const kw of keywords){ const i=headers.findIndex(h=>lc(h).includes(lc(kw))); if(i>=0) return i; }
+    return -1;
+  }
+  function detectHeaderRow(aoa){
+    const lc=s=>norm(s).toLowerCase();
+    const score=row=>{ const cells=(row||[]).map(lc); let s=0;
+      if(cells.some(c=>KW_NAME.some(k=>c.includes(lc(k))))) s++;
+      if(cells.some(c=>KW_TEL.some(k=>c.includes(lc(k))))) s++;
+      return s; };
+    const lim=Math.min(aoa.length,15); let best=0,bestScore=-1;
+    for(let r=0;r<lim;r++){ const s=score(aoa[r]); if(s>bestScore){ bestScore=s; best=r; } }
+    return best;
+  }
+  function parseWorkbook(buf){
+    const wb=XLSX.read(buf,{type:"array",cellDates:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+    if(!aoa.length) return null;
+    const hr=detectHeaderRow(aoa);
+    const headers=(aoa[hr]||[]).map(h=>String(h));
+    const rows=aoa.slice(hr+1).filter(r=>r && r.some(c=>String(c).trim()!==""));
+    return { headers, rows, map:{ 이름:findCol(headers,KW_NAME), 전화:findCol(headers,KW_TEL) } };
+  }
+
+  // 파일을 읽어 노드로 추가 (드래그/선택 시마다 호출)
+  function addFiles(fileList){
+    const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
+    if(!files.length) return;
+    files.forEach(file=>{
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const parsed=parseWorkbook(new Uint8Array(e.target.result));
+        const node={ id:++seq, name:file.name, headers:[], rows:[], map:{이름:-1,전화:-1}, error:false };
+        if(!parsed){ node.error=true; }
+        else { node.headers=parsed.headers; node.rows=parsed.rows; node.map=parsed.map; }
+        nodes.push(node);
+        render(); recompute();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
+
+  function render(){
+    nodesEl.innerHTML="";
+    nodes.forEach((n,i)=>{
+      const node=document.createElement("div");
+      node.className="node";
+      node.style.marginTop=i>0?"8px":"0";
+      node.innerHTML=`<div class="sms-row">
+          <div class="ch-drop loaded" style="flex:1"><span>✓ ${esc(n.name)}</span></div>
+          <button class="node-del" title="제거">✕</button>
+        </div><div class="ch-info"></div>`;
+      const info=node.querySelector(".ch-info");
+      node.querySelector(".node-del").addEventListener("click",()=>removeNode(n.id));
+
+      if(n.error){
+        info.innerHTML=`<span style="color:#c0392b">⚠ 읽을 데이터가 없습니다.</span>`;
+      }else{
+        const okName=n.map.이름>=0, okTel=n.map.전화>=0;
+        if(okName && okTel){
+          info.innerHTML=`<span style="color:#2e7d32">✓ 이름·전화 인식됨</span> · ${won(n.rows.length)}행`;
+        }else{
+          info.innerHTML=`<span style="color:#c0392b">⚠ ${!okName?"이름":""}${(!okName&&!okTel)?"·":""}${!okTel?"전화":""} 컬럼을 지정해 주세요</span>`;
+          const mk=(label,key)=>{
+            const sel=document.createElement("select");
+            sel.style.cssText="margin-left:6px;font-size:11.5px;padding:2px 4px;border:1px solid #ddd;border-radius:5px";
+            sel.innerHTML=`<option value="-1">${label}(없음)</option>`+n.headers.map((h,idx)=>`<option value="${idx}" ${n.map[key]===idx?"selected":""}>${esc(h||("열"+(idx+1)))}</option>`).join("");
+            sel.addEventListener("change",()=>{ n.map[key]=parseInt(sel.value,10); render(); recompute(); });
+            return sel;
+          };
+          const wrap=document.createElement("div"); wrap.style.marginTop="6px";
+          wrap.appendChild(mk("이름","이름")); wrap.appendChild(mk("전화","전화"));
+          info.appendChild(wrap);
+        }
+      }
+      nodesEl.appendChild(node);
+    });
+  }
+
+  // 전체 추합 + 전화번호 기준 중복 제거
+  let lastResult=[];
+  function recompute(){
+    const seen=new Set();
+    const out=[];
+    nodes.forEach(n=>{
+      if(n.error || n.map.전화<0) return;
+      n.rows.forEach(r=>{
+        const tel=normTel(r[n.map.전화]);
+        if(!tel.key) return;              // 전화번호 없으면 제외
+        if(seen.has(tel.key)) return;     // 전화번호 기준 중복 제거 (먼저 나온 것 유지)
+        seen.add(tel.key);
+        const name = n.map.이름>=0 ? String(r[n.map.이름]==null?"":r[n.map.이름]).trim() : "";
+        out.push({ 이름:name, 전화:tel.disp });
+      });
+    });
+    out.sort((a,b)=>String(a.이름).localeCompare(String(b.이름),"ko"));
+    lastResult=out;
+    renderOutput();
+  }
+
+  function renderOutput(){
+    const anyLoaded=nodes.length>0;
+    if(!anyLoaded){ outputEl.innerHTML='<div class="empty">파일을 넣으면 이름·전화번호가 자동으로 추출됩니다.</div>'; countEl.textContent=""; dlRow.style.display="none"; return; }
+    if(!lastResult.length){
+      outputEl.innerHTML='<div class="warn">추출된 전화번호가 없습니다. 각 파일에서 전화 컬럼이 올바르게 지정됐는지 확인해 주세요.</div>';
+      countEl.textContent=""; dlRow.style.display="none"; return;
+    }
+    const noTelName=lastResult.filter(x=>!x.이름).length;
+    countEl.textContent=`· 중복 제거 후 ${won(lastResult.length)}명`;
+    const preview=lastResult.slice(0,50);
+    let html=`<div class="table-scroll" style="max-height:420px;overflow:auto"><table>
+      <tr><th style="width:48px">#</th><th>이름</th><th>전화번호</th></tr>`;
+    preview.forEach((x,i)=>{ html+=`<tr><td>${i+1}</td><td>${esc(x.이름)||'<span style="color:#bbb">(이름 없음)</span>'}</td><td>${esc(x.전화)}</td></tr>`; });
+    html+=`</table></div>`;
+    if(lastResult.length>50) html+=`<div style="font-size:12px;color:#999;margin-top:6px">미리보기 50명 표시 · 전체 ${won(lastResult.length)}명은 다운로드 파일에 포함됩니다.</div>`;
+    if(noTelName) html+=`<div class="warn">이름이 비어있는 항목 ${won(noTelName)}건이 있습니다. (전화번호는 포함됨)</div>`;
+    outputEl.innerHTML=html;
+    dlRow.style.display="flex";
+    dlInfo.innerHTML=`총 <b>${won(lastResult.length)}명</b>`;
+  }
+
+  // 다운로드: txt (한 줄에 "이름 전화번호")
+  function dlTxt(){
+    if(!lastResult.length) return;
+    const lines=lastResult.map(x=>(x.이름 ? x.이름+" "+x.전화 : x.전화));
+    const blob=new Blob([lines.join("\r\n")],{type:"text/plain;charset=utf-8"});
+    triggerDownload(blob, fname("txt"));
+  }
+  // 다운로드: 엑셀 (이름·전화번호 2열)
+  function dlXlsx(){
+    if(!lastResult.length) return;
+    const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름, x.전화])];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:14},{wch:18}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"문자발송명단");
+    XLSX.writeFile(wb, fname("xlsx"));
+  }
+  function fname(ext){
+    const d=new Date(); const p=n=>String(n).padStart(2,"0");
+    return `문자발송명단_${won(lastResult.length)}명_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.${ext}`;
+  }
+  function triggerDownload(blob, filename){
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download=filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
+  }
+
+  // 상시 드롭존: 드래그/선택 시마다 파일 추가
+  const smsDrop=document.getElementById("smsDrop");
+  const smsInput=document.getElementById("smsFileInput");
+  smsInput.addEventListener("change",e=>{ if(e.target.files.length) addFiles(e.target.files); smsInput.value=""; });
+  ["dragenter","dragover"].forEach(ev=>smsDrop.addEventListener(ev,e=>{ e.preventDefault(); smsDrop.classList.add("hover"); }));
+  ["dragleave","drop"].forEach(ev=>smsDrop.addEventListener(ev,e=>{ e.preventDefault(); smsDrop.classList.remove("hover"); }));
+  smsDrop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+  document.getElementById("smsDlTxt").addEventListener("click",dlTxt);
+  document.getElementById("smsDlXlsx").addEventListener("click",dlXlsx);
 })();
 
 </script>
