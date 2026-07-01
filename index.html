@@ -250,6 +250,18 @@
   .chk table td:last-child { text-align:right; font-weight:600; }
   .chk .ct td { border-top:1px solid rgba(0,0,0,.12); padding-top:5px; font-weight:700; }
   .chk ul { margin:8px 0 0; padding-left:18px; color:#c0392b; font-size:12px; }
+  /* ===== 예매자 명단 정리 탭 (노드식) ===== */
+  #panel-excel .node { background:#fff; border-radius:14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); padding:14px 16px; }
+  #panel-excel .sms-row { display:flex; align-items:center; gap:10px; }
+  #panel-excel .node-del { background:none; border:none; color:#c0392b; font-size:13px; font-weight:700; cursor:pointer; opacity:.65; flex-shrink:0; }
+  #panel-excel .node-del:hover { opacity:1; }
+  #panel-excel .ch-drop { border:1.5px solid #7fc08a; border-radius:8px; padding:12px 10px; text-align:center; font-size:12.5px; color:#2e7d32; background:#f1fbf2; font-weight:600; word-break:break-all; display:flex; align-items:center; justify-content:center; gap:8px; }
+  #panel-excel .ch-info { font-size:11.5px; color:#999; margin-top:7px; }
+  #panel-excel .connector { text-align:center; color:#b89cd6; font-size:18px; margin:5px 0; }
+  #panel-excel .out-head { background:#602b89; color:#fff; border-radius:14px 14px 0 0; padding:12px 18px; font-size:15px; font-weight:800; }
+  #panel-excel .out-body { background:#fff; border-radius:0 0 14px 14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); padding:16px 18px; }
+  #panel-excel .empty { color:#bbb; font-size:13px; text-align:center; padding:24px 0; }
+  #panel-excel .privacy { font-size:12px; color:#aaa; margin-top:18px; text-align:center; }
 </style>
 </head>
 <body>
@@ -277,28 +289,33 @@
   <section class="panel-view active" id="panel-excel">
     <h2>예매자 명단 정리</h2>
 
+    <!-- 상시 드롭존: 드래그/선택하면 파일이 계속 추가됨 -->
     <label class="drop" id="xlDrop">
       <div class="big">📂 예매자 명단 파일 넣기</div>
-      <div class="small">여기에 끌어다 놓거나 클릭해서 선택</div>
-      <input type="file" id="xlFile" accept=".xls,.xlsx" />
+      <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
+      <input type="file" id="xlFileInput" accept=".xls,.xlsx" multiple />
     </label>
 
-    <div class="panel hidden" id="xlResult">
-      <div class="summary" id="xlSummary"></div>
-      <div class="controls">
+    <!-- 추가된 파일 목록 -->
+    <div id="xlNodes"></div>
+    <div class="connector">▼</div>
+
+    <!-- 결과 -->
+    <div class="out-head">정리 결과 <span id="xlCount" style="font-weight:400;font-size:13px;opacity:.85"></span></div>
+    <div class="out-body">
+      <div class="controls" id="xlControls" style="display:none">
         <label class="toggle"><input type="checkbox" id="xlMask"> 연락처 가운데 가리기</label>
       </div>
-      <div class="btn-row">
+      <div id="xlOutput"><div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div></div>
+      <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
         <button class="btn ghost" id="xlDriveSave">드라이브 저장</button>
-        <button class="btn ghost" id="xlReset">초기화</button>
         <span class="fname" id="xlFname"></span>
       </div>
-      <div id="xlWarn"></div>
-      <div class="table-scroll" id="xlTable"></div>
-      <div class="meta" id="xlMeta"></div>
-      <div class="privacy"></div>
+      <div id="xlWarn" style="margin-top:10px"></div>
     </div>
+
+    <div class="privacy"></div>
   </section>
 
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
@@ -598,26 +615,128 @@ document.querySelectorAll(".tab").forEach(t=>{
     document.getElementById("panel-"+t.dataset.tab).classList.add("active");
   });
 });
-/* ===== 도구 1: 예매자 명단 정리 ===== */
+/* ===== 공용: 암호 걸린 Office 파일 복호화 (도구1·도구4 공유) ===== */
+  // ── 암호 걸린 Office 파일(.xls/.xlsx, Agile 암호화) 브라우저 복호화 ──
+  // 순수 JS AES-128-CBC + Web Crypto SHA-1 + 최소 CFB(OLE) 파서
+  const OfficeCrypto=(function(){
+    const AES=(function(){
+      function genTables(){
+        const sbox=new Uint8Array(256),inv=new Uint8Array(256);
+        const exp=new Uint8Array(256),log=new Uint8Array(256); let x=1;
+        for(let i=0;i<255;i++){ exp[i]=x; log[x]=i; x^=(x<<1)^((x&0x80)?0x11b:0); x&=0xff; } exp[255]=exp[0];
+        for(let i=0;i<256;i++){ let s=i?exp[(255-log[i])%255]:0; let xf=s; for(let k=0;k<4;k++){ s=((s<<1)|(s>>7))&0xff; xf^=s; } xf^=0x63; sbox[i]=xf&0xff; }
+        for(let i=0;i<256;i++) inv[sbox[i]]=i; return {sbox,inv};
+      }
+      const {sbox:SB,inv:ISB}=genTables();
+      const rcons=[0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];
+      function mul(a,b){ let r=0; for(let i=0;i<8;i++){ if(b&1)r^=a; const hi=a&0x80; a=(a<<1)&0xff; if(hi)a^=0x1b; b>>=1; } return r; }
+      function expandKey(key){ const w=new Uint8Array(176); w.set(key);
+        for(let i=16;i<176;i+=4){ let t=[w[i-4],w[i-3],w[i-2],w[i-1]];
+          if(i%16===0){ t=[t[1],t[2],t[3],t[0]].map(b=>SB[b]); t[0]^=rcons[i/16-1]; }
+          for(let j=0;j<4;j++) w[i+j]=w[i-16+j]^t[j]; } return w; }
+      function decryptBlock(inp,w){ let s=Array.from(inp.slice(0,16));
+        const addRK=r=>{ for(let i=0;i<16;i++) s[i]^=w[r*16+i]; };
+        const invShift=()=>{ const t=s.slice(); const idx=[0,13,10,7,4,1,14,11,8,5,2,15,12,9,6,3]; for(let i=0;i<16;i++) s[i]=t[idx[i]]; };
+        const invSub=()=>{ for(let i=0;i<16;i++) s[i]=ISB[s[i]]; };
+        const invMix=()=>{ for(let c=0;c<4;c++){ const o=c*4,a0=s[o],a1=s[o+1],a2=s[o+2],a3=s[o+3];
+          s[o]=mul(a0,14)^mul(a1,11)^mul(a2,13)^mul(a3,9); s[o+1]=mul(a0,9)^mul(a1,14)^mul(a2,11)^mul(a3,13);
+          s[o+2]=mul(a0,13)^mul(a1,9)^mul(a2,14)^mul(a3,11); s[o+3]=mul(a0,11)^mul(a1,13)^mul(a2,9)^mul(a3,14); } };
+        addRK(10); for(let r=9;r>=1;r--){ invShift(); invSub(); addRK(r); invMix(); } invShift(); invSub(); addRK(0);
+        return Uint8Array.from(s); }
+      function cbcDecrypt(key,iv,data){ const w=expandKey(key); const out=new Uint8Array(data.length); let prev=iv.slice(0,16);
+        for(let off=0;off<data.length;off+=16){ const block=data.subarray(off,off+16); const dec=decryptBlock(block,w);
+          for(let i=0;i<16;i++) out[off+i]=dec[i]^prev[i]; prev=block.slice(0,16); } return out; }
+      return { cbcDecrypt };
+    })();
+    const concat=(...a)=>{ let l=a.reduce((s,x)=>s+x.length,0),o=new Uint8Array(l),p=0; for(const x of a){o.set(x,p);p+=x.length;} return o; };
+    const b64=s=>{ const bin=atob(s); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; };
+    async function sha1(d){ return new Uint8Array(await crypto.subtle.digest('SHA-1',d)); }
+    async function deriveKey(pw,salt,spin,blockKey){ let h=await sha1(concat(salt,pw)); const it=new Uint8Array(4),dv=new DataView(it.buffer);
+      for(let i=0;i<spin;i++){ dv.setUint32(0,i,true); h=await sha1(concat(it,h)); } const hf=await sha1(concat(h,blockKey));
+      const key=new Uint8Array(16); key.set(hf.subarray(0,16)); return key; }
+    function parseCFB(buf){
+      const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+      const secSize=1<<dv.getUint16(30,true), miniSize=1<<dv.getUint16(32,true);
+      const dirStart=dv.getUint32(48,true), miniCutoff=dv.getUint32(56,true), miniFATStart=dv.getUint32(60,true);
+      const difStart=dv.getUint32(68,true), numDIF=dv.getUint32(72,true);
+      let fatSects=[]; for(let i=0;i<109;i++){ const v=dv.getUint32(76+i*4,true); if(v<0xFFFFFFF0) fatSects.push(v); }
+      let sect=difStart; for(let i=0;i<numDIF&&sect<0xFFFFFFF0;i++){ const off=(sect+1)*secSize;
+        for(let j=0;j<(secSize/4)-1;j++){ const v=dv.getUint32(off+j*4,true); if(v<0xFFFFFFF0) fatSects.push(v); } sect=dv.getUint32(off+secSize-4,true); }
+      const FAT=[]; for(const f of fatSects){ const off=(f+1)*secSize; for(let j=0;j<secSize/4;j++) FAT.push(dv.getUint32(off+j*4,true)); }
+      const readChain=(st,fat)=>{ const o=[]; let s=st; while(s<0xFFFFFFF0){ o.push(s); s=fat[s]; } return o; };
+      const secData=s=>buf.subarray((s+1)*secSize,(s+2)*secSize);
+      const dirBuf=concat(...readChain(dirStart,FAT).map(secData)); const entries=[];
+      for(let i=0;i*128<dirBuf.length;i++){ const edv=new DataView(dirBuf.buffer,dirBuf.byteOffset+i*128,128);
+        const nl=edv.getUint16(64,true); if(!nl) continue; let nm=''; for(let k=0;k<nl/2-1;k++) nm+=String.fromCharCode(edv.getUint16(k*2,true));
+        entries.push({name:nm,type:edv.getUint8(66),start:edv.getUint32(116,true),size:Number(edv.getBigUint64(120,true))}); }
+      const root=entries.find(e=>e.type===5);
+      const miniFATbuf=concat(...readChain(miniFATStart,FAT).map(secData)); const miniFAT=[];
+      { const m=new DataView(miniFATbuf.buffer,miniFATbuf.byteOffset,miniFATbuf.byteLength); for(let j=0;j<miniFATbuf.length/4;j++) miniFAT.push(m.getUint32(j*4,true)); }
+      const miniStream=concat(...readChain(root.start,FAT).map(secData));
+      const readStream=e=>{ if(e.size>=miniCutoff){ return concat(...readChain(e.start,FAT).map(secData)).subarray(0,e.size); }
+        else { const ch=readChain(e.start,miniFAT); return concat(...ch.map(s=>miniStream.subarray(s*miniSize,(s+1)*miniSize))).subarray(0,e.size); } };
+      return { get:nm=>{ const e=entries.find(x=>x.name===nm); return e?readStream(e):null; } };
+    }
+    // CFB(암호화 Office) 시그니처: D0 CF 11 E0
+    function isEncrypted(u8){ return u8.length>8 && u8[0]===0xD0&&u8[1]===0xCF&&u8[2]===0x11&&u8[3]===0xE0; }
+    async function decrypt(fileBuf,password){
+      const cfb=parseCFB(new Uint8Array(fileBuf));
+      const info=cfb.get('EncryptionInfo'), pkg=cfb.get('EncryptedPackage');
+      if(!info||!pkg) throw new Error('암호화 형식을 해석할 수 없습니다.');
+      const xml=new TextDecoder().decode(info.subarray(8));
+      if(!/spinCount/.test(xml)) throw new Error('지원하지 않는 암호화 방식입니다.');  // Agile만 지원
+      const pw=new Uint8Array(new Uint8Array((()=>{ const a=[]; for(const ch of password){ const c=ch.charCodeAt(0); a.push(c&0xff,(c>>8)&0xff); } return a; })()));
+      const pKeySalt=b64(xml.match(/<p:encryptedKey[^>]*saltValue="([^"]*)"/)[1]);
+      const spin=parseInt(xml.match(/spinCount="(\d+)"/)[1]);
+      const encKeyValue=b64(xml.match(/encryptedKeyValue="([^"]*)"/)[1]);
+      const keyDataSalt=b64(xml.match(/<keyData[^>]*saltValue="([^"]*)"/)[1]);
+      const verifierInput=b64(xml.match(/encryptedVerifierHashInput="([^"]*)"/)[1]);
+      const verifierHash=b64(xml.match(/encryptedVerifierHashValue="([^"]*)"/)[1]);
+      const bkVI=new Uint8Array([0xfe,0xa7,0xd2,0x76,0x3b,0x4b,0x9e,0x79]);
+      const bkVH=new Uint8Array([0xd7,0xaa,0x0f,0x6d,0x30,0x61,0x34,0x4e]);
+      const kVI=await deriveKey(pw,pKeySalt,spin,bkVI), kVH=await deriveKey(pw,pKeySalt,spin,bkVH);
+      const vin=AES.cbcDecrypt(kVI,pKeySalt,verifierInput), vh=AES.cbcDecrypt(kVH,pKeySalt,verifierHash);
+      const vinHash=await sha1(vin);
+      let match=true; for(let i=0;i<20;i++){ if(vinHash[i]!==vh[i]){ match=false; break; } }
+      if(!match) throw new Error('비밀번호가 올바르지 않습니다.');
+      const bkKey=new Uint8Array([0x14,0x6e,0x0b,0xe7,0xab,0xac,0xd0,0xd6]);
+      const keyForKey=await deriveKey(pw,pKeySalt,spin,bkKey);
+      const secretKey=AES.cbcDecrypt(keyForKey,pKeySalt,encKeyValue);
+      const totalSize=Number(new DataView(pkg.buffer,pkg.byteOffset,8).getBigUint64(0,true));
+      const enc=pkg.subarray(8); const SEG=4096; const parts=[]; const segs=Math.ceil(enc.length/SEG);
+      for(let i=0;i<segs;i++){ const blk=new Uint8Array(4); new DataView(blk.buffer).setUint32(0,i,true);
+        const iv=(await sha1(concat(keyDataSalt,blk))).subarray(0,16);
+        parts.push(AES.cbcDecrypt(secretKey,iv,enc.subarray(i*SEG,(i+1)*SEG))); }
+      return concat(...parts).subarray(0,totalSize);
+    }
+    return { isEncrypted, decrypt };
+  })();
+  // 파일명에서 YYMMDD(6자리) 추출 → 이 유형의 기본 암호
+  function pwFromName(name){ const m=String(name).match(/(\d{6})(?=\.[^.]+$|\D*$)/); return m?m[1]:null; }
+
+/* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
-  const drop=document.getElementById("xlDrop");
-  const input=document.getElementById("xlFile");
-  const resultPanel=document.getElementById("xlResult");
-  const summaryEl=document.getElementById("xlSummary");
-  const tableBox=document.getElementById("xlTable");
-  const previewMeta=document.getElementById("xlMeta");
+
+  const dropEl=document.getElementById("xlDrop");
+  const inputEl=document.getElementById("xlFileInput");
+  const nodesEl=document.getElementById("xlNodes");
+  const outputEl=document.getElementById("xlOutput");
+  const countEl=document.getElementById("xlCount");
+  const controlsEl=document.getElementById("xlControls");
+  const dlRow=document.getElementById("xlDownloadRow");
   const warnBox=document.getElementById("xlWarn");
-  const downloadBtn=document.getElementById("xlDownload");
   const fnameLabel=document.getElementById("xlFname");
   const maskPhoneChk=document.getElementById("xlMask");
 
-  let processedRows=[];
+  let nodes=[];   // {id,name,rows:[9col objects],missing:[],error,errMsg}
+  let seq=0;
   let outFilename="예매자명단_정리본.xlsx";
 
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const pad=n=>String(n).padStart(2,"0");
+  const won=n=>Number(n).toLocaleString("ko-KR");
 
   function fmtDate(v){
     if(v==null) return "";
@@ -640,61 +759,128 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   const maskPhone=v=>String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/,(m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
 
-  function handleFile(file){
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
-        if(rows.length<2){ alert("데이터가 없는 파일이에요."); drop.style.display=""; return; }
-        const headers=rows[0].map(h=>norm(h));
-        const colIndex={}, missing=[];
-        TARGET_COLS.forEach(name=>{ const idx=headers.indexOf(norm(name)); if(idx===-1) missing.push(name); else colIndex[name]=idx; });
-        processedRows=[];
-        for(let r=1;r<rows.length;r++){
-          const row=rows[r];
-          if(!row || row.every(c=>String(c).trim()==="")) continue;
-          const get=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
-          const obj={}; TARGET_COLS.forEach(name=>{ obj[name]=get(name); });
-          obj["공연일"]=fmtDate(obj["공연일"]);
-          obj["공연시간"]=fmtTime(obj["공연시간"]);
-          TARGET_COLS.forEach(name=>{
-            if(name!=="공연일" && name!=="공연시간"){
-              const v=obj[name]; obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v));
-            }
-          });
-          processedRows.push(obj);
-        }
-        const showName=processedRows.length?String(processedRows[0]["공연명"]||"").trim():"";
-        outFilename=(showName?showName+"_예매자명단":"예매자명단_정리본")+".xlsx";
-        warnBox.innerHTML=missing.length
-          ? `<div class="warn">다음 컬럼을 원본에서 못 찾았어요: <b>${missing.map(esc).join(", ")}</b> · 해당 칸은 비워둡니다. 원본 헤더 이름이 바뀌었는지 확인해 주세요.</div>` : "";
-        resultPanel.classList.remove("hidden");
-        render();
-      }catch(err){ alert("파일을 읽는 중 오류가 났어요: "+(err.message||err)); drop.style.display=""; }
-    };
-    reader.readAsArrayBuffer(file);
+  function detectHeaderRow(aoa){
+    const score=row=>{ const cells=(row||[]).map(norm); let s=0; TARGET_COLS.forEach(t=>{ if(cells.includes(norm(t))) s++; }); return s; };
+    const lim=Math.min(aoa.length,15); let best=0,bestScore=-1;
+    for(let r=0;r<lim;r++){ const s=score(aoa[r]); if(s>bestScore){ bestScore=s; best=r; } }
+    return best;
+  }
+  function parseBytes(bytes){
+    const wb=XLSX.read(bytes,{type:"array",cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+    if(aoa.length<2) return null;
+    const hr=detectHeaderRow(aoa);
+    const headers=(aoa[hr]||[]).map(h=>norm(h));
+    const colIndex={}, missing=[];
+    TARGET_COLS.forEach(name=>{ const idx=headers.indexOf(norm(name)); if(idx===-1) missing.push(name); else colIndex[name]=idx; });
+    const rows=[];
+    for(let r=hr+1;r<aoa.length;r++){
+      const row=aoa[r];
+      if(!row || row.every(c=>String(c).trim()==="")) continue;
+      const get=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
+      const obj={}; TARGET_COLS.forEach(name=>{ obj[name]=get(name); });
+      obj["공연일"]=fmtDate(obj["공연일"]);
+      obj["공연시간"]=fmtTime(obj["공연시간"]);
+      TARGET_COLS.forEach(name=>{ if(name!=="공연일"&&name!=="공연시간"){ const v=obj[name]; obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v)); } });
+      rows.push(obj);
+    }
+    return { rows, missing };
   }
 
+  function addFiles(fileList){
+    const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
+    if(!files.length) return;
+    files.forEach(file=>{
+      const reader=new FileReader();
+      reader.onload=async e=>{
+        try{
+          let bytes=new Uint8Array(e.target.result);
+          if(OfficeCrypto.isEncrypted(bytes)){
+            let pw=pwFromName(file.name); let dec=null, lastErr="";
+            for(let attempt=0;attempt<4;attempt++){
+              if(!pw){ pw=prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+              try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
+              catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
+            }
+            if(!dec){ nodes.push({id:++seq,name:file.name,rows:[],missing:[],error:true,errMsg:"암호 해제 실패"}); render(); recompute(); return; }
+            bytes=dec;
+          }
+          const parsed=parseBytes(bytes);
+          const node={id:++seq,name:file.name,rows:[],missing:[],error:false};
+          if(!parsed){ node.error=true; node.errMsg="읽을 데이터가 없습니다."; }
+          else { node.rows=parsed.rows; node.missing=parsed.missing; }
+          nodes.push(node); render(); recompute();
+        }catch(err){
+          nodes.push({id:++seq,name:file.name,rows:[],missing:[],error:true,errMsg:(err.message||"읽기 오류")});
+          render(); recompute();
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
+
+  function render(){
+    nodesEl.innerHTML="";
+    nodes.forEach((n,i)=>{
+      const node=document.createElement("div");
+      node.className="node"; node.style.marginTop=i>0?"8px":"0";
+      node.innerHTML=`<div class="sms-row">
+          <div class="ch-drop" style="flex:1"><span>✓ ${esc(n.name)}</span></div>
+          <button class="node-del" title="제거">✕</button>
+        </div><div class="ch-info"></div>`;
+      const info=node.querySelector(".ch-info");
+      node.querySelector(".node-del").addEventListener("click",()=>removeNode(n.id));
+      if(n.error){
+        info.innerHTML=`<span style="color:#c0392b">⚠ ${esc(n.errMsg||"읽을 데이터가 없습니다.")}</span>`;
+      }else{
+        let extra="";
+        if(n.missing.length) extra=` · <span style="color:#c0392b">누락: ${n.missing.map(esc).join(", ")}</span>`;
+        info.innerHTML=`<span style="color:#2e7d32">✓ 인식됨</span> · ${won(n.rows.length)}행${extra}`;
+      }
+      nodesEl.appendChild(node);
+    });
+  }
+
+  function allRows(){ const out=[]; nodes.forEach(n=>{ if(!n.error) n.rows.forEach(r=>out.push(r)); }); return out; }
   function getViewRows(){
-    let rows=processedRows.map(r=>({...r}));
+    let rows=allRows().map(r=>({...r}));
     rows.sort((a,b)=>String(a["관람자명"]||"").localeCompare(String(b["관람자명"]||""),"ko"));
     if(maskPhoneChk.checked) rows=rows.map(r=>({...r,"연락처":maskPhone(r["연락처"])}));
     return rows;
   }
-  function render(){
-    const rows=getViewRows();
-    summaryEl.innerHTML=`
-      <div class="stat"><div class="n">${rows.length}</div><div class="l">총 좌석/건수</div></div>`;
-    const preview=rows.slice(0,30);
-    let html="<table><tr>"+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
-    preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
-    html+="</table>";
-    tableBox.innerHTML=html;
-    previewMeta.textContent=rows.length>30?`미리보기 30행 표시 · 전체 ${rows.length}행은 다운로드 파일에 포함됩니다.`:`전체 ${rows.length}행`;
-    fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
+  function firstShowName(){ for(const r of allRows()){ const v=String(r["공연명"]||"").trim(); if(v) return v; } return ""; }
+
+  function recompute(){
+    const showName=firstShowName();
+    outFilename=(showName?showName+"_예매자명단":"예매자명단_정리본")+".xlsx";
+    renderOutput();
   }
+  function renderOutput(){
+    if(!nodes.length){
+      outputEl.innerHTML='<div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div>';
+      countEl.textContent=""; controlsEl.style.display="none"; dlRow.style.display="none"; warnBox.innerHTML=""; return;
+    }
+    const rows=getViewRows();
+    if(!rows.length){
+      outputEl.innerHTML='<div class="warn">정리된 행이 없습니다. 파일 형식·헤더를 확인해 주세요.</div>';
+      countEl.textContent=""; controlsEl.style.display="none"; dlRow.style.display="none"; return;
+    }
+    controlsEl.style.display="";
+    countEl.textContent=`· 총 ${won(rows.length)}행`;
+    const preview=rows.slice(0,30);
+    let html='<div class="table-scroll"><table><tr>'+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+    preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
+    html+="</table></div>";
+    if(rows.length>30) html+=`<div style="font-size:12px;color:#999;margin-top:6px">미리보기 30행 표시 · 전체 ${won(rows.length)}행은 다운로드 파일에 포함됩니다.</div>`;
+    outputEl.innerHTML=html;
+    dlRow.style.display="flex";
+    fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
+    const miss=new Set(); nodes.forEach(n=>n.missing&&n.missing.forEach(m=>miss.add(m)));
+    warnBox.innerHTML=miss.size?`<div class="warn">일부 파일에서 못 찾은 컬럼: <b>${[...miss].map(esc).join(", ")}</b> · 해당 칸은 비워둡니다.</div>`:"";
+  }
+
   function buildWb(){
     const rows=getViewRows();
     const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
@@ -704,38 +890,29 @@ document.querySelectorAll(".tab").forEach(t=>{
     XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
     return wb;
   }
-  function download(){
-    XLSX.writeFile(buildWb(),outFilename);
-  }
+  function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
   async function saveToDrive(){
+    if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
     if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
       const bytes=XLSX.write(buildWb(),{type:"array",bookType:"xlsx"});
-      const showName=processedRows.length?String(processedRows[0]["공연명"]||"").trim():"";
-      const res=await window.gdrive.saveFile(["enticket","예매자명단", showName||"미지정"], outFilename,
+      const res=await window.gdrive.saveFile(["enticket","예매자명단", firstShowName()||"미지정"], outFilename,
         new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
     }catch(e){ alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
 
-  input.addEventListener("change",e=>{ if(e.target.files[0]){ drop.style.display="none"; handleFile(e.target.files[0]); } });
-  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("hover");}));
-  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("hover");}));
-  drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]){ drop.style.display="none"; handleFile(e.dataTransfer.files[0]); } });
-  maskPhoneChk.addEventListener("change",render);
-  downloadBtn.addEventListener("click",download);
+  // 상시 드롭존: 드래그/선택 시마다 파일 추가
+  inputEl.addEventListener("change",e=>{ if(e.target.files.length) addFiles(e.target.files); inputEl.value=""; });
+  ["dragenter","dragover"].forEach(ev=>dropEl.addEventListener(ev,e=>{ e.preventDefault(); dropEl.classList.add("hover"); }));
+  ["dragleave","drop"].forEach(ev=>dropEl.addEventListener(ev,e=>{ e.preventDefault(); dropEl.classList.remove("hover"); }));
+  dropEl.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  maskPhoneChk.addEventListener("change",renderOutput);
+  document.getElementById("xlDownload").addEventListener("click",download);
   document.getElementById("xlDriveSave").addEventListener("click",saveToDrive);
-  document.getElementById("xlReset").addEventListener("click",()=>{
-    processedRows=[]; outFilename="예매자명단_정리본.xlsx";
-    resultPanel.classList.add("hidden");
-    drop.style.display="";
-    summaryEl.innerHTML=""; tableBox.innerHTML=""; previewMeta.textContent=""; warnBox.innerHTML=""; fnameLabel.innerHTML="";
-    maskPhoneChk.checked=false;
-    input.value="";
-  });
 })();
 
 /* ===== 도구 2: 포스터 이미지 변환 ===== */
@@ -2064,103 +2241,6 @@ function renderValidationCard(result) {
 
 /* ===== 도구 4: 문자발송명단 (노드식 추합 + 중복제거) ===== */
 (function(){
-  // ── 암호 걸린 Office 파일(.xls/.xlsx, Agile 암호화) 브라우저 복호화 ──
-  // 순수 JS AES-128-CBC + Web Crypto SHA-1 + 최소 CFB(OLE) 파서
-  const OfficeCrypto=(function(){
-    const AES=(function(){
-      function genTables(){
-        const sbox=new Uint8Array(256),inv=new Uint8Array(256);
-        const exp=new Uint8Array(256),log=new Uint8Array(256); let x=1;
-        for(let i=0;i<255;i++){ exp[i]=x; log[x]=i; x^=(x<<1)^((x&0x80)?0x11b:0); x&=0xff; } exp[255]=exp[0];
-        for(let i=0;i<256;i++){ let s=i?exp[(255-log[i])%255]:0; let xf=s; for(let k=0;k<4;k++){ s=((s<<1)|(s>>7))&0xff; xf^=s; } xf^=0x63; sbox[i]=xf&0xff; }
-        for(let i=0;i<256;i++) inv[sbox[i]]=i; return {sbox,inv};
-      }
-      const {sbox:SB,inv:ISB}=genTables();
-      const rcons=[0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];
-      function mul(a,b){ let r=0; for(let i=0;i<8;i++){ if(b&1)r^=a; const hi=a&0x80; a=(a<<1)&0xff; if(hi)a^=0x1b; b>>=1; } return r; }
-      function expandKey(key){ const w=new Uint8Array(176); w.set(key);
-        for(let i=16;i<176;i+=4){ let t=[w[i-4],w[i-3],w[i-2],w[i-1]];
-          if(i%16===0){ t=[t[1],t[2],t[3],t[0]].map(b=>SB[b]); t[0]^=rcons[i/16-1]; }
-          for(let j=0;j<4;j++) w[i+j]=w[i-16+j]^t[j]; } return w; }
-      function decryptBlock(inp,w){ let s=Array.from(inp.slice(0,16));
-        const addRK=r=>{ for(let i=0;i<16;i++) s[i]^=w[r*16+i]; };
-        const invShift=()=>{ const t=s.slice(); const idx=[0,13,10,7,4,1,14,11,8,5,2,15,12,9,6,3]; for(let i=0;i<16;i++) s[i]=t[idx[i]]; };
-        const invSub=()=>{ for(let i=0;i<16;i++) s[i]=ISB[s[i]]; };
-        const invMix=()=>{ for(let c=0;c<4;c++){ const o=c*4,a0=s[o],a1=s[o+1],a2=s[o+2],a3=s[o+3];
-          s[o]=mul(a0,14)^mul(a1,11)^mul(a2,13)^mul(a3,9); s[o+1]=mul(a0,9)^mul(a1,14)^mul(a2,11)^mul(a3,13);
-          s[o+2]=mul(a0,13)^mul(a1,9)^mul(a2,14)^mul(a3,11); s[o+3]=mul(a0,11)^mul(a1,13)^mul(a2,9)^mul(a3,14); } };
-        addRK(10); for(let r=9;r>=1;r--){ invShift(); invSub(); addRK(r); invMix(); } invShift(); invSub(); addRK(0);
-        return Uint8Array.from(s); }
-      function cbcDecrypt(key,iv,data){ const w=expandKey(key); const out=new Uint8Array(data.length); let prev=iv.slice(0,16);
-        for(let off=0;off<data.length;off+=16){ const block=data.subarray(off,off+16); const dec=decryptBlock(block,w);
-          for(let i=0;i<16;i++) out[off+i]=dec[i]^prev[i]; prev=block.slice(0,16); } return out; }
-      return { cbcDecrypt };
-    })();
-    const concat=(...a)=>{ let l=a.reduce((s,x)=>s+x.length,0),o=new Uint8Array(l),p=0; for(const x of a){o.set(x,p);p+=x.length;} return o; };
-    const b64=s=>{ const bin=atob(s); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; };
-    async function sha1(d){ return new Uint8Array(await crypto.subtle.digest('SHA-1',d)); }
-    async function deriveKey(pw,salt,spin,blockKey){ let h=await sha1(concat(salt,pw)); const it=new Uint8Array(4),dv=new DataView(it.buffer);
-      for(let i=0;i<spin;i++){ dv.setUint32(0,i,true); h=await sha1(concat(it,h)); } const hf=await sha1(concat(h,blockKey));
-      const key=new Uint8Array(16); key.set(hf.subarray(0,16)); return key; }
-    function parseCFB(buf){
-      const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
-      const secSize=1<<dv.getUint16(30,true), miniSize=1<<dv.getUint16(32,true);
-      const dirStart=dv.getUint32(48,true), miniCutoff=dv.getUint32(56,true), miniFATStart=dv.getUint32(60,true);
-      const difStart=dv.getUint32(68,true), numDIF=dv.getUint32(72,true);
-      let fatSects=[]; for(let i=0;i<109;i++){ const v=dv.getUint32(76+i*4,true); if(v<0xFFFFFFF0) fatSects.push(v); }
-      let sect=difStart; for(let i=0;i<numDIF&&sect<0xFFFFFFF0;i++){ const off=(sect+1)*secSize;
-        for(let j=0;j<(secSize/4)-1;j++){ const v=dv.getUint32(off+j*4,true); if(v<0xFFFFFFF0) fatSects.push(v); } sect=dv.getUint32(off+secSize-4,true); }
-      const FAT=[]; for(const f of fatSects){ const off=(f+1)*secSize; for(let j=0;j<secSize/4;j++) FAT.push(dv.getUint32(off+j*4,true)); }
-      const readChain=(st,fat)=>{ const o=[]; let s=st; while(s<0xFFFFFFF0){ o.push(s); s=fat[s]; } return o; };
-      const secData=s=>buf.subarray((s+1)*secSize,(s+2)*secSize);
-      const dirBuf=concat(...readChain(dirStart,FAT).map(secData)); const entries=[];
-      for(let i=0;i*128<dirBuf.length;i++){ const edv=new DataView(dirBuf.buffer,dirBuf.byteOffset+i*128,128);
-        const nl=edv.getUint16(64,true); if(!nl) continue; let nm=''; for(let k=0;k<nl/2-1;k++) nm+=String.fromCharCode(edv.getUint16(k*2,true));
-        entries.push({name:nm,type:edv.getUint8(66),start:edv.getUint32(116,true),size:Number(edv.getBigUint64(120,true))}); }
-      const root=entries.find(e=>e.type===5);
-      const miniFATbuf=concat(...readChain(miniFATStart,FAT).map(secData)); const miniFAT=[];
-      { const m=new DataView(miniFATbuf.buffer,miniFATbuf.byteOffset,miniFATbuf.byteLength); for(let j=0;j<miniFATbuf.length/4;j++) miniFAT.push(m.getUint32(j*4,true)); }
-      const miniStream=concat(...readChain(root.start,FAT).map(secData));
-      const readStream=e=>{ if(e.size>=miniCutoff){ return concat(...readChain(e.start,FAT).map(secData)).subarray(0,e.size); }
-        else { const ch=readChain(e.start,miniFAT); return concat(...ch.map(s=>miniStream.subarray(s*miniSize,(s+1)*miniSize))).subarray(0,e.size); } };
-      return { get:nm=>{ const e=entries.find(x=>x.name===nm); return e?readStream(e):null; } };
-    }
-    // CFB(암호화 Office) 시그니처: D0 CF 11 E0
-    function isEncrypted(u8){ return u8.length>8 && u8[0]===0xD0&&u8[1]===0xCF&&u8[2]===0x11&&u8[3]===0xE0; }
-    async function decrypt(fileBuf,password){
-      const cfb=parseCFB(new Uint8Array(fileBuf));
-      const info=cfb.get('EncryptionInfo'), pkg=cfb.get('EncryptedPackage');
-      if(!info||!pkg) throw new Error('암호화 형식을 해석할 수 없습니다.');
-      const xml=new TextDecoder().decode(info.subarray(8));
-      if(!/spinCount/.test(xml)) throw new Error('지원하지 않는 암호화 방식입니다.');  // Agile만 지원
-      const pw=new Uint8Array(new Uint8Array((()=>{ const a=[]; for(const ch of password){ const c=ch.charCodeAt(0); a.push(c&0xff,(c>>8)&0xff); } return a; })()));
-      const pKeySalt=b64(xml.match(/<p:encryptedKey[^>]*saltValue="([^"]*)"/)[1]);
-      const spin=parseInt(xml.match(/spinCount="(\d+)"/)[1]);
-      const encKeyValue=b64(xml.match(/encryptedKeyValue="([^"]*)"/)[1]);
-      const keyDataSalt=b64(xml.match(/<keyData[^>]*saltValue="([^"]*)"/)[1]);
-      const verifierInput=b64(xml.match(/encryptedVerifierHashInput="([^"]*)"/)[1]);
-      const verifierHash=b64(xml.match(/encryptedVerifierHashValue="([^"]*)"/)[1]);
-      const bkVI=new Uint8Array([0xfe,0xa7,0xd2,0x76,0x3b,0x4b,0x9e,0x79]);
-      const bkVH=new Uint8Array([0xd7,0xaa,0x0f,0x6d,0x30,0x61,0x34,0x4e]);
-      const kVI=await deriveKey(pw,pKeySalt,spin,bkVI), kVH=await deriveKey(pw,pKeySalt,spin,bkVH);
-      const vin=AES.cbcDecrypt(kVI,pKeySalt,verifierInput), vh=AES.cbcDecrypt(kVH,pKeySalt,verifierHash);
-      const vinHash=await sha1(vin);
-      let match=true; for(let i=0;i<20;i++){ if(vinHash[i]!==vh[i]){ match=false; break; } }
-      if(!match) throw new Error('비밀번호가 올바르지 않습니다.');
-      const bkKey=new Uint8Array([0x14,0x6e,0x0b,0xe7,0xab,0xac,0xd0,0xd6]);
-      const keyForKey=await deriveKey(pw,pKeySalt,spin,bkKey);
-      const secretKey=AES.cbcDecrypt(keyForKey,pKeySalt,encKeyValue);
-      const totalSize=Number(new DataView(pkg.buffer,pkg.byteOffset,8).getBigUint64(0,true));
-      const enc=pkg.subarray(8); const SEG=4096; const parts=[]; const segs=Math.ceil(enc.length/SEG);
-      for(let i=0;i<segs;i++){ const blk=new Uint8Array(4); new DataView(blk.buffer).setUint32(0,i,true);
-        const iv=(await sha1(concat(keyDataSalt,blk))).subarray(0,16);
-        parts.push(AES.cbcDecrypt(secretKey,iv,enc.subarray(i*SEG,(i+1)*SEG))); }
-      return concat(...parts).subarray(0,totalSize);
-    }
-    return { isEncrypted, decrypt };
-  })();
-  // 파일명에서 YYMMDD(6자리) 추출 → 이 유형의 기본 암호
-  function pwFromName(name){ const m=String(name).match(/(\d{6})(?=\.[^.]+$|\D*$)/); return m?m[1]:null; }
 
   // 이름·전화 컬럼 인식 키워드 (예매처마다 컬럼명이 달라 넓게 잡음)
   const KW_NAME=["관람자명","예매자명","구매자명","수령자명","수취인명","고객명","주문자명","성명","성함","이름","예매자","구매자","관람자","수령자","수취인","받는분","주문자","회원명","회원","name"];
