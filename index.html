@@ -290,6 +290,7 @@
       </div>
       <div class="btn-row">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
+        <button class="btn ghost" id="xlDriveSave">드라이브 저장</button>
         <button class="btn ghost" id="xlReset">초기화</button>
         <span class="fname" id="xlFname"></span>
       </div>
@@ -401,6 +402,7 @@
     <div class="st-gen">
       <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
       <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
+      <button class="btn ghost" id="saveSettlementDrive" disabled>드라이브 저장</button>
     </div>
     <div id="checkResult"></div>
 
@@ -429,6 +431,7 @@
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
+        <button class="btn ghost" id="smsDriveSave">드라이브 저장</button>
         <span class="fname" id="smsDlInfo"></span>
       </div>
     </div>
@@ -513,6 +516,55 @@
     }
     return folder;
   }
+
+  // ---- 드라이브 저장 공용 API (다른 탭에서 window.gdrive로 사용) ----
+  async function ensureFolder(token, name, parentId){
+    const safe = String(name).replace(/'/g, "\\'");
+    let q = "mimeType='application/vnd.google-apps.folder' and trashed=false and name='"+safe+"'";
+    if(parentId) q += " and '"+parentId+"' in parents";
+    const r = await fetch("https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name)&q="+encodeURIComponent(q),
+      { headers:{ Authorization:"Bearer "+token } });
+    if(!r.ok) throw new Error("폴더 조회 "+r.status);
+    const d = await r.json();
+    if(d.files && d.files.length) return d.files[0].id;
+    const meta = { name:String(name), mimeType:"application/vnd.google-apps.folder" };
+    if(parentId) meta.parents=[parentId];
+    const cr = await fetch("https://www.googleapis.com/drive/v3/files?fields=id",
+      { method:"POST", headers:{ Authorization:"Bearer "+token, "Content-Type":"application/json" }, body:JSON.stringify(meta) });
+    if(!cr.ok) throw new Error("폴더 생성 "+cr.status);
+    return (await cr.json()).id;
+  }
+  async function ensurePath(token, segments){
+    let parent=null;
+    for(const raw of segments){
+      const name=String(raw==null?"":raw).replace(/[\\/:*?"<>|]/g,'').trim() || '미지정';
+      parent=await ensureFolder(token, name, parent);
+    }
+    return parent;
+  }
+  async function uploadFile(token, parentId, filename, bytes, mimeType){
+    const boundary="enticket"+Date.now();
+    const meta={ name:filename }; if(parentId) meta.parents=[parentId];
+    const body=new Blob([
+      "--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n",
+      JSON.stringify(meta),
+      "\r\n--"+boundary+"\r\nContent-Type: "+mimeType+"\r\n\r\n",
+      bytes,
+      "\r\n--"+boundary+"--"
+    ]);
+    const r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink",
+      { method:"POST", headers:{ Authorization:"Bearer "+token, "Content-Type":"multipart/related; boundary="+boundary }, body });
+    if(!r.ok){ let t=""; try{ t=await r.text(); }catch(e){} throw new Error("업로드 "+r.status+(t?(": "+t.slice(0,120)):"")); }
+    return await r.json();
+  }
+  window.gdrive={
+    isLoggedIn:function(){ return !!accessToken; },
+    saveFile:async function(segments, filename, bytes, mimeType){
+      if(!accessToken) throw new Error("먼저 로그인해 주세요.");
+      const parent=await ensurePath(accessToken, segments);
+      return await uploadFile(accessToken, parent, filename, new Uint8Array(bytes), mimeType||"application/octet-stream");
+    }
+  };
 })();
 </script>
 
@@ -643,14 +695,30 @@ document.querySelectorAll(".tab").forEach(t=>{
     previewMeta.textContent=rows.length>30?`미리보기 30행 표시 · 전체 ${rows.length}행은 다운로드 파일에 포함됩니다.`:`전체 ${rows.length}행`;
     fnameLabel.innerHTML=`저장 파일명: <b>${esc(outFilename)}</b>`;
   }
-  function download(){
+  function buildWb(){
     const rows=getViewRows();
     const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:9},{wch:10},{wch:16},{wch:10},{wch:15},{wch:12}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
-    XLSX.writeFile(wb,outFilename);
+    return wb;
+  }
+  function download(){
+    XLSX.writeFile(buildWb(),outFilename);
+  }
+  async function saveToDrive(){
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
+    btn.disabled=true; btn.textContent="저장 중...";
+    try{
+      const bytes=XLSX.write(buildWb(),{type:"array",bookType:"xlsx"});
+      const showName=processedRows.length?String(processedRows[0]["공연명"]||"").trim():"";
+      const res=await window.gdrive.saveFile(["enticket","예매자명단", showName||"미지정"], outFilename,
+        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+    finally{ btn.disabled=false; btn.textContent=orig; }
   }
 
   input.addEventListener("change",e=>{ if(e.target.files[0]){ drop.style.display="none"; handleFile(e.target.files[0]); } });
@@ -659,6 +727,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   drop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]){ drop.style.display="none"; handleFile(e.dataTransfer.files[0]); } });
   maskPhoneChk.addEventListener("change",render);
   downloadBtn.addEventListener("click",download);
+  document.getElementById("xlDriveSave").addEventListener("click",saveToDrive);
   document.getElementById("xlReset").addEventListener("click",()=>{
     processedRows=[]; outFilename="예매자명단_정리본.xlsx";
     resultPanel.classList.add("hidden");
@@ -1884,6 +1953,7 @@ function renderValidationCard(result) {
   function updateSettlementLive(){
     const hasAgg=sessions.some(sessionHasData);
     const genBtn=document.getElementById("genSettlement");
+    const saveBtn=document.getElementById("saveSettlementDrive");
     // 초대좌석권 입력란 자동 채움 (직원이 수동 편집하지 않은 경우에만)
     const invField=document.getElementById("sf_invite");
     if(invField && !inviteEdited){
@@ -1893,13 +1963,13 @@ function renderValidationCard(result) {
     if(!hasAgg){
       document.getElementById("livePayout").textContent="₩0";
       document.getElementById("checkResult").innerHTML="";
-      genBtn.disabled=true; return;
+      genBtn.disabled=true; saveBtn.disabled=true; return;
     }
     const data=buildSettlementData();
     const r=validateSettlement(data, null);
     document.getElementById("livePayout").textContent=wonS(r.expected.지급금액);
     document.getElementById("checkResult").innerHTML=renderCheck(r);
-    genBtn.disabled=false;
+    genBtn.disabled=false; saveBtn.disabled=false;
   }
   function wonS(n){ return '₩'+(Math.round(n||0)).toLocaleString('ko-KR'); }
   function renderCheck(r){
@@ -1915,38 +1985,59 @@ function renderValidationCard(result) {
     h+='</div>'; return h;
   }
 
-  // 정산서 생성
-  function generateSettlement(){
+  // 정산서 바이트 생성 (다운로드·드라이브 저장 공통)
+  function buildSettlementFile(){
     const data=buildSettlementData();
     const check=validateSettlement(data, null);
-    if(!check.ok){
-      if(!confirm('확인할 항목이 있습니다:\n\n'+check.issues.join('\n')+'\n\n그래도 생성할까요?')) return;
-    }
+    if(typeof XLSX==='undefined' || !XLSX.write){ throw new Error('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); }
+    const wb=buildSettlementWorkbook(data);
+    const baseBytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    if(!baseBytes || baseBytes.byteLength<2000){ throw new Error('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); }
+    let bytes=baseBytes;
     try{
-      const wb=buildSettlementWorkbook(data);
-      if(typeof XLSX==='undefined' || !XLSX.write){ alert('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); return; }
-      const baseBytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
-      if(!baseBytes || baseBytes.byteLength<2000){ alert('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); return; }
-      // 페이지설정 주입은 부가 기능 — 실패하면 주입 없이 정상 파일을 내보냄
-      let bytes=baseBytes;
-      try{
-        if(typeof fflate!=='undefined' && fflate.unzipSync){
-          const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
-          const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
-          const lastRow=16+grades+3+3+prices.size+1+12;
-          const injected=injectPageSetup(new Uint8Array(baseBytes), lastRow);
-          // 주입 결과가 정상(원본의 절반 이상 압축돼도 최소 크기 확보)일 때만 채택
-          if(injected && injected.byteLength>1000) bytes=injected;
-        }
-      }catch(e){ console.warn('페이지설정 주입 건너뜀:', e); bytes=baseBytes; }
-      const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      const today=new Date(); const stamp=`${today.getFullYear()}${p2(today.getMonth()+1)}${p2(today.getDate())}`;
-      const t=(data.공연명||'공연').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob); a.download=`엔티켓_정산서_${t}_${stamp}.xlsx`;
-      document.body.appendChild(a); a.click();
-      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
-    }catch(err){ alert('정산서 생성 중 오류: '+err.message); console.error(err); }
+      if(typeof fflate!=='undefined' && fflate.unzipSync){
+        const grades=data.rounds.reduce((a,rd)=>a+rd.items.length,0);
+        const prices=new Set(); data.rounds.forEach(rd=>rd.items.forEach(it=>prices.add(it.price)));
+        const lastRow=16+grades+3+3+prices.size+1+12;
+        const injected=injectPageSetup(new Uint8Array(baseBytes), lastRow);
+        if(injected && injected.byteLength>1000) bytes=injected;
+      }
+    }catch(e){ console.warn('페이지설정 주입 건너뜀:', e); bytes=baseBytes; }
+    const today=new Date(); const stamp=`${today.getFullYear()}${p2(today.getMonth()+1)}${p2(today.getDate())}`;
+    const t=(data.공연명||'공연').replace(/[\\/:*?"<>|]/g,'').slice(0,30);
+    const filename=`엔티켓_정산서_${t}_${stamp}.xlsx`;
+    return { bytes:(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes)), filename, data, check };
+  }
+
+  // 정산서 생성 (로컬 다운로드)
+  function generateSettlement(){
+    let built;
+    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); console.error(err); return; }
+    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 생성할까요?')) return; }
+    const blob=new Blob([built.bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=built.filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
+  }
+
+  // 정산서 드라이브 저장
+  async function saveSettlementToDrive(){
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    let built;
+    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
+    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
+    const btn=document.getElementById("saveSettlementDrive"); const orig=btn.textContent;
+    btn.disabled=true; btn.textContent="저장 중...";
+    try{
+      let year=new Date().getFullYear();
+      const withDt=built.data.rounds.find(r=>r.dt instanceof Date);
+      if(withDt) year=withDt.dt.getFullYear();
+      const res=await window.gdrive.saveFile(["enticket","정산서", String(year), built.data.공연명||"미지정"],
+        built.filename, built.bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+    finally{ btn.disabled=false; btn.textContent=orig; }
   }
 
   // 접이식 패널 토글
@@ -1959,6 +2050,7 @@ function renderValidationCard(result) {
   // 이벤트 바인딩
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
+  document.getElementById("saveSettlementDrive").addEventListener("click",saveSettlementToDrive);
   // 초대좌석권 입력란: 직원이 직접 입력하면 자동 채움 중단, 그 값 우선
   (function(){
     const inv=document.getElementById("sf_invite");
@@ -2370,15 +2462,32 @@ function renderValidationCard(result) {
     const blob=new Blob([lines.join("\r\n")],{type:"text/plain;charset=utf-8"});
     triggerDownload(blob, fname("txt"));
   }
-  // 다운로드: 엑셀 (이름·전화번호 2열)
-  function dlXlsx(){
-    if(!lastResult.length) return;
+  function buildSmsWb(){
     const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름, x.전화])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"]=[{wch:14},{wch:18}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"문자발송명단");
-    XLSX.writeFile(wb, fname("xlsx"));
+    return wb;
+  }
+  // 다운로드: 엑셀 (이름·전화번호 2열)
+  function dlXlsx(){
+    if(!lastResult.length) return;
+    XLSX.writeFile(buildSmsWb(), fname("xlsx"));
+  }
+  // 드라이브 저장 (엑셀)
+  async function smsSaveToDrive(){
+    if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
+    btn.disabled=true; btn.textContent="저장 중...";
+    try{
+      const bytes=XLSX.write(buildSmsWb(),{type:"array",bookType:"xlsx"});
+      const res=await window.gdrive.saveFile(["enticket","문자발송명단"], fname("xlsx"),
+        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+    finally{ btn.disabled=false; btn.textContent=orig; }
   }
   function fname(ext){
     const d=new Date(); const p=n=>String(n).padStart(2,"0");
@@ -2401,6 +2510,7 @@ function renderValidationCard(result) {
 
   document.getElementById("smsDlTxt").addEventListener("click",dlTxt);
   document.getElementById("smsDlXlsx").addEventListener("click",dlXlsx);
+  document.getElementById("smsDriveSave").addEventListener("click",smsSaveToDrive);
 })();
 
 </script>
