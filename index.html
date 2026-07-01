@@ -716,7 +716,7 @@ document.querySelectorAll(".tab").forEach(t=>{
 
 /* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
-  const TARGET_COLS=["공연명","공연일","공연시간","좌석등급","권종","좌석명","관람자명","연락처","예매번호"];
+  const TARGET_COLS=["공연명","공연일","공연시간","관람자명","연락처","예매번호"];
 
   const dropEl=document.getElementById("xlDrop");
   const inputEl=document.getElementById("xlFileInput");
@@ -759,29 +759,108 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   const maskPhone=v=>String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/,(m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
 
+  // 컬럼 별칭 (예매처마다 헤더명이 달라 폭넓게 인식)
+  const COL_ALIASES={
+    공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"],
+    공연일:["공연일","공연일자","관람일","관람일자","이용일","이용일자"],
+    공연시간:["공연시간","공연시각","관람시간","이용시간"],
+    관람자명:["관람자명","관람자","주문자명","주문자","예매자명","예매자","구매자명","구매자","수령자명","고객명","회원명","성명","성함","이름"],
+    연락처:["휴대폰번호","휴대폰","핸드폰번호","핸드폰","휴대전화","연락처","연락번호","전화번호"],
+    예매번호:["예매번호","대표티켓번호","티켓번호","주문번호","예매코드","주문코드","연동예매번호"]
+  };
+  // 이용(관람)일시처럼 날짜·시간이 한 칸에 합쳐진 열
+  function findCombinedDT(headers){
+    for(let i=0;i<headers.length;i++){ const h=headers[i]; if(h.includes("일시")&&(h.includes("이용")||h.includes("관람")||h.includes("공연"))) return i; }
+    return -1;
+  }
+  function splitDT(v){
+    const s=String(v==null?"":v).trim(); let date="", time="";
+    const m=s.match(/(\d{4})[-./]?(\d{1,2})[-./]?(\d{1,2})/);
+    if(m) date=`${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+    const t=s.match(/(\d{1,2}):(\d{2})/);
+    if(t){ time=`${pad(t[1])}:${t[2]}`; }
+    else { const rest=m?s.slice(m.index+m[0].length):s; const t2=rest.match(/(\d{1,2})(\d{2})(?!\d)/); if(t2) time=`${pad(t2[1])}:${t2[2]}`; }
+    return { date, time };
+  }
+
   function detectHeaderRow(aoa){
-    const score=row=>{ const cells=(row||[]).map(norm); let s=0; TARGET_COLS.forEach(t=>{ if(cells.includes(norm(t))) s++; }); return s; };
+    const scoreRow=row=>{
+      const cells=(row||[]).map(norm); let s=0;
+      TARGET_COLS.forEach(name=>{
+        const aliases=COL_ALIASES[name]||[name];
+        if(aliases.some(a=>{ const na=norm(a); return cells.includes(na)||cells.some(c=>c.includes(na)); })) s++;
+      });
+      if(cells.some(c=>c.includes("일시")&&(c.includes("이용")||c.includes("관람")||c.includes("공연")))) s++;
+      return s;
+    };
     const lim=Math.min(aoa.length,15); let best=0,bestScore=-1;
-    for(let r=0;r<lim;r++){ const s=score(aoa[r]); if(s>bestScore){ bestScore=s; best=r; } }
+    for(let r=0;r<lim;r++){ const s=scoreRow(aoa[r]); if(s>bestScore){ bestScore=s; best=r; } }
     return best;
   }
-  function parseBytes(bytes){
+  function mapColumns(headers){
+    const colIndex={}, used=new Set();
+    // 1) 정확 일치 우선 (기존 양식 보존)
+    TARGET_COLS.forEach(name=>{ const i=headers.indexOf(norm(name)); if(i>=0){ colIndex[name]=i; used.add(i); } });
+    // 2) 별칭(정확→부분), 이미 쓴 열은 건너뜀
+    TARGET_COLS.forEach(name=>{
+      if(colIndex[name]!==undefined) return;
+      const aliases=COL_ALIASES[name]||[name];
+      for(const a of aliases){ const i=headers.indexOf(norm(a)); if(i>=0&&!used.has(i)){ colIndex[name]=i; used.add(i); return; } }
+      for(const a of aliases){ const na=norm(a); const i=headers.findIndex((h,idx)=>!used.has(idx)&&h.includes(na)); if(i>=0){ colIndex[name]=i; used.add(i); return; } }
+    });
+    return { colIndex, used };
+  }
+
+  // ── HTML 표로 위장한 .xls (예매처 다수) 감지·직접 파싱 ──
+  function looksLikeHTML(bytes){
+    let head=""; try{ head=new TextDecoder("ascii").decode(bytes.subarray(0,4096)).toLowerCase(); }catch(_){ return false; }
+    return head.includes("<table")||head.includes("<html")||head.includes("<!doctype html")||/<tr[\s>]/.test(head);
+  }
+  function bytesToText(bytes){
+    let cs="utf-8";
+    try{ const head=new TextDecoder("ascii").decode(bytes.subarray(0,4096)); const m=head.match(/charset\s*=\s*["']?([\w-]+)/i); if(m) cs=m[1].toLowerCase(); }catch(_){}
+    try{ return new TextDecoder(cs).decode(bytes); }
+    catch(_){ try{ return new TextDecoder("euc-kr").decode(bytes); }catch(__){ return new TextDecoder("utf-8").decode(bytes); } }
+  }
+  function parseHTMLTable(text){
+    const doc=new DOMParser().parseFromString(text,"text/html");
+    const tables=[...doc.querySelectorAll("table")];
+    if(!tables.length) return [];
+    let best=tables[0],bestRows=0;
+    tables.forEach(t=>{ const rc=t.querySelectorAll("tr").length; if(rc>bestRows){ bestRows=rc; best=t; } });
+    return [...best.querySelectorAll("tr")].map(tr=>[...tr.querySelectorAll("th,td")].map(td=>(td.textContent||"").replace(/\u00a0/g," ").trim()));
+  }
+  function readAOA(bytes){
+    if(looksLikeHTML(bytes)) return parseHTMLTable(bytesToText(bytes));
     const wb=XLSX.read(bytes,{type:"array",cellDates:true});
     const ws=wb.Sheets[wb.SheetNames[0]];
-    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
-    if(aoa.length<2) return null;
+    return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+  }
+
+  function parseBytes(bytes){
+    const aoa=readAOA(bytes);
+    if(!aoa || aoa.length<2) return null;
     const hr=detectHeaderRow(aoa);
     const headers=(aoa[hr]||[]).map(h=>norm(h));
-    const colIndex={}, missing=[];
-    TARGET_COLS.forEach(name=>{ const idx=headers.indexOf(norm(name)); if(idx===-1) missing.push(name); else colIndex[name]=idx; });
+    const { colIndex, used }=mapColumns(headers);
+    let dtCol=findCombinedDT(headers);
+    if(dtCol>=0 && used.has(dtCol)) dtCol=-1;   // 이미 다른 열로 쓰였으면 제외
+    // 누락 판정 (공연일·시간은 합쳐진 일시 열로 대체 가능)
+    const missing=TARGET_COLS.filter(name=>{
+      if(colIndex[name]!==undefined) return false;
+      if((name==="공연일"||name==="공연시간") && dtCol>=0) return false;
+      return true;
+    });
     const rows=[];
     for(let r=hr+1;r<aoa.length;r++){
       const row=aoa[r];
       if(!row || row.every(c=>String(c).trim()==="")) continue;
-      const get=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
-      const obj={}; TARGET_COLS.forEach(name=>{ obj[name]=get(name); });
-      obj["공연일"]=fmtDate(obj["공연일"]);
-      obj["공연시간"]=fmtTime(obj["공연시간"]);
+      const cell=name=>(colIndex[name]!==undefined ? (row[colIndex[name]] ?? "") : "");
+      const obj={};
+      TARGET_COLS.forEach(name=>{ obj[name]=cell(name); });
+      const dtParts=(dtCol>=0)?splitDT(row[dtCol]):null;
+      obj["공연일"]=(colIndex["공연일"]!==undefined)?fmtDate(obj["공연일"]):(dtParts?dtParts.date:"");
+      obj["공연시간"]=(colIndex["공연시간"]!==undefined)?fmtTime(obj["공연시간"]):(dtParts?dtParts.time:"");
       TARGET_COLS.forEach(name=>{ if(name!=="공연일"&&name!=="공연시간"){ const v=obj[name]; obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v)); } });
       rows.push(obj);
     }
@@ -885,7 +964,7 @@ document.querySelectorAll(".tab").forEach(t=>{
     const rows=getViewRows();
     const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:9},{wch:10},{wch:16},{wch:10},{wch:15},{wch:12}];
+    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:10},{wch:15},{wch:12}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
     return wb;
