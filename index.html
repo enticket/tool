@@ -277,7 +277,7 @@
       <button class="tab" data-tab="settlement">공연 정산서</button>
     </nav>
     <div class="gauth">
-      <div id="gLoginBox"></div>
+      <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
       <span id="gUser" class="guser" style="display:none"></span>
       <button class="gbtn" id="gTestBtn" style="display:none">백엔드 연결 테스트</button>
       <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
@@ -460,69 +460,76 @@
 
 </div>
 
-<!-- 구글 로그인 (신원 확인용 ID 토큰) + 백엔드(Worker) 저장 -->
+<!-- 구글 로그인 (신원 확인, 커스텀 버튼) + 백엔드(Worker) 저장 -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
   const WORKER_URL = "https://enticket-drive.enticketai.workers.dev";
-  let idToken = null, idPayload = null;
+  let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "";
 
-  const loginBox  = document.getElementById("gLoginBox");
+  const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
   const testBtn   = document.getElementById("gTestBtn");
 
-  function decodeJwt(jwt){
-    try{
-      const b=jwt.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
-      return JSON.parse(decodeURIComponent(escape(atob(b))));
-    }catch(e){ return null; }
-  }
-  function showLoggedIn(email){ if(loginBox) loginBox.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; }
-  function showLoggedOut(){ if(loginBox) loginBox.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; }
-  function tokenExpired(){ return !idPayload || (idPayload.exp && idPayload.exp*1000 < Date.now()); }
-
-  function onCredential(resp){
-    if(!resp || !resp.credential){ return; }
-    idToken = resp.credential;
-    idPayload = decodeJwt(idToken);
-    showLoggedIn(idPayload && idPayload.email ? idPayload.email : "로그인됨");
-  }
+  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; }
+  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; }
+  function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
 
   function initGis(){
-    if(!(window.google && google.accounts && google.accounts.id)) return;
-    google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, auto_select:false });
-    if(loginBox){ google.accounts.id.renderButton(loginBox, { type:"standard", theme:"filled_blue", size:"medium", text:"signin_with", shape:"pill" }); }
+    if(!(window.google && google.accounts && google.accounts.oauth2)) return;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: "openid email profile",
+      callback: async (resp)=>{
+        if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        accessToken = resp.access_token;
+        tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
+        try{
+          const u = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers:{ Authorization:"Bearer "+accessToken } });
+          const ud = await u.json(); userEmail = ud.email || "";
+        }catch(e){ userEmail = ""; }
+        showLoggedIn(userEmail || "로그인됨");
+      }
+    });
+    loginBtn.disabled = false;
   }
   window.onGoogleLibraryLoad = initGis;
-  if(window.google && google.accounts && google.accounts.id){ initGis(); }
+  if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
+
+  loginBtn.addEventListener("click", ()=>{
+    if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
+    tokenClient.requestAccessToken();
+  });
 
   logoutBtn.addEventListener("click", ()=>{
-    idToken=null; idPayload=null;
-    try{ google.accounts.id.disableAutoSelect(); }catch(e){}
+    if(accessToken && window.google && google.accounts && google.accounts.oauth2){
+      try{ google.accounts.oauth2.revoke(accessToken); }catch(e){}
+    }
+    accessToken=null; tokenExp=0; userEmail="";
     showLoggedOut();
   });
 
   testBtn.addEventListener("click", async ()=>{
-    if(!idToken || tokenExpired()){ alert("로그인이 필요합니다(또는 만료됨). 다시 로그인해 주세요."); showLoggedOut(); return; }
+    if(!tokenValid()){ alert("로그인이 필요합니다(또는 만료됨). 다시 로그인해 주세요."); showLoggedOut(); return; }
     try{
       const r = await fetch(WORKER_URL + "/", { method:"GET" });
       const d = await r.json().catch(()=>({}));
-      if(d && d.ok){ alert("백엔드 연결 정상 ✅\n서비스: "+(d.service||"")+"\n로그인 계정: "+(idPayload.email||"")); }
+      if(d && d.ok){ alert("백엔드 연결 정상 ✅\n서비스: "+(d.service||"")+"\n로그인 계정: "+(userEmail||"")); }
       else{ alert("백엔드 응답 이상: "+JSON.stringify(d).slice(0,200)); }
     }catch(e){ alert("백엔드 연결 실패: "+e.message); }
   });
 
-  // ---- 공용 저장 API: 내부만 Worker 전송으로 교체 (탭 코드 변경 없음) ----
+  // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {
-    isLoggedIn: function(){ return !!idToken && !tokenExpired(); },
+    isLoggedIn: function(){ return tokenValid(); },
     saveFile: async function(segments, filename, bytes, mimeType){
-      if(!idToken || tokenExpired()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
       const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
       const fd = new FormData();
-      fd.append("id_token", idToken);
+      fd.append("access_token", accessToken);
       fd.append("folder", folder);
       fd.append("filename", filename);
       fd.append("mime", mt);
@@ -531,7 +538,7 @@
       const d = await r.json().catch(()=>({}));
       if(!r.ok || !d.ok){
         const err = (d && d.error) ? d.error : ("HTTP "+r.status);
-        if(err === "invalid_id_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
+        if(err === "invalid_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
         if(err === "not_allowed"){ throw new Error("이 계정은 허용목록에 없습니다: "+(d.email||"")); }
         throw new Error("저장 실패: "+err);
       }
