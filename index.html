@@ -25,6 +25,15 @@
   .tab:hover { color: #fff; }
   .tab.active { color: #fff; border-bottom-color: #fff; }
 
+  /* ===== 구글 연동 (로그인) ===== */
+  .gauth { display:flex; align-items:center; gap:10px; padding:10px 0; margin-left:auto; }
+  .gauth .gbtn {
+    background:#fff; color:#602b89; border:none; border-radius:8px;
+    padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .gauth .gbtn:hover { background:#f3eef8; }
+  .gauth .gbtn:disabled { background:#cdb8e3; color:#fff; cursor:default; }
+
   .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 40px; }
   .panel-view { display: none; }
   .panel-view.active { display: block; }
@@ -254,6 +263,11 @@
       <button class="tab" data-tab="poster">이미지 변환</button>
       <button class="tab" data-tab="settlement">공연 정산서</button>
     </nav>
+    <div class="gauth">
+      <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
+      <button class="gbtn" id="gTestBtn" style="display:none">드라이브 연결 테스트</button>
+      <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
+    </div>
   </div>
 </div>
 
@@ -423,6 +437,84 @@
   </section>
 
 </div>
+
+<!-- 구글 로그인 (GIS 토큰 모델) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){
+  const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
+  const SCOPE = "https://www.googleapis.com/auth/drive.file";
+  let tokenClient = null, accessToken = null;
+
+  const loginBtn  = document.getElementById("gLoginBtn");
+  const logoutBtn = document.getElementById("gLogoutBtn");
+  const testBtn   = document.getElementById("gTestBtn");
+
+  function showLoggedIn(){ loginBtn.style.display="none"; logoutBtn.style.display=""; testBtn.style.display=""; }
+  function showLoggedOut(){ loginBtn.style.display=""; logoutBtn.style.display="none"; testBtn.style.display="none"; }
+
+  function initGis(){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+      callback: (resp)=>{
+        if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        accessToken = resp.access_token;
+        showLoggedIn();
+      }
+    });
+    loginBtn.disabled = false;
+  }
+  window.onGoogleLibraryLoad = initGis;
+  if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
+
+  loginBtn.addEventListener("click", ()=>{
+    if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
+    tokenClient.requestAccessToken();
+  });
+
+  logoutBtn.addEventListener("click", ()=>{
+    if(accessToken && window.google && google.accounts && google.accounts.oauth2){
+      try{ google.accounts.oauth2.revoke(accessToken); }catch(e){}
+    }
+    accessToken = null;
+    showLoggedOut();
+  });
+
+  testBtn.addEventListener("click", async ()=>{
+    if(!accessToken){ alert("먼저 로그인해 주세요."); return; }
+    try{
+      const folder = await driveConnectTest(accessToken);
+      const link = "https://drive.google.com/drive/folders/" + folder.id;
+      alert("드라이브 연결 성공!\n\n앱이 만든 폴더: "+folder.name+"\n확인: "+link+"\n\n(이 테스트 폴더는 지워도 됩니다.)");
+    }catch(e){
+      alert("드라이브 연결 실패: "+e.message);
+    }
+  });
+
+  async function driveConnectTest(token){
+    const q = "name='enticket_연결테스트' and mimeType='application/vnd.google-apps.folder' and trashed=false";
+    const listRes = await fetch(
+      "https://www.googleapis.com/drive/v3/files?q="+encodeURIComponent(q)+"&fields=files(id,name)",
+      { headers:{ Authorization:"Bearer "+token } }
+    );
+    if(!listRes.ok) throw new Error("목록 조회 "+listRes.status);
+    const listData = await listRes.json();
+    let folder = (listData.files||[])[0];
+    if(!folder){
+      const createRes = await fetch(
+        "https://www.googleapis.com/drive/v3/files?fields=id,name",
+        { method:"POST",
+          headers:{ Authorization:"Bearer "+token, "Content-Type":"application/json" },
+          body: JSON.stringify({ name:"enticket_연결테스트", mimeType:"application/vnd.google-apps.folder" }) }
+      );
+      if(!createRes.ok) throw new Error("폴더 생성 "+createRes.status);
+      folder = await createRes.json();
+    }
+    return folder;
+  }
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
