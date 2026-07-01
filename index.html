@@ -717,6 +717,7 @@ document.querySelectorAll(".tab").forEach(t=>{
 /* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","관람자명","연락처","예매번호"];
+  const OUTPUT_COLS=["공연명","공연일","공연시간","좌석수","관람자명","연락처","예매번호"];
 
   const dropEl=document.getElementById("xlDrop");
   const inputEl=document.getElementById("xlFileInput");
@@ -768,6 +769,8 @@ document.querySelectorAll(".tab").forEach(t=>{
     연락처:["휴대폰번호","휴대폰","핸드폰번호","핸드폰","휴대전화","연락처","연락번호","전화번호"],
     예매번호:["예매번호","대표티켓번호","티켓번호","주문번호","예매코드","주문코드","연동예매번호"]
   };
+  // 좌석 수(매수) 열 별칭 — 예매 건별 좌석 수 집계용
+  const SEAT_ALIASES=["좌석수","좌석수량","좌석매수","최종정상매수","총매수","발권매수","매수","티켓수","예매수량","관람인원","수량","인원"];
   // 이용(관람)일시처럼 날짜·시간이 한 칸에 합쳐진 열
   function findCombinedDT(headers){
     for(let i=0;i<headers.length;i++){ const h=headers[i]; if(h.includes("일시")&&(h.includes("이용")||h.includes("관람")||h.includes("공연"))) return i; }
@@ -810,6 +813,19 @@ document.querySelectorAll(".tab").forEach(t=>{
     });
     return { colIndex, used };
   }
+  // 좌석 수 열 탐지 (이미 매핑된 열은 제외)
+  function findSeatCol(headers, used){
+    for(const a of SEAT_ALIASES){ const i=headers.indexOf(norm(a)); if(i>=0 && !used.has(i)) return i; }
+    for(const a of SEAT_ALIASES){ const na=norm(a); const i=headers.findIndex((h,idx)=>!used.has(idx)&&h.includes(na)); if(i>=0) return i; }
+    return -1;
+  }
+  // 행별 좌석 수: 좌석수 열 없으면 1건=1석으로 간주
+  function seatOf(row, seatCol){
+    if(seatCol<0) return 1;
+    const digits=String(row[seatCol]==null?"":row[seatCol]).replace(/[^\d]/g,"");
+    const n=parseInt(digits,10);
+    return (digits!=="" && isFinite(n)) ? n : 1;
+  }
 
   // ── HTML 표로 위장한 .xls (예매처 다수) 감지·직접 파싱 ──
   function looksLikeHTML(bytes){
@@ -845,6 +861,7 @@ document.querySelectorAll(".tab").forEach(t=>{
     const { colIndex, used }=mapColumns(headers);
     let dtCol=findCombinedDT(headers);
     if(dtCol>=0 && used.has(dtCol)) dtCol=-1;   // 이미 다른 열로 쓰였으면 제외
+    const seatCol=findSeatCol(headers, used);
     // 누락 판정 (공연일·시간은 합쳐진 일시 열로 대체 가능)
     const missing=TARGET_COLS.filter(name=>{
       if(colIndex[name]!==undefined) return false;
@@ -862,6 +879,9 @@ document.querySelectorAll(".tab").forEach(t=>{
       obj["공연일"]=(colIndex["공연일"]!==undefined)?fmtDate(obj["공연일"]):(dtParts?dtParts.date:"");
       obj["공연시간"]=(colIndex["공연시간"]!==undefined)?fmtTime(obj["공연시간"]):(dtParts?dtParts.time:"");
       TARGET_COLS.forEach(name=>{ if(name!=="공연일"&&name!=="공연시간"){ const v=obj[name]; obj[name]=(v instanceof Date)?fmtDate(v):(v==null?"":String(v)); } });
+      // 식별정보가 전혀 없는 행(합계·요약·빈 행)은 제외
+      if(!obj["관람자명"].trim() && !obj["연락처"].trim() && !obj["예매번호"].trim()) continue;
+      obj["좌석수"]=seatOf(row, seatCol);
       rows.push(obj);
     }
     return { rows, missing };
@@ -916,7 +936,8 @@ document.querySelectorAll(".tab").forEach(t=>{
       }else{
         let extra="";
         if(n.missing.length) extra=` · <span style="color:#c0392b">누락: ${n.missing.map(esc).join(", ")}</span>`;
-        info.innerHTML=`<span style="color:#2e7d32">✓ 인식됨</span> · ${won(n.rows.length)}행${extra}`;
+        const seats=n.rows.reduce((s,r)=>s+(Number(r["좌석수"])||0),0);
+        info.innerHTML=`<span style="color:#2e7d32">✓ 인식됨</span> · ${won(n.rows.length)}건 · ${won(seats)}석${extra}`;
       }
       nodesEl.appendChild(node);
     });
@@ -947,10 +968,11 @@ document.querySelectorAll(".tab").forEach(t=>{
       countEl.textContent=""; controlsEl.style.display="none"; dlRow.style.display="none"; return;
     }
     controlsEl.style.display="";
-    countEl.textContent=`· 총 ${won(rows.length)}행`;
+    const totalSeats=rows.reduce((s,r)=>s+(Number(r["좌석수"])||0),0);
+    countEl.textContent=`· 총 ${won(rows.length)}건 · ${won(totalSeats)}석`;
     const preview=rows.slice(0,30);
-    let html='<div class="table-scroll"><table><tr>'+TARGET_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
-    preview.forEach(r=>{ html+="<tr>"+TARGET_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
+    let html='<div class="table-scroll"><table><tr>'+OUTPUT_COLS.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+    preview.forEach(r=>{ html+="<tr>"+OUTPUT_COLS.map(c=>`<td>${esc(r[c])}</td>`).join("")+"</tr>"; });
     html+="</table></div>";
     if(rows.length>30) html+=`<div style="font-size:12px;color:#999;margin-top:6px">미리보기 30행 표시 · 전체 ${won(rows.length)}행은 다운로드 파일에 포함됩니다.</div>`;
     outputEl.innerHTML=html;
@@ -962,9 +984,9 @@ document.querySelectorAll(".tab").forEach(t=>{
 
   function buildWb(){
     const rows=getViewRows();
-    const aoa=[TARGET_COLS, ...rows.map(r=>TARGET_COLS.map(c=>r[c]))];
+    const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]))];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:10},{wch:15},{wch:12}];
+    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:7},{wch:10},{wch:15},{wch:12}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
     return wb;
