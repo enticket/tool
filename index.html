@@ -3301,36 +3301,42 @@ window.OrigSeal = (function(){
   });
 
   let pdfLibP=null;
-  function loadHtml2Pdf(){
-    if(window.html2pdf) return Promise.resolve();
+  function loadPdfLibs(){
+    if(window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
     if(pdfLibP) return pdfLibP;
-    pdfLibP=new Promise((res,rej)=>{
-      const s=document.createElement("script");
-      s.src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js";
-      s.onload=()=>res();
-      s.onerror=()=>{ pdfLibP=null; rej(new Error("PDF 라이브러리를 불러오지 못했습니다. 네트워크 확인 후 다시 시도해 주세요.")); };
-      document.head.appendChild(s);
-    });
+    function load(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error("PDF 라이브러리를 불러오지 못했습니다. 네트워크(외부 CDN) 확인 후 다시 시도해 주세요.")); document.head.appendChild(s); }); }
+    pdfLibP=(async()=>{
+      if(!window.html2canvas) await load("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      if(!(window.jspdf && window.jspdf.jsPDF)) await load("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
+    })().catch(e=>{ pdfLibP=null; throw e; });
     return pdfLibP;
   }
   btnPdf.addEventListener("click", async ()=>{
     if(!out) return;
     btnPdf.disabled=true; setStatus("PDF 생성 중… (수 초 걸릴 수 있습니다)");
     try{
-      await loadHtml2Pdf();
+      await loadPdfLibs();
       const host=document.createElement("div");
       host.style.cssText="position:fixed;left:-100000px;top:0;background:#fff;";
       host.innerHTML=out.html;
       document.body.appendChild(host);
       try{
-        await html2pdf().set({
-          margin:[5,5,5,5],
-          filename: out.name+".pdf",
-          image:{ type:"jpeg", quality:0.95 },
-          html2canvas:{ scale: Math.max(1, Math.min(2, 2600/out.widthPx)), useCORS:true, backgroundColor:"#ffffff" },
-          jsPDF:{ unit:"mm", format:"a4", orientation:"portrait" },
-          pagebreak:{ mode:["css","legacy"] }
-        }).from(host.firstChild).save();
+        const target=host.firstChild;
+        // 선명도용 렌더 배율 (콘텐츠 폭이 넓을수록 배율↓, 과도한 캔버스 방지)
+        const scale=Math.max(1.5, Math.min(2.5, 2800/out.widthPx));
+        const canvas=await html2canvas(target, { scale, useCORS:true, backgroundColor:"#ffffff", logging:false });
+        const { jsPDF }=window.jspdf;
+        const pdf=new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
+        const pw=pdf.internal.pageSize.getWidth();   // 210mm
+        const ph=pdf.internal.pageSize.getHeight();  // 297mm
+        const margin=6;
+        const availW=pw-margin*2, availH=ph-margin*2;
+        // A4 한 장에 전부 들어가도록 가로·세로 중 더 제약되는 축 기준 축소 (엑셀 fitToPage와 동일 개념)
+        const ratio=Math.min(availW/canvas.width, availH/canvas.height);
+        const drawW=canvas.width*ratio, drawH=canvas.height*ratio;
+        const x=(pw-drawW)/2, y=margin;
+        pdf.addImage(canvas.toDataURL("image/jpeg",0.95), "JPEG", x, y, drawW, drawH, undefined, "FAST");
+        pdf.save(out.name+".pdf");
       } finally { host.remove(); }
       setStatus("PDF 저장 완료.");
     }catch(e){
