@@ -263,6 +263,23 @@
   #panel-excel .out-body { background:#fff; border-radius:0 0 14px 14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); padding:16px 18px; }
   #panel-excel .empty { color:#bbb; font-size:13px; text-align:center; padding:24px 0; }
   #panel-excel .privacy { font-size:12px; color:#aaa; margin-top:18px; text-align:center; }
+  /* ===== 원본대조필 탭 ===== */
+  #panel-oseal .gate { background:#fff; border:1.5px solid #e5d9f2; border-radius:14px; padding:26px 20px; text-align:center; box-shadow:0 1px 5px rgba(0,0,0,0.07); }
+  #panel-oseal .gate .g-ico { font-size:30px; margin-bottom:8px; }
+  #panel-oseal .gate .g-t { font-size:15px; font-weight:800; color:#4e2270; margin-bottom:6px; }
+  #panel-oseal .gate .g-d { font-size:13px; color:#888; line-height:1.6; }
+  #panel-oseal .work.locked { display:none; }
+  #panel-oseal .connector { text-align:center; color:#b89cd6; font-size:18px; margin:5px 0; }
+  #panel-oseal .out-head { background:#602b89; color:#fff; border-radius:14px 14px 0 0; padding:12px 18px; font-size:15px; font-weight:800; }
+  #panel-oseal .out-body { background:#fff; border-radius:0 0 14px 14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); padding:16px 18px; }
+  #panel-oseal .empty { color:#bbb; font-size:13px; text-align:center; padding:24px 0; }
+  #panel-oseal .btn-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  #panel-oseal .fname { font-size:12.5px; color:#999; word-break:break-all; }
+  #panel-oseal .status { font-size:13px; color:#666; margin-top:10px; }
+  #panel-oseal .status.err { color:#c0392b; font-weight:600; }
+  #panel-oseal .prev-wrap { border:1px solid #eee; border-radius:8px; overflow:auto; max-height:560px; background:#f2f2f2; padding:10px; }
+  #panel-oseal .prev-scale { transform-origin: top left; }
+  #panel-oseal .privacy { font-size:12px; color:#aaa; margin-top:18px; text-align:center; }
 </style>
 </head>
 <body>
@@ -275,6 +292,7 @@
       <button class="tab" data-tab="sms">문자 발송 명단</button>
       <button class="tab" data-tab="poster">이미지 변환</button>
       <button class="tab" data-tab="settlement">공연 정산서</button>
+      <button class="tab" data-tab="oseal">원본대조필</button>
     </nav>
     <div class="gauth">
       <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
@@ -458,6 +476,40 @@
     <div class="privacy"></div>
   </section>
 
+  <!-- ============ 탭 5: 원본대조필 ============ -->
+  <section class="panel-view" id="panel-oseal">
+    <h2>원본대조필</h2>
+
+    <!-- 로그인 게이트 -->
+    <div class="gate" id="osealGate">
+      <div class="g-ico">🔒</div>
+      <div class="g-t">로그인이 필요한 기능입니다</div>
+    </div>
+
+    <!-- 작업 영역 (로그인 후 표시) -->
+    <div class="work locked" id="osealWork">
+      <label class="drop" id="osealDrop">
+        <div class="big">📂 정산서 엑셀 파일 넣기</div>
+        <div class="small">정산서 xlsx 한 개를 끌어다 놓거나 클릭해서 선택 · 맨 위에 원본대조필 2행과 도장이 추가됩니다</div>
+        <input type="file" id="osealFileInput" accept=".xlsx" />
+      </label>
+      <div class="status" id="osealStatus"></div>
+      <div class="connector">▼</div>
+
+      <div class="out-head">원본대조필 미리보기</div>
+      <div class="out-body">
+        <div id="osealPreview"><div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div></div>
+        <div class="btn-row" id="osealBtnRow" style="margin-top:14px;display:none">
+          <button class="btn" id="osealDlXlsx">엑셀 다운로드</button>
+          <button class="btn ghost" id="osealDlPdf">PDF 다운로드</button>
+          <span class="fname" id="osealFname"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="privacy"></div>
+  </section>
+
 </div>
 
 <!-- 구글 로그인 (신원 확인, 커스텀 버튼) + 백엔드(Worker) 저장 -->
@@ -466,15 +518,16 @@
 (function(){
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
   const WORKER_URL = "https://enticket-drive.enticketai.workers.dev";
-  let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "";
+  let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null;
 
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
   const testBtn   = document.getElementById("gTestBtn");
 
-  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; }
-  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; }
+  function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn } })); }catch(e){} }
+  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; notifyAuth(true); }
+  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; stampCache=null; notifyAuth(false); }
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
 
   function initGis(){
@@ -543,6 +596,26 @@
         throw new Error("저장 실패: "+err);
       }
       return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
+    },
+    fetchStamp: async function(){
+      if(stampCache) return stampCache;
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      const fd = new FormData();
+      fd.append("access_token", accessToken);
+      const r = await fetch(WORKER_URL + "/stamp", { method:"POST", body: fd });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok || !d.ok || !d.b64){
+        const err = (d && d.error) ? d.error : ("HTTP "+r.status);
+        if(err === "invalid_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
+        if(err === "not_allowed"){ throw new Error("이 계정은 허용목록에 없습니다: "+(d.email||"")); }
+        if(err === "not_found"){ throw new Error("백엔드에 도장 기능이 아직 배포되지 않았습니다. Worker를 최신 코드로 재배포해 주세요."); }
+        throw new Error("도장 이미지를 받지 못했습니다: "+err);
+      }
+      const bin = atob(d.b64);
+      const u8 = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      stampCache = u8;
+      return u8;
     }
   };
 })();
@@ -2657,6 +2730,608 @@ function renderValidationCard(result) {
   document.getElementById("smsDriveSave").addEventListener("click",smsSaveToDrive);
 })();
 
+</script>
+
+<script>
+/* ===== 원본대조필 변환 모듈 (window.OrigSeal) =====
+   정산서 xlsx → 맨 위 2행(원 본 대 조 필 배너 + 여백) 삽입 + 도장 이미지 + A4 맞춤 인쇄설정.
+   SheetJS를 쓰지 않고 zip 내부 XML을 직접 수정 → 서식·수식·병합 원본 보존. */
+window.OrigSeal = (function(){
+  const DEC = new TextDecoder("utf-8");
+  const ENC = new TextEncoder();
+  const TARGET_SHEET = "정산서";
+  const DELTA = 2; // 삽입 행 수
+
+  /* ---------- 참조 유틸 ---------- */
+  function colToNum(c){ let n=0; for(let i=0;i<c.length;i++){ n=n*26+(c.charCodeAt(i)-64); } return n; }
+  function numToCol(n){ let s=""; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; }
+
+  /* 수식 문자열 내 셀 참조 행번호 +delta (문자열 리터럴은 건너뜀)
+     mode 'self'  : 시트 접두어 없는 참조 + 정산서! 접두어 참조를 이동
+     mode 'other' : 정산서! 접두어 참조만 이동 */
+  function shiftFormula(text, delta, mode){
+    const parts = text.split(/("(?:[^"]*)"|&quot;[\s\S]*?&quot;)/);
+    const refRe = /(?<![A-Za-z0-9_$.\uAC00-\uD7A3])((?:'[^']+'|[A-Za-z0-9_.\uAC00-\uD7A3]+)!)?(\$?)([A-Z]{1,3})(\$?)(\d{1,7})(:(\$?)([A-Z]{1,3})(\$?)(\d{1,7}))?(?![\d(A-Za-z_\uAC00-\uD7A3])/g;
+    for(let i=0;i<parts.length;i+=2){
+      if(!parts[i]) continue;
+      parts[i] = parts[i].replace(refRe, (m, pref, d1, col, d2, row, rng, e1, ecol, e2, erow)=>{
+        let hit;
+        if(pref){ const nm = pref.slice(0,-1).replace(/^'|'$/g,""); hit = (nm===TARGET_SHEET); }
+        else hit = (mode==="self");
+        if(!hit) return m;
+        let out = (pref||"") + d1 + col + d2 + (Number(row)+delta);
+        if(rng) out += ":" + e1 + ecol + e2 + (Number(erow)+delta);
+        return out;
+      });
+    }
+    return parts.join("");
+  }
+
+  function shiftRangeStr(ref, delta){ // "A1:B5" 또는 "A1"
+    return ref.replace(/([A-Z]{1,3})(\d+)/g, (m,c,r)=> c+(Number(r)+delta));
+  }
+
+  /* ---------- 대상 시트 XML 변환 ---------- */
+  function transformSheetXml(xml){
+    // 1) 수식 내용 이동 (자기 시트 기준)
+    xml = xml.replace(/(<f\b[^>]*>)([\s\S]*?)(<\/f>)/g, (m,a,body,c)=> a+shiftFormula(body, DELTA, "self")+c);
+    // 공유/배열 수식 ref 속성 이동
+    xml = xml.replace(/(<f\b[^>]*\bref=")([^"]+)(")/g, (m,a,ref,c)=> a+shiftRangeStr(ref,DELTA)+c);
+    // 2) 행/셀 좌표 이동
+    xml = xml.replace(/(<row\b[^>]*\br=")(\d+)(")/g, (m,a,n,c)=> a+(Number(n)+DELTA)+c);
+    xml = xml.replace(/(<c r=")([A-Z]{1,3})(\d+)(")/g, (m,a,col,row,c)=> a+col+(Number(row)+DELTA)+c);
+    // 3) 병합 이동
+    xml = xml.replace(/(<mergeCell ref=")([^"]+)(")/g, (m,a,ref,c)=> a+shiftRangeStr(ref,DELTA)+c);
+    // 4) 하이퍼링크 이동
+    xml = xml.replace(/(<hyperlink\b[^>]*\bref=")([A-Z]{1,3})(\d+)(")/g, (m,a,col,row,c)=> a+col+(Number(row)+DELTA)+c);
+    // 5) dimension: 시작은 A1 유지(배너 포함), 끝행 +2, 끝열은 최소 AK 보장
+    xml = xml.replace(/(<dimension ref=")([A-Z]{1,3})(\d+):([A-Z]{1,3})(\d+)(")/,
+      (m,a,c1,r1,c2,r2,e)=>{
+        const endCol = colToNum(c2) < colToNum("AK") ? "AK" : c2;
+        return a+c1+"1:"+endCol+(Number(r2)+DELTA)+e;
+      });
+    return xml;
+  }
+
+  /* ---------- 스타일 추가 (원본대조필 배너용) ---------- */
+  function appendStyles(stylesXml){
+    // 폰트: 26pt 나눔고딕
+    let fontId, borderBase, xfBase;
+    stylesXml = stylesXml.replace(/(<fonts count=")(\d+)(")/, (m,a,n,c)=>{ fontId=Number(n); return a+(Number(n)+1)+c; });
+    stylesXml = stylesXml.replace(/<\/fonts>/, '<font><sz val="26"/><name val="나눔고딕"/><family val="3"/><charset val="129"/></font></fonts>');
+    // 테두리 4종: 좌+상하 / 상하 / 우+상하 / 상만 (모두 medium)
+    stylesXml = stylesXml.replace(/(<borders count=")(\d+)(")/, (m,a,n,c)=>{ borderBase=Number(n); return a+(Number(n)+4)+c; });
+    const M='<color indexed="64"/>';
+    const B=[
+      `<border><left style="medium">${M}</left><right/><top style="medium">${M}</top><bottom style="medium">${M}</bottom><diagonal/></border>`,
+      `<border><left/><right/><top style="medium">${M}</top><bottom style="medium">${M}</bottom><diagonal/></border>`,
+      `<border><left/><right style="medium">${M}</right><top style="medium">${M}</top><bottom style="medium">${M}</bottom><diagonal/></border>`,
+      `<border><left/><right/><top style="medium">${M}</top><bottom/><diagonal/></border>`
+    ].join("");
+    stylesXml = stylesXml.replace(/<\/borders>/, B+'</borders>');
+    // cellXfs 5종
+    stylesXml = stylesXml.replace(/(<cellXfs count=")(\d+)(")/, (m,a,n,c)=>{ xfBase=Number(n); return a+(Number(n)+5)+c; });
+    const AL='<alignment horizontal="center" vertical="center"/>';
+    const X=[
+      `<xf numFmtId="0" fontId="${fontId}" fillId="0" borderId="${borderBase}" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">${AL}</xf>`,   // 텍스트(좌+상하)
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="${borderBase}" xfId="0" applyBorder="1" applyAlignment="1">${AL}</xf>`,                          // 좌+상하
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="${borderBase+1}" xfId="0" applyBorder="1" applyAlignment="1">${AL}</xf>`,                        // 상하
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="${borderBase+2}" xfId="0" applyBorder="1" applyAlignment="1">${AL}</xf>`,                        // 우+상하
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="${borderBase+3}" xfId="0" applyBorder="1" applyAlignment="1">${AL}</xf>`                         // 상만
+    ].join("");
+    stylesXml = stylesXml.replace(/<\/cellXfs>/, X+'</cellXfs>');
+    return { stylesXml, xf:{ TXT:xfBase, L:xfBase+1, M:xfBase+2, R:xfBase+3, T:xfBase+4 } };
+  }
+
+  /* ---------- 배너 2행 XML ---------- */
+  function bannerRowsXml(xf){
+    let r1cells = `<c r="Y1" s="${xf.TXT}" t="inlineStr"><is><t xml:space="preserve">원 본 대 조 필</t></is></c>`;
+    for(let n=colToNum("Z"); n<=colToNum("AG"); n++) r1cells += `<c r="${numToCol(n)}1" s="${xf.M}"/>`;
+    r1cells += `<c r="AH1" s="${xf.R}"/><c r="AI1" s="${xf.L}"/><c r="AJ1" s="${xf.M}"/><c r="AK1" s="${xf.R}"/>`;
+    let r2cells = "";
+    for(let n=colToNum("Y"); n<=colToNum("AK"); n++) r2cells += `<c r="${numToCol(n)}2" s="${xf.T}"/>`;
+    return `<row r="1" spans="25:37" ht="64.5" customHeight="1" thickBot="1">${r1cells}</row>`
+         + `<row r="2" spans="25:37" ht="30" customHeight="1" thickBot="1">${r2cells}</row>`;
+  }
+
+  /* ---------- 인쇄 설정 보장 (A4 세로, 너비 맞춤) ---------- */
+  function ensurePageSetup(xml){
+    // sheetPr / pageSetUpPr fitToPage
+    if(!/fitToPage="1"/.test(xml)){
+      if(/<sheetPr\b[^>]*\/>/.test(xml)){
+        xml = xml.replace(/<sheetPr\b([^>]*)\/>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/></sheetPr>');
+      } else if(/<sheetPr\b[^>]*>/.test(xml)){
+        xml = xml.replace(/(<sheetPr\b[^>]*>)/, '$1<pageSetUpPr fitToPage="1"/>');
+      } else {
+        xml = xml.replace(/(<worksheet\b[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+      }
+    }
+    // pageMargins 없으면 추가 (pageSetup 앞 또는 </worksheet> 앞)
+    if(!/<pageMargins\b/.test(xml)){
+      const pm = '<pageMargins left="0.25" right="0.25" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>';
+      if(/<pageSetup\b/.test(xml)) xml = xml.replace(/<pageSetup\b/, pm+'<pageSetup');
+      else xml = xml.replace(/<\/worksheet>/, pm+'</worksheet>');
+    }
+    // pageSetup: 있으면 속성 보장, 없으면 추가
+    if(/<pageSetup\b/.test(xml)){
+      xml = xml.replace(/<pageSetup\b([^>]*?)\/?>/, (m, attrs)=>{
+        if(!/paperSize=/.test(attrs)) attrs += ' paperSize="9"';
+        if(!/fitToHeight=/.test(attrs)) attrs += ' fitToHeight="0"';
+        if(!/orientation=/.test(attrs)) attrs += ' orientation="portrait"';
+        return '<pageSetup'+attrs+'/>';
+      });
+    } else {
+      xml = xml.replace(/(<pageMargins\b[^>]*\/>)/, '$1<pageSetup paperSize="9" fitToWidth="1" fitToHeight="0" orientation="portrait"/>');
+    }
+    return xml;
+  }
+
+  /* ---------- 도장 드로잉 anchor (예시 파일과 동일 좌표: AI1 영역) ---------- */
+  function stampAnchorXml(){
+    return '<xdr:oneCellAnchor><xdr:from><xdr:col>34</xdr:col><xdr:colOff>64994</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>49575</xdr:rowOff></xdr:from>'
+      + '<xdr:ext cx="720000" cy="720000"/>'
+      + '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="{ID}" name="엔티켓 도장"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'
+      + '<xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="{RID}" cstate="print">'
+      + '<a:clrChange><a:clrFrom><a:srgbClr val="FFFFFF"/></a:clrFrom><a:clrTo><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:clrTo></a:clrChange>'
+      + '</a:blip><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
+      + '<xdr:spPr><a:xfrm><a:off x="9959788" y="49575"/><a:ext cx="720000" cy="720000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>'
+      + '</xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
+  }
+
+  /* ---------- 메인 변환 ---------- */
+  function transform(inputBytes, stampJpegBytes){
+    const files = fflate.unzipSync(inputBytes);
+    const get = p => files[p] ? DEC.decode(files[p]) : null;
+    const put = (p,s) => { files[p] = ENC.encode(s); };
+
+    // 대상 시트 찾기
+    let wb = get("xl/workbook.xml");
+    if(!wb) throw new Error("올바른 xlsx 파일이 아닙니다 (workbook 없음).");
+    const sheets = [];
+    wb.replace(/<sheet\b([^>]*)\/>/g, (m,attrs)=>{
+      const name=(attrs.match(/name="([^"]*)"/)||[])[1];
+      const rid=(attrs.match(/r:id="([^"]*)"/)||[])[1];
+      sheets.push({name, rid}); return m;
+    });
+    if(!sheets.length) throw new Error("시트를 찾을 수 없습니다.");
+    const target = sheets.find(s=>s.name===TARGET_SHEET) || sheets[0];
+
+    let wbRels = get("xl/_rels/workbook.xml.rels");
+    const relMap = {};
+    wbRels.replace(/<Relationship\b([^>]*)\/>/g, (m,attrs)=>{
+      const id=(attrs.match(/Id="([^"]*)"/)||[])[1];
+      const tg=(attrs.match(/Target="([^"]*)"/)||[])[1];
+      relMap[id]=tg; return m;
+    });
+    let sheetTarget = relMap[target.rid];
+    if(!sheetTarget) throw new Error("시트 경로를 찾을 수 없습니다.");
+    sheetTarget = sheetTarget.replace(/^\//,"").replace(/^xl\//,"");
+    const sheetPath = "xl/"+sheetTarget;
+    let sx = get(sheetPath);
+    if(!sx) throw new Error("시트 파일이 없습니다: "+sheetPath);
+    const sstXml = get("xl/sharedStrings.xml") || "";
+    if(/원 본 대 조 필/.test(sx) || /원 본 대 조 필/.test(sstXml)) throw new Error("이미 원본대조필 처리가 된 파일로 보입니다.");
+
+    // 좌표 이동
+    sx = transformSheetXml(sx);
+
+    // 스타일 추가
+    const stRes = appendStyles(get("xl/styles.xml"));
+    put("xl/styles.xml", stRes.stylesXml);
+
+    // 배너 2행 삽입
+    const banner = bannerRowsXml(stRes.xf);
+    if(!/<sheetData>/.test(sx)) throw new Error("sheetData를 찾을 수 없습니다.");
+    sx = sx.replace(/<sheetData>/, "<sheetData>"+banner);
+
+    // 병합 2개 추가
+    if(/<mergeCells count="(\d+)">/.test(sx)){
+      sx = sx.replace(/<mergeCells count="(\d+)">/, (m,n)=>'<mergeCells count="'+(Number(n)+2)+'"><mergeCell ref="Y1:AH1"/><mergeCell ref="AI1:AK1"/>');
+    } else {
+      sx = sx.replace(/<\/sheetData>/, '</sheetData><mergeCells count="2"><mergeCell ref="Y1:AH1"/><mergeCell ref="AI1:AK1"/></mergeCells>');
+    }
+
+    // 인쇄 설정
+    sx = ensurePageSetup(sx);
+
+    // ----- 도장 이미지 + 드로잉 -----
+    // 미디어 파일명 (충돌 회피)
+    let mediaName = "enticket_seal.jpeg", k=1;
+    while(files["xl/media/"+mediaName]) mediaName = "enticket_seal"+(++k)+".jpeg";
+    files["xl/media/"+mediaName] = stampJpegBytes;
+
+    // 시트 rels 준비
+    const relsPath = sheetPath.replace(/worksheets\//, "worksheets/_rels/") + ".rels";
+    let sRels = get(relsPath) || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    function nextRid(relsXml){
+      let mx=0; relsXml.replace(/Id="rId(\d+)"/g,(m,n)=>{ mx=Math.max(mx,Number(n)); return m; });
+      return "rId"+(mx+1);
+    }
+
+    let ct = get("[Content_Types].xml");
+    if(!/Extension="jpeg"/.test(ct)) ct = ct.replace(/<Types\b([^>]*)>/, '<Types$1><Default Extension="jpeg" ContentType="image/jpeg"/>');
+
+    const existingDrawing = sx.match(/<drawing r:id="([^"]+)"\/>/);
+    if(existingDrawing){
+      // 기존 드로잉에 anchor 추가
+      const dRelId = existingDrawing[1];
+      const dRelsXml = sRels;
+      const dTarget = (dRelsXml.match(new RegExp('Id="'+dRelId+'"[^>]*Target="([^"]*)"'))||dRelsXml.match(new RegExp('Target="([^"]*)"[^>]*Id="'+dRelId+'"'))||[])[1];
+      if(!dTarget) throw new Error("드로잉 관계를 찾을 수 없습니다.");
+      const dPath = "xl/"+dTarget.replace(/^\.\.\//,"").replace(/^\//,"").replace(/^xl\//,"");
+      let dx = get(dPath);
+      const dRelsPath = dPath.replace(/drawings\//,"drawings/_rels/")+".rels";
+      let dr = get(dRelsPath) || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      const imgRid = nextRid(dr);
+      dr = dr.replace(/<\/Relationships>/, '<Relationship Id="'+imgRid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/'+mediaName+'"/></Relationships>');
+      let mxId=1; dx.replace(/<xdr:cNvPr id="(\d+)"/g,(m,n)=>{ mxId=Math.max(mxId,Number(n)); return m; });
+      dx = dx.replace(/<\/xdr:wsDr>/, stampAnchorXml().replace("{ID}", String(mxId+1)).replace("{RID}", imgRid)+"</xdr:wsDr>");
+      put(dPath, dx); put(dRelsPath, dr);
+    } else {
+      // 새 드로잉 생성
+      let dn=1; while(files["xl/drawings/drawing"+dn+".xml"]) dn++;
+      const dPath = "xl/drawings/drawing"+dn+".xml";
+      const dx = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
+        + '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        + stampAnchorXml().replace("{ID}","2").replace("{RID}","rId1")
+        + '</xdr:wsDr>';
+      const dr = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/'+mediaName+'"/></Relationships>';
+      put(dPath, dx);
+      put("xl/drawings/_rels/drawing"+dn+".xml.rels", dr);
+      const drawRid = nextRid(sRels);
+      sRels = sRels.replace(/<\/Relationships>/, '<Relationship Id="'+drawRid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing'+dn+'.xml"/></Relationships>');
+      sx = sx.replace(/<\/worksheet>/, '<drawing r:id="'+drawRid+'"/></worksheet>');
+      ct = ct.replace(/<\/Types>/, '<Override PartName="/xl/drawings/drawing'+dn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+    }
+    put(relsPath, sRels);
+    put("[Content_Types].xml", ct);
+    put(sheetPath, sx);
+
+    // ----- 다른 시트: 정산서! 참조 이동 -----
+    Object.keys(files).forEach(p=>{
+      if(/^xl\/worksheets\/[^/]+\.xml$/.test(p) && p !== sheetPath){
+        let x = DEC.decode(files[p]);
+        if(x.indexOf(TARGET_SHEET) !== -1){
+          x = x.replace(/(<f\b[^>]*>)([\s\S]*?)(<\/f>)/g, (m,a,body,c)=> a+shiftFormula(body, DELTA, "other")+c);
+          put(p, x);
+        }
+      }
+    });
+
+    // ----- workbook.xml: definedNames(인쇄영역 등) 이동 + 전체 재계산 지시 -----
+    wb = wb.replace(/(<definedName\b[^>]*>)([\s\S]*?)(<\/definedName>)/g, (m,a,body,c)=> a+shiftFormula(body, DELTA, "other")+c);
+    // 정산서 인쇄영역 시작행은 1 유지 (배너 포함 출력)
+    wb = wb.replace(new RegExp("("+TARGET_SHEET+"!\\$[A-Z]{1,3}\\$)3(:)","g"), "$11$2");
+    if(/<calcPr\b/.test(wb)){
+      if(!/fullCalcOnLoad/.test(wb)) wb = wb.replace(/<calcPr\b/, '<calcPr fullCalcOnLoad="1" ');
+    } else {
+      wb = wb.replace(/<\/workbook>/, '<calcPr fullCalcOnLoad="1"/></workbook>');
+    }
+    put("xl/workbook.xml", wb);
+
+    // ----- calcChain 제거 (좌표가 바뀌므로 Excel이 새로 만들게 함) -----
+    if(files["xl/calcChain.xml"]){
+      delete files["xl/calcChain.xml"];
+      let ct2 = get("[Content_Types].xml");
+      ct2 = ct2.replace(/<Override PartName="\/xl\/calcChain\.xml"[^>]*\/>/, "");
+      put("[Content_Types].xml", ct2);
+      wbRels = wbRels.replace(/<Relationship\b[^>]*Target="calcChain\.xml"[^>]*\/>/, "");
+      put("xl/_rels/workbook.xml.rels", wbRels);
+    }
+
+    // ----- 재압축 ([Content_Types].xml 우선) -----
+    const ordered = {};
+    ordered["[Content_Types].xml"] = files["[Content_Types].xml"];
+    Object.keys(files).forEach(p=>{ if(p!=="[Content_Types].xml") ordered[p]=files[p]; });
+    const out = fflate.zipSync(ordered, { level: 6 });
+    return { bytes: out, sheetName: target.name, sheetPath };
+  }
+
+  /* ==================== PDF용 HTML 렌더러 ==================== */
+  /* 값·숫자서식·병합·행높이·열너비는 xlsx-js-style로, 셀 서식(테두리·폰트·채움)은 styles.xml 직접 파싱 */
+  const IDX_COLORS={8:"000000",9:"FFFFFF",10:"FF0000",11:"00FF00",12:"0000FF",13:"FFFF00",14:"FF00FF",15:"00FFFF",16:"800000",17:"008000",18:"000080",19:"808000",20:"800080",21:"008080",22:"C0C0C0",23:"808080",64:"000000"};
+  function parseTheme(themeXml){
+    const out=[]; if(!themeXml) return ["FFFFFF","000000","FFFFFF","000000"];
+    const m=themeXml.match(/<a:clrScheme[\s\S]*?<\/a:clrScheme>/);
+    if(!m) return ["FFFFFF","000000"];
+    const order=["dk1","lt1","dk2","lt2","accent1","accent2","accent3","accent4","accent5","accent6","hlink","folHlink"];
+    const raw={};
+    order.forEach(k=>{
+      const mm=m[0].match(new RegExp("<a:"+k+">([\\s\\S]*?)</a:"+k+">"));
+      if(mm){
+        const rgb=mm[1].match(/srgbClr val="([0-9A-Fa-f]{6})"/);
+        const sys=mm[1].match(/sysClr[^>]*lastClr="([0-9A-Fa-f]{6})"/);
+        raw[k]=(rgb&&rgb[1])||(sys&&sys[1])||"000000";
+      } else raw[k]="000000";
+    });
+    // Excel 테마 인덱스: 0=lt1, 1=dk1, 2=lt2, 3=dk2, 4~9=accent1~6, 10=hlink, 11=folHlink
+    return [raw.lt1,raw.dk1,raw.lt2,raw.dk2,raw.accent1,raw.accent2,raw.accent3,raw.accent4,raw.accent5,raw.accent6,raw.hlink,raw.folHlink];
+  }
+  function applyTint(hex,tint){
+    if(!tint) return hex;
+    let r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+    const f=v=> tint<0 ? Math.round(v*(1+tint)) : Math.round(v+(255-v)*tint);
+    const h=v=>Math.max(0,Math.min(255,f(v))).toString(16).padStart(2,"0").toUpperCase();
+    return h(r)+h(g)+h(b);
+  }
+  function colorOf(tag, theme){ // tag: <color .../> 원문 문자열
+    if(!tag) return null;
+    let m=tag.match(/rgb="(?:FF)?([0-9A-Fa-f]{6})"/); if(m) return m[1].toUpperCase();
+    m=tag.match(/indexed="(\d+)"/); if(m) return IDX_COLORS[Number(m[1])]||"000000";
+    m=tag.match(/theme="(\d+)"/);
+    if(m){
+      let hex=theme[Number(m[1])]||"000000";
+      const t=tag.match(/tint="(-?[\d.]+)"/);
+      return applyTint(hex, t?Number(t[1]):0);
+    }
+    if(/auto="1"/.test(tag)) return "000000";
+    return null;
+  }
+  function parseStyleSheet(stylesXml, themeXml){
+    const theme=parseTheme(themeXml);
+    const pick=(xml,tag)=>{ const m=xml.match(new RegExp("<"+tag+"[\\s\\S]*?</"+tag+">")); return m?m[0]:""; };
+    const fonts=(pick(stylesXml,"fonts").match(/<font\/>|<font>[\s\S]*?<\/font>/g)||[]).map(f=>{
+      const sz=f.match(/<sz val="([\d.]+)"/);
+      const col=f.match(/<color[^>]*\/>/);
+      const nm=f.match(/<name val="([^"]*)"/);
+      return { sz: sz?Number(sz[1]):11, bold:/<b\/>/.test(f), italic:/<i\/>/.test(f), underline:/<u\/>|<u val=/.test(f),
+               color: colorOf(col&&col[0],theme), name: nm?nm[1]:null };
+    });
+    const fills=(pick(stylesXml,"fills").match(/<fill>[\s\S]*?<\/fill>/g)||[]).map(f=>{
+      if(!/patternType="solid"/.test(f)) return null;
+      const fg=f.match(/<fgColor[^>]*\/>/);
+      return colorOf(fg&&fg[0],theme);
+    });
+    const BW={thin:"1px solid",hair:"1px dotted",dotted:"1px dotted",dashed:"1px dashed",medium:"2px solid",thick:"3px solid",double:"3px double"};
+    const borders=(pick(stylesXml,"borders").match(/<border[^>]*>[\s\S]*?<\/border>|<border[^>]*\/>/g)||[]).map(b=>{
+      const side=n=>{
+        const m=b.match(new RegExp("<"+n+"[^>]*style=\"([a-zA-Z]+)\"[^>]*(?:/>|>[\\s\\S]*?</"+n+">)"));
+        if(!m) return null;
+        const cm=(m[0].match(/<color[^>]*\/>/)||[])[0];
+        return (BW[m[1]]||"1px solid")+" #"+(colorOf(cm,theme)||"000000");
+      };
+      return { top:side("top"), left:side("left"), right:side("right"), bottom:side("bottom") };
+    });
+    const xfs=(pick(stylesXml,"cellXfs").match(/<xf [^>]*\/>|<xf [^>]*>[\s\S]*?<\/xf>/g)||[]).map(x=>{
+      const g=(a)=>{ const m=x.match(new RegExp(a+'="(\\d+)"')); return m?Number(m[1]):0; };
+      const al=x.match(/<alignment([^>]*)\/>/);
+      let alignment=null;
+      if(al){
+        alignment={
+          h:(al[1].match(/horizontal="(\w+)"/)||[])[1]||null,
+          v:(al[1].match(/vertical="(\w+)"/)||[])[1]||null,
+          wrap:/wrapText="(1|true)"/.test(al[1])
+        };
+      }
+      return { fontId:g("fontId"), fillId:g("fillId"), borderId:g("borderId"), alignment };
+    });
+    return { fonts, fills, borders, xfs };
+  }
+  function renderHTML(outBytes, sheetName, stampBytes){
+    const files = fflate.unzipSync(outBytes);
+    const dec = p => files[p] ? DEC.decode(files[p]) : null;
+    // 대상 시트 경로
+    const wbXml = dec("xl/workbook.xml");
+    let rid=null;
+    wbXml.replace(/<sheet\b([^>]*)\/>/g,(m,a)=>{
+      const nm=(a.match(/name="([^"]*)"/)||[])[1];
+      if(nm===sheetName) rid=(a.match(/r:id="([^"]*)"/)||[])[1];
+      return m;
+    });
+    let tgt=null;
+    dec("xl/_rels/workbook.xml.rels").replace(/<Relationship\b([^>]*)\/>/g,(m,a)=>{
+      const id=(a.match(/Id="([^"]*)"/)||[])[1];
+      if(id===rid) tgt=(a.match(/Target="([^"]*)"/)||[])[1];
+      return m;
+    });
+    const sheetXml = dec("xl/"+tgt.replace(/^\//,"").replace(/^xl\//,""));
+    const SS = parseStyleSheet(dec("xl/styles.xml"), dec("xl/theme/theme1.xml"));
+    // 셀별 스타일 인덱스
+    const sMap={};
+    sheetXml.replace(/<c r="([A-Z]+\d+)"([^>]*)>/g,(m,ref,attrs)=>{
+      const s=attrs.match(/\bs="(\d+)"/); if(s) sMap[ref]=Number(s[1]); return m;
+    });
+    sheetXml.replace(/<c r="([A-Z]+\d+)"([^>]*)\/>/g,(m,ref,attrs)=>{
+      const s=attrs.match(/\bs="(\d+)"/); if(s) sMap[ref]=Number(s[1]); return m;
+    });
+    // 값·치수는 XLSX로
+    const wbk = XLSX.read(outBytes, { type:"array", cellStyles:true, cellNF:true });
+    const ws = wbk.Sheets[sheetName];
+    if(!ws || !ws["!ref"]) throw new Error("시트를 읽을 수 없습니다.");
+    const rng = XLSX.utils.decode_range(ws["!ref"]);
+    const nR = rng.e.r+1, nC = rng.e.c+1;
+    const cols = ws["!cols"]||[], rows = ws["!rows"]||[], merges = ws["!merges"]||[];
+    const colW=[];
+    for(let c=0;c<nC;c++){
+      const ci=cols[c]||{};
+      colW[c]= ci.wpx ? ci.wpx : (ci.wch ? Math.round(ci.wch*7+5) : 32);
+    }
+    const totalW=colW.reduce((a,b)=>a+b,0);
+    const skip={}, span={};
+    merges.forEach(m=>{
+      span[m.s.r+"_"+m.s.c]={rs:m.e.r-m.s.r+1, cs:m.e.c-m.s.c+1, er:m.e.r, ec:m.e.c};
+      for(let r=m.s.r;r<=m.e.r;r++) for(let c=m.s.c;c<=m.e.c;c++){ if(!(r===m.s.r&&c===m.s.c)) skip[r+"_"+c]=1; }
+    });
+    const xfOf=(r,c)=>{ const i=sMap[XLSX.utils.encode_cell({r,c})]; return (i!=null&&SS.xfs[i])?SS.xfs[i]:null; };
+    let html='<colgroup>'+colW.map(w=>'<col style="width:'+w+'px">').join("")+'</colgroup>';
+    for(let r=0;r<nR;r++){
+      const hpt=(rows[r]&&rows[r].hpt)?rows[r].hpt:16.5;
+      html+='<tr style="height:'+Math.round(hpt*96/72)+'px">';
+      for(let c=0;c<nC;c++){
+        if(skip[r+"_"+c]) continue;
+        const sp=span[r+"_"+c];
+        const xf=xfOf(r,c);
+        const exf= sp ? (xfOf(sp.er,sp.ec)||xf) : xf;
+        const bd= xf?SS.borders[xf.borderId]||{}:{};
+        const ebd= exf?SS.borders[exf.borderId]||{}:{};
+        let css="border-top:"+(bd.top||"1px solid transparent")+";border-left:"+(bd.left||"1px solid transparent")
+              +";border-right:"+((ebd.right||bd.right)||"1px solid transparent")+";border-bottom:"+((ebd.bottom||bd.bottom)||"1px solid transparent")+";";
+        const f= xf?SS.fonts[xf.fontId]||{}:{};
+        css+="font-size:"+(f.sz||11)+"pt;";
+        if(f.bold) css+="font-weight:bold;";
+        if(f.italic) css+="font-style:italic;";
+        if(f.underline) css+="text-decoration:underline;";
+        if(f.color && f.color!=="000000") css+="color:#"+f.color+";";
+        const cell=ws[XLSX.utils.encode_cell({r,c})]||{};
+        const al=(xf&&xf.alignment)||{};
+        css+="text-align:"+(al.h||(typeof cell.v==="number"?"right":"left"))+";";
+        css+="vertical-align:"+((al.v||"bottom").replace("center","middle"))+";";
+        css+= al.wrap ? "white-space:pre-wrap;word-break:break-all;overflow:hidden;" : "white-space:pre;overflow:visible;";
+        const fill= xf?SS.fills[xf.fillId]:null;
+        if(fill && fill!=="FFFFFF") css+="background:#"+fill+";";
+        let txt="";
+        if(cell.v!==undefined && cell.v!==null) txt=(cell.w!==undefined)?cell.w:String(cell.v);
+        txt=String(txt).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+        html+='<td'+(sp&&sp.rs>1?' rowspan="'+sp.rs+'"':"")+(sp&&sp.cs>1?' colspan="'+sp.cs+'"':"")+' style="'+css+'">'+txt+'</td>';
+      }
+      html+="</tr>";
+    }
+    // 도장 오버레이 (드로잉 anchor와 동일: AI열 시작 + colOff)
+    let leftPx=0; for(let c=0;c<34&&c<nC;c++) leftPx+=colW[c];
+    leftPx+=Math.round(64994/9525);
+    const topPx=Math.round(49575/9525), wPx=Math.round(720000/9525), hPx=Math.round(720000/9525);
+    let stampImg="";
+    if(stampBytes){
+      let bin=""; for(let i=0;i<stampBytes.length;i++) bin+=String.fromCharCode(stampBytes[i]);
+      stampImg='<img src="data:image/jpeg;base64,'+btoa(bin)+'" style="position:absolute;left:'+leftPx+'px;top:'+topPx+'px;width:'+wPx+'px;height:'+hPx+'px;mix-blend-mode:multiply;">';
+    }
+    const wrap='<div class="oseal-sheet" style="position:relative;width:'+totalW+'px;background:#fff;font-family:\'나눔고딕\',\'Nanum Gothic\',\'Malgun Gothic\',sans-serif;color:#000;line-height:1.25;box-sizing:border-box;">'
+      +'<table style="border-collapse:collapse;table-layout:fixed;width:'+totalW+'px">'+html+'</table>'+stampImg+'</div>';
+    return { html: wrap, widthPx: totalW };
+  }
+
+  return { transform, renderHTML };
+})();
+
+/* ===== 원본대조필 탭 로직 ===== */
+(function(){
+  const gate=document.getElementById("osealGate");
+  const work=document.getElementById("osealWork");
+  const drop=document.getElementById("osealDrop");
+  const input=document.getElementById("osealFileInput");
+  const statusEl=document.getElementById("osealStatus");
+  const preview=document.getElementById("osealPreview");
+  const btnRow=document.getElementById("osealBtnRow");
+  const fnameEl=document.getElementById("osealFname");
+  const btnXlsx=document.getElementById("osealDlXlsx");
+  const btnPdf=document.getElementById("osealDlPdf");
+  let out=null;
+
+  function setStatus(msg,isErr){ statusEl.textContent=msg||""; statusEl.className="status"+(isErr?" err":""); }
+
+  function updateGate(){
+    const ok = window.gdrive && window.gdrive.isLoggedIn();
+    gate.style.display = ok ? "none" : "";
+    work.classList.toggle("locked", !ok);
+  }
+  document.addEventListener("enticket-auth", updateGate);
+  updateGate();
+
+  function makeName(orig){
+    let base=String(orig||"정산서.xlsx").replace(/\.(xlsx|xls)$/i,"");
+    if(base.indexOf("정산서")!==-1) base=base.replace("정산서","원본대조필");
+    else base="원본대조필_"+base;
+    return base;
+  }
+
+  async function handleFile(file){
+    if(!file) return;
+    if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
+    if(!(window.gdrive && window.gdrive.isLoggedIn())){ updateGate(); alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    out=null; btnRow.style.display="none"; fnameEl.textContent="";
+    preview.innerHTML='<div class="empty">변환 중…</div>';
+    try{
+      setStatus("도장 이미지 확인 중…");
+      const stamp = await window.gdrive.fetchStamp();
+      setStatus("정산서 변환 중…");
+      const buf = new Uint8Array(await file.arrayBuffer());
+      const res = OrigSeal.transform(buf, stamp);
+      const name = makeName(file.name);
+      const r = OrigSeal.renderHTML(res.bytes, res.sheetName, stamp);
+      out = { bytes:res.bytes, sheetName:res.sheetName, name, stamp, html:r.html, widthPx:r.widthPx };
+
+      // 미리보기: 폭에 맞춰 축소 렌더
+      const wrap=document.createElement("div"); wrap.className="prev-wrap";
+      const sizer=document.createElement("div"); sizer.style.overflow="hidden";
+      const inner=document.createElement("div"); inner.className="prev-scale";
+      inner.innerHTML=r.html;
+      sizer.appendChild(inner); wrap.appendChild(sizer);
+      preview.innerHTML=""; preview.appendChild(wrap);
+      const h0 = inner.scrollHeight;
+      const avail = Math.max(200, wrap.clientWidth - 22);
+      const scale = Math.min(1, avail / r.widthPx);
+      inner.style.transform = "scale("+scale+")";
+      sizer.style.width  = Math.ceil(r.widthPx*scale)+"px";
+      sizer.style.height = Math.ceil(h0*scale)+"px";
+
+      btnRow.style.display="";
+      fnameEl.textContent = name+".xlsx · "+name+".pdf";
+      setStatus("변환 완료. 미리보기를 확인하고 다운로드하세요.");
+    }catch(e){
+      preview.innerHTML='<div class="empty">변환 실패</div>';
+      setStatus("오류: "+(e && e.message || e), true);
+    }
+  }
+
+  drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("hover"); });
+  drop.addEventListener("dragleave",()=>drop.classList.remove("hover"));
+  drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("hover"); handleFile(e.dataTransfer.files && e.dataTransfer.files[0]); });
+  input.addEventListener("change",()=>{ handleFile(input.files && input.files[0]); input.value=""; });
+
+  function saveBlob(bytes,name,mime){
+    const b=new Blob([bytes],{type:mime});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(b); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  }
+  btnXlsx.addEventListener("click",()=>{
+    if(!out) return;
+    saveBlob(out.bytes, out.name+".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  });
+
+  let pdfLibP=null;
+  function loadHtml2Pdf(){
+    if(window.html2pdf) return Promise.resolve();
+    if(pdfLibP) return pdfLibP;
+    pdfLibP=new Promise((res,rej)=>{
+      const s=document.createElement("script");
+      s.src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js";
+      s.onload=()=>res();
+      s.onerror=()=>{ pdfLibP=null; rej(new Error("PDF 라이브러리를 불러오지 못했습니다. 네트워크 확인 후 다시 시도해 주세요.")); };
+      document.head.appendChild(s);
+    });
+    return pdfLibP;
+  }
+  btnPdf.addEventListener("click", async ()=>{
+    if(!out) return;
+    btnPdf.disabled=true; setStatus("PDF 생성 중… (수 초 걸릴 수 있습니다)");
+    try{
+      await loadHtml2Pdf();
+      const host=document.createElement("div");
+      host.style.cssText="position:fixed;left:-100000px;top:0;background:#fff;";
+      host.innerHTML=out.html;
+      document.body.appendChild(host);
+      try{
+        await html2pdf().set({
+          margin:[5,5,5,5],
+          filename: out.name+".pdf",
+          image:{ type:"jpeg", quality:0.95 },
+          html2canvas:{ scale: Math.max(1, Math.min(2, 2600/out.widthPx)), useCORS:true, backgroundColor:"#ffffff" },
+          jsPDF:{ unit:"mm", format:"a4", orientation:"portrait" },
+          pagebreak:{ mode:["css","legacy"] }
+        }).from(host.firstChild).save();
+      } finally { host.remove(); }
+      setStatus("PDF 저장 완료.");
+    }catch(e){
+      setStatus("PDF 생성 실패: "+(e && e.message || e), true);
+    }finally{
+      btnPdf.disabled=false;
+    }
+  });
+})();
 </script>
 </body>
 </html>
