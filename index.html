@@ -518,17 +518,29 @@
 (function(){
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
   const WORKER_URL = "https://enticket-drive.enticketai.workers.dev";
-  let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null;
+  let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null, isAllowedUser = false;
 
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
   const testBtn   = document.getElementById("gTestBtn");
 
-  function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn } })); }catch(e){} }
+  function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
   function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; stampCache=null; notifyAuth(false); }
+  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
+
+  // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
+  async function verifyAllowed(){
+    if(!tokenValid()) return false;
+    try{
+      const fd = new FormData();
+      fd.append("access_token", accessToken);
+      const r = await fetch(WORKER_URL + "/verify", { method:"POST", body: fd });
+      const d = await r.json().catch(()=>({}));
+      return !!(r.ok && d.ok && d.allowed !== false);
+    }catch(e){ return false; }
+  }
 
   function initGis(){
     if(!(window.google && google.accounts && google.accounts.oauth2)) return;
@@ -543,7 +555,11 @@
           const u = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers:{ Authorization:"Bearer "+accessToken } });
           const ud = await u.json(); userEmail = ud.email || "";
         }catch(e){ userEmail = ""; }
+        isAllowedUser = await verifyAllowed();
         showLoggedIn(userEmail || "로그인됨");
+        if(!isAllowedUser){
+          alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
+        }
       }
     });
     loginBtn.disabled = false;
@@ -577,6 +593,7 @@
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {
     isLoggedIn: function(){ return tokenValid(); },
+    isAllowed: function(){ return tokenValid() && isAllowedUser; },
     saveFile: async function(segments, filename, bytes, mimeType){
       if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
@@ -3221,10 +3238,13 @@ window.OrigSeal = (function(){
 
   function setStatus(msg,isErr){ statusEl.textContent=msg||""; statusEl.className="status"+(isErr?" err":""); }
 
+  const gateT = gate.querySelector(".g-t");
   function updateGate(){
-    const ok = window.gdrive && window.gdrive.isLoggedIn();
-    gate.style.display = ok ? "none" : "";
-    work.classList.toggle("locked", !ok);
+    const loggedIn = !!(window.gdrive && window.gdrive.isLoggedIn());
+    const allowed  = !!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed());
+    gate.style.display = allowed ? "none" : "";
+    work.classList.toggle("locked", !allowed);
+    if(gateT) gateT.textContent = (loggedIn && !allowed) ? "허용되지 않은 계정입니다" : "로그인이 필요한 기능입니다";
   }
   document.addEventListener("enticket-auth", updateGate);
   updateGate();
@@ -3239,7 +3259,7 @@ window.OrigSeal = (function(){
   async function handleFile(file){
     if(!file) return;
     if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
-    if(!(window.gdrive && window.gdrive.isLoggedIn())){ updateGate(); alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    if(!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed())){ updateGate(); alert("로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
     out=null; btnRow.style.display="none"; fnameEl.textContent="";
     preview.innerHTML='<div class="empty">변환 중…</div>';
     try{
