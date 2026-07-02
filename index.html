@@ -297,7 +297,6 @@
     <div class="gauth">
       <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
       <span id="gUser" class="guser" style="display:none"></span>
-      <button class="gbtn" id="gTestBtn" style="display:none">백엔드 연결 테스트</button>
       <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
     </div>
   </div>
@@ -523,11 +522,10 @@
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
-  const testBtn   = document.getElementById("gTestBtn");
 
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
-  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; testBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; testBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
+  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
+  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
 
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
@@ -578,16 +576,6 @@
     }
     accessToken=null; tokenExp=0; userEmail="";
     showLoggedOut();
-  });
-
-  testBtn.addEventListener("click", async ()=>{
-    if(!tokenValid()){ alert("로그인이 필요합니다(또는 만료됨). 다시 로그인해 주세요."); showLoggedOut(); return; }
-    try{
-      const r = await fetch(WORKER_URL + "/", { method:"GET" });
-      const d = await r.json().catch(()=>({}));
-      if(d && d.ok){ alert("백엔드 연결 정상 ✅\n서비스: "+(d.service||"")+"\n로그인 계정: "+(userEmail||"")); }
-      else{ alert("백엔드 응답 이상: "+JSON.stringify(d).slice(0,200)); }
-    }catch(e){ alert("백엔드 연결 실패: "+e.message); }
   });
 
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
