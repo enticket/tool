@@ -24,7 +24,6 @@
   }
   .tab:hover { color: #fff; }
   .tab.active { color: #fff; border-bottom-color: #fff; }
-
   /* ===== 구글 연동 (로그인) ===== */
   .gauth { display:flex; align-items:center; gap:10px; padding:10px 0; margin-left:auto; }
   .gauth .gbtn {
@@ -34,14 +33,11 @@
   .gauth .gbtn:hover { background:#f3eef8; }
   .gauth .gbtn:disabled { background:#cdb8e3; color:#fff; cursor:default; }
   .gauth .guser { font-size:12px; color:#602b89; font-weight:700; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
   .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 40px; }
   .panel-view { display: none; }
   .panel-view.active { display: block; }
-
   h2 { font-size: 19px; color: #602b89; margin-bottom: 4px; }
   .sub { font-size: 13px; color: #666; margin-bottom: 18px; }
-
   /* ===== 공통 ===== */
   .drop {
     display: block; width: 100%;
@@ -61,7 +57,6 @@
   .btn.ghost { background: #fff; color: #602b89; border: 1px solid #cdb8e3; }
   .btn.ghost:hover { background: #f3eef8; }
   .privacy { font-size: 12px; color: #aaa; margin-top: 16px; text-align: center; }
-
   /* ===== 엑셀 정리 ===== */
   .panel { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   .hidden { display: none; }
@@ -82,7 +77,6 @@
   tr:nth-child(even) td { background: #faf8fc; }
   .meta { font-size: 12px; color: #999; margin-top: 6px; }
   .warn { background: #fff3e0; border-left: 3px solid #fb8c00; color: #8a4b00; padding: 9px 13px; border-radius: 6px; font-size: 13px; margin-top: 10px; }
-
   /* ===== 포스터 변환 ===== */
   .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
   .count { font-size: 13px; color: #777; }
@@ -111,13 +105,11 @@
   .imgbox-title { font-size: 14px; font-weight: 800; color: #602b89; margin-bottom: 10px; }
   .imgbox .drop { margin-bottom: 0; }
   .imgbox-results { display: flex; flex-direction: column; margin-top: 10px; }
-
   @media (max-width: 768px){
     .cols { flex-direction: column; }
     .topbar-inner { justify-content: center; }
     .brand { padding-bottom: 0; }
   }
-
   /* ===== 정산서 도구 (탭3) ===== */
   #panel-settlement .node { background: #fff; border-radius: 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.07); padding: 16px 18px; }
   #panel-settlement .node-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -166,7 +158,6 @@
   #panel-settlement tr.total td { background: #f3eef8 !important; font-weight: 800; color: #602b89; }
   #panel-settlement .empty { color: #bbb; font-size: 13px; text-align: center; padding: 24px 0; }
   #panel-settlement .privacy { font-size: 12px; color: #aaa; margin-top: 18px; text-align: center; }
-
   /* ===== 문자발송명단 탭 ===== */
   #panel-sms .node { background: #fff; border-radius: 14px; box-shadow: 0 1px 5px rgba(0,0,0,0.07); padding: 14px 16px; }
   #panel-sms .node-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -212,7 +203,6 @@
   #panel-settlement .rule .undo { margin-left: auto; cursor: pointer; color: #c0392b; border: 1px solid #e3c4c4; border-radius: 6px; padding: 2px 9px; font-size: 11.5px; background: #fff; flex-shrink:0; }
   #panel-settlement .rule .undo:hover { background: #fdecea; }
   #panel-settlement .sim-hint { font-size: 11.5px; color: #a35bce; margin-left: 4px; }
-
   /* ===== 정산 정보 보충 패널 ===== */
   .st-supp { background:#fff; border-radius:14px; box-shadow:0 1px 5px rgba(0,0,0,0.07); overflow:hidden; margin-bottom:14px; }
   .supp-head { padding:14px 18px; font-size:15px; font-weight:800; color:#602b89; cursor:pointer; user-select:none;
@@ -234,7 +224,6 @@
   .etc-row2 { display:grid; grid-template-columns:1.5fr 1fr 0.8fr; gap:8px; align-items:center; margin-bottom:8px; }
   .etc-row2 .el { font-size:12.5px; color:#333; }
   .etc-row2 input { border:1px solid #e3dcec; border-radius:8px; padding:7px 10px; font-size:13px; width:100%; text-align:right; }
-
   /* ===== 정산서 생성 바 ===== */
   .st-gen { display:flex; align-items:center; justify-content:flex-end; gap:18px; padding:4px 2px 0; margin-bottom:8px; }
   .st-gen-live { font-size:13px; color:#8a7f97; }
@@ -280,10 +269,35 @@
   #panel-oseal .prev-wrap { border:1px solid #eee; border-radius:8px; overflow:auto; max-height:560px; background:#f2f2f2; padding:10px; }
   #panel-oseal .prev-scale { transform-origin: top left; }
   #panel-oseal .privacy { font-size:12px; color:#aaa; margin-top:18px; text-align:center; }
+  /* ===== 메일 업무 탭 ===== */
+  #panel-mail .gate { background:#fff; border:1.5px solid #e5d9f2; border-radius:14px; padding:26px 20px; text-align:center; box-shadow:0 1px 5px rgba(0,0,0,0.07); }
+  #panel-mail .gate .g-ico { font-size:30px; margin-bottom:8px; }
+  #panel-mail .gate .g-t { font-size:15px; font-weight:800; color:#4e2270; margin-bottom:6px; }
+  #panel-mail .work.locked { display:none; }
+  #panel-mail .m-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  #panel-mail .m-meta { font-size:13px; color:#666; }
+  #panel-mail .m-prog { height:8px; border-radius:4px; background:#eee; overflow:hidden; flex:1; min-width:120px; }
+  #panel-mail .m-prog>div { height:100%; background:#2e7d32; border-radius:4px; transition:.2s; }
+  #panel-mail .m-cat { margin-bottom:16px; }
+  #panel-mail .m-cat-head { background:#602b89; color:#fff; border-radius:14px 14px 0 0;
+    padding:11px 18px; font-size:14.5px; font-weight:800; display:flex; justify-content:space-between; align-items:center; }
+  #panel-mail .m-cat-head .cnt { font-size:12.5px; font-weight:600; opacity:.85; }
+  #panel-mail .m-cat-body { background:#fff; border-radius:0 0 14px 14px;
+    box-shadow:0 1px 5px rgba(0,0,0,0.07); padding:6px 18px; }
+  #panel-mail .m-item { display:flex; gap:11px; align-items:flex-start; padding:11px 0; border-bottom:1px solid #f0eaf6; }
+  #panel-mail .m-item:last-child { border-bottom:none; }
+  #panel-mail .m-item input { width:17px; height:17px; accent-color:#602b89; cursor:pointer; margin-top:2px; flex:none; }
+  #panel-mail .m-title { font-size:14px; font-weight:600; color:#1a1a1a; }
+  #panel-mail .m-detail { font-size:12.5px; color:#777; margin-top:2px; }
+  #panel-mail .m-chip { display:inline-block; background:#f3eef8; color:#602b89; border-radius:6px;
+    padding:1px 7px; font-size:11.5px; font-weight:700; margin-right:6px; }
+  #panel-mail .m-done-info { font-size:11.5px; color:#2e7d32; font-weight:600; }
+  #panel-mail .m-item.done { opacity:.55; }
+  #panel-mail .m-item.done .m-title { text-decoration:line-through; color:#666; }
+  #panel-mail .empty { color:#bbb; font-size:13px; text-align:center; padding:24px 0; }
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand">엔티켓 업무 도구</div>
@@ -293,6 +307,7 @@
       <button class="tab" data-tab="poster">이미지 변환</button>
       <button class="tab" data-tab="settlement">공연 정산서</button>
       <button class="tab" data-tab="oseal">원본대조필</button>
+      <button class="tab" data-tab="mail">메일 업무</button>
     </nav>
     <div class="gauth">
       <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
@@ -301,24 +316,19 @@
     </div>
   </div>
 </div>
-
 <div class="wrap">
-
   <!-- ============ 탭 1: 예매자 명단 정리 ============ -->
   <section class="panel-view active" id="panel-excel">
     <h2>예매자 명단 정리</h2>
-
     <!-- 상시 드롭존: 드래그/선택하면 파일이 계속 추가됨 -->
     <label class="drop" id="xlDrop">
       <div class="big">📂 예매자 명단 파일 넣기</div>
       <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
       <input type="file" id="xlFileInput" accept=".xls,.xlsx" multiple />
     </label>
-
     <!-- 추가된 파일 목록 -->
     <div id="xlNodes"></div>
     <div class="connector">▼</div>
-
     <!-- 결과 -->
     <div class="out-head">정리 결과 <span id="xlCount" style="font-weight:400;font-size:13px;opacity:.85"></span></div>
     <div class="out-body">
@@ -333,19 +343,15 @@
       </div>
       <div id="xlWarn" style="margin-top:10px"></div>
     </div>
-
     <div class="privacy"></div>
   </section>
-
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
   <section class="panel-view" id="panel-poster">
     <h2>이미지 변환</h2>
-
     <div class="bar">
       <button class="btn ghost" id="imClear" disabled>초기화</button>
       <span class="count" id="imCount"></span>
     </div>
-
     <div class="imgbox">
       <div class="imgbox-title">포스터</div>
       <label class="drop imgdrop" data-box="poster">
@@ -355,7 +361,6 @@
       </label>
       <div class="imgbox-results" data-box="poster"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
     </div>
-
     <div class="imgbox">
       <div class="imgbox-title">롤배너</div>
       <label class="drop imgdrop" data-box="roll">
@@ -365,7 +370,6 @@
       </label>
       <div class="imgbox-results" data-box="roll"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
     </div>
-
     <div class="imgbox">
       <div class="imgbox-title">띠배너</div>
       <label class="drop imgdrop" data-box="strip">
@@ -377,18 +381,15 @@
     </div>
     <div class="privacy"></div>
   </section>
-
   <!-- ============ 탭 3: 정산서 도구 ============ -->
   <section class="panel-view" id="panel-settlement">
     <h2>공연 정산서</h2>
-
     <!-- 회차 노드 -->
     <div id="sessions"></div>
     <div class="add-row">
       <button class="btn ghost" id="addSession">＋ 회차 추가</button>
     </div>
     <div class="connector">▼</div>
-
     <!-- 정산 정보 보충 입력 (접이식) -->
     <div class="st-supp" id="suppPanel">
       <div class="supp-head" id="suppToggle">
@@ -396,7 +397,6 @@
         기본 정보 입력
       </div>
       <div class="supp-body" id="suppBody">
-
         <div class="supp-sec">
           <div class="supp-sec-t">공연 정보</div>
           <div class="supp-grid2">
@@ -408,7 +408,6 @@
             <label class="sfld"><span>연락처</span><input type="text" id="sf_tel"></label>
           </div>
         </div>
-
         <div class="supp-sec">
           <div class="supp-sec-t">수수료 · 정산 외 발권</div>
           <div class="supp-grid2">
@@ -416,24 +415,19 @@
             <label class="sfld"><span>초대좌석권 (장)</span><input type="number" id="sf_invite" value="0"></label>
           </div>
         </div>
-
         <div class="supp-sec">
           <div class="supp-sec-t">기타거래내역 <span class="supp-note">단가·수량 입력 시 금액 자동 계산</span></div>
           <div id="etcWrap"></div>
         </div>
-
       </div>
     </div>
-
     <div class="connector">▼</div>
-
     <!-- 집계 결과 -->
     <div class="out-head">집계 결과</div>
     <div class="out-body">
       <div id="output"><div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div></div>
       <div id="merge"></div>
     </div>
-
     <!-- 정산서 생성 -->
     <div class="st-gen">
       <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
@@ -441,25 +435,20 @@
       <button class="btn ghost" id="saveSettlementDrive" disabled>드라이브 저장</button>
     </div>
     <div id="checkResult"></div>
-
     <div class="privacy"></div>
   </section>
-
   <!-- ============ 탭 4: 문자발송명단 ============ -->
   <section class="panel-view" id="panel-sms">
     <h2>문자 발송 명단</h2>
-
     <!-- 상시 드롭존: 드래그/선택하면 파일이 계속 추가됨 -->
     <label class="drop" id="smsDrop">
       <div class="big">📂 예매자 명단 파일 넣기</div>
       <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
       <input type="file" id="smsFileInput" accept=".xls,.xlsx" multiple />
     </label>
-
     <!-- 추가된 파일 목록 -->
     <div id="smsNodes"></div>
     <div class="connector">▼</div>
-
     <!-- 결과 -->
     <div class="out-head">추출 결과 <span id="smsCount" style="font-weight:400;font-size:13px;opacity:.85"></span></div>
     <div class="out-body">
@@ -471,20 +460,16 @@
         <span class="fname" id="smsDlInfo"></span>
       </div>
     </div>
-
     <div class="privacy"></div>
   </section>
-
   <!-- ============ 탭 5: 원본대조필 ============ -->
   <section class="panel-view" id="panel-oseal">
     <h2>원본대조필</h2>
-
     <!-- 로그인 게이트 -->
     <div class="gate" id="osealGate">
       <div class="g-ico">🔒</div>
       <div class="g-t">로그인이 필요한 기능입니다</div>
     </div>
-
     <!-- 작업 영역 (로그인 후 표시) -->
     <div class="work locked" id="osealWork">
       <label class="drop" id="osealDrop">
@@ -494,7 +479,6 @@
       </label>
       <div class="status" id="osealStatus"></div>
       <div class="connector">▼</div>
-
       <div class="out-head">원본대조필 미리보기</div>
       <div class="out-body">
         <div id="osealPreview"><div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div></div>
@@ -505,12 +489,32 @@
         </div>
       </div>
     </div>
-
     <div class="privacy"></div>
   </section>
-
+  <!-- ============ 탭 6: 메일 업무 ============ -->
+  <section class="panel-view" id="panel-mail">
+    <h2>메일 업무</h2>
+    <div class="sub">엔티켓 메일함 일일 브리핑 · 처리 체크는 팀 전체에 실시간 공유됩니다</div>
+    <!-- 로그인 게이트 -->
+    <div class="gate" id="mailGate">
+      <div class="g-ico">🔒</div>
+      <div class="g-t">로그인이 필요한 기능입니다</div>
+    </div>
+    <!-- 작업 영역 (로그인 후 표시) -->
+    <div class="work locked" id="mailWork">
+      <div class="panel m-bar">
+        <button class="btn" id="mailRefresh">업데이트</button>
+        <span class="m-meta" id="mailMeta">아직 불러오지 않음</span>
+        <div class="m-prog"><div id="mailProg" style="width:0%"></div></div>
+        <span class="m-meta" id="mailProgTxt"></span>
+        <label class="toggle"><input type="checkbox" id="mailOnlyOpen">미처리만 보기</label>
+      </div>
+      <div id="mailList"></div>
+      <div class="empty" id="mailEmpty">「업데이트」 버튼을 누르면 최신 브리핑을 불러옵니다.</div>
+    </div>
+    <div class="privacy"></div>
+  </section>
 </div>
-
 <!-- 구글 로그인 (신원 확인, 커스텀 버튼) + 백엔드(Worker) 저장 -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -518,16 +522,13 @@
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
   const WORKER_URL = "https://enticket-drive.enticketai.workers.dev";
   let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null, isAllowedUser = false;
-
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
-
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
   function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
   function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
-
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
     if(!tokenValid()) return false;
@@ -539,7 +540,6 @@
       return !!(r.ok && d.ok && d.allowed !== false);
     }catch(e){ return false; }
   }
-
   function initGis(){
     if(!(window.google && google.accounts && google.accounts.oauth2)) return;
     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -564,12 +564,10 @@
   }
   window.onGoogleLibraryLoad = initGis;
   if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
-
   loginBtn.addEventListener("click", ()=>{
     if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     tokenClient.requestAccessToken();
   });
-
   logoutBtn.addEventListener("click", ()=>{
     if(accessToken && window.google && google.accounts && google.accounts.oauth2){
       try{ google.accounts.oauth2.revoke(accessToken); }catch(e){}
@@ -577,11 +575,27 @@
     accessToken=null; tokenExp=0; userEmail="";
     showLoggedOut();
   });
-
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {
     isLoggedIn: function(){ return tokenValid(); },
     isAllowed: function(){ return tokenValid() && isAllowedUser; },
+    // 공용 Worker 호출: FormData(access_token + fields) POST → JSON 응답
+    api: async function(path, fields){
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      const fd = new FormData();
+      fd.append("access_token", accessToken);
+      Object.entries(fields||{}).forEach(([k,v])=>fd.append(k,v));
+      const r = await fetch(WORKER_URL + path, { method:"POST", body: fd });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok || !d.ok){
+        const err = (d && d.error) ? d.error : ("HTTP "+r.status);
+        if(err === "invalid_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
+        if(err === "not_allowed"){ throw new Error("이 계정은 허용목록에 없습니다: "+(d.email||"")); }
+        if(r.status === 404){ throw new Error("백엔드에 이 기능이 아직 배포되지 않았습니다. Worker를 최신 코드로 재배포해 주세요."); }
+        throw new Error("요청 실패: "+err);
+      }
+      return d;
+    },
     saveFile: async function(segments, filename, bytes, mimeType){
       if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
@@ -625,7 +639,6 @@
   };
 })();
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <script>
@@ -646,7 +659,6 @@
     console.error(msg);
   }
 })();
-
 /* ===== 탭 전환 ===== */
 document.querySelectorAll(".tab").forEach(t=>{
   t.addEventListener("click",()=>{
@@ -754,12 +766,10 @@ document.querySelectorAll(".tab").forEach(t=>{
   })();
   // 파일명에서 YYMMDD(6자리) 추출 → 이 유형의 기본 암호
   function pwFromName(name){ const m=String(name).match(/(\d{6})(?=\.[^.]+$|\D*$)/); return m?m[1]:null; }
-
 /* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","관람자명","연락처","예매번호"];
   const OUTPUT_COLS=["공연명","공연일","공연시간","좌석수","관람자명","연락처","예매번호"];
-
   const dropEl=document.getElementById("xlDrop");
   const inputEl=document.getElementById("xlFileInput");
   const nodesEl=document.getElementById("xlNodes");
@@ -770,16 +780,13 @@ document.querySelectorAll(".tab").forEach(t=>{
   const warnBox=document.getElementById("xlWarn");
   const fnameLabel=document.getElementById("xlFname");
   const maskPhoneChk=document.getElementById("xlMask");
-
   let nodes=[];   // {id,name,rows:[9col objects],missing:[],error,errMsg}
   let seq=0;
   let outFilename="예매자명단_정리본.xlsx";
-
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const pad=n=>String(n).padStart(2,"0");
   const won=n=>Number(n).toLocaleString("ko-KR");
-
   function fmtDate(v){
     if(v==null) return "";
     if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
@@ -800,7 +807,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     return s;
   }
   const maskPhone=v=>String(v||"").replace(/(\d{2,3})[-\s]?(\d{3,4})[-\s]?(\d{4})/,(m,a,b,c)=>`${a}-${"*".repeat(b.length)}-${c}`);
-
   // 컬럼 별칭 (예매처마다 헤더명이 달라 폭넓게 인식)
   const COL_ALIASES={
     공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"],
@@ -826,7 +832,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     else { const rest=m?s.slice(m.index+m[0].length):s; const t2=rest.match(/(\d{1,2})(\d{2})(?!\d)/); if(t2) time=`${pad(t2[1])}:${t2[2]}`; }
     return { date, time };
   }
-
   function detectHeaderRow(aoa){
     const scoreRow=row=>{
       const cells=(row||[]).map(norm); let s=0;
@@ -867,7 +872,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     const n=parseInt(digits,10);
     return (digits!=="" && isFinite(n)) ? n : 1;
   }
-
   // ── HTML 표로 위장한 .xls (예매처 다수) 감지·직접 파싱 ──
   function looksLikeHTML(bytes){
     let head=""; try{ head=new TextDecoder("ascii").decode(bytes.subarray(0,4096)).toLowerCase(); }catch(_){ return false; }
@@ -885,7 +889,7 @@ document.querySelectorAll(".tab").forEach(t=>{
     if(!tables.length) return [];
     let best=tables[0],bestRows=0;
     tables.forEach(t=>{ const rc=t.querySelectorAll("tr").length; if(rc>bestRows){ bestRows=rc; best=t; } });
-    return [...best.querySelectorAll("tr")].map(tr=>[...tr.querySelectorAll("th,td")].map(td=>(td.textContent||"").replace(/\u00a0/g," ").trim()));
+    return [...best.querySelectorAll("tr")].map(tr=>[...tr.querySelectorAll("th,td")].map(td=>(td.textContent||"").replace(/ /g," ").trim()));
   }
   function readAOA(bytes){
     if(looksLikeHTML(bytes)) return parseHTMLTable(bytesToText(bytes));
@@ -893,7 +897,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     const ws=wb.Sheets[wb.SheetNames[0]];
     return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
   }
-
   function parseBytes(bytes){
     const aoa=readAOA(bytes);
     if(!aoa || aoa.length<2) return null;
@@ -927,7 +930,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     }
     return { rows, missing };
   }
-
   function addFiles(fileList){
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
     if(!files.length) return;
@@ -960,7 +962,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     });
   }
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
-
   function render(){
     nodesEl.innerHTML="";
     nodes.forEach((n,i)=>{
@@ -983,7 +984,6 @@ document.querySelectorAll(".tab").forEach(t=>{
       nodesEl.appendChild(node);
     });
   }
-
   function allRows(){ const out=[]; nodes.forEach(n=>{ if(!n.error) n.rows.forEach(r=>out.push(r)); }); return out; }
   function getViewRows(){
     let rows=allRows().map(r=>({...r}));
@@ -992,7 +992,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     return rows;
   }
   function firstShowName(){ for(const r of allRows()){ const v=String(r["공연명"]||"").trim(); if(v) return v; } return ""; }
-
   function recompute(){
     const showName=firstShowName();
     outFilename=(showName?showName+"_예매자명단":"예매자명단_정리본")+".xlsx";
@@ -1022,7 +1021,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     const miss=new Set(); nodes.forEach(n=>n.missing&&n.missing.forEach(m=>miss.add(m)));
     warnBox.innerHTML=miss.size?`<div class="warn">일부 파일에서 못 찾은 컬럼: <b>${[...miss].map(esc).join(", ")}</b> · 해당 칸은 비워둡니다.</div>`:"";
   }
-
   function buildWb(){
     const rows=getViewRows();
     const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]))];
@@ -1046,7 +1044,6 @@ document.querySelectorAll(".tab").forEach(t=>{
     }catch(e){ alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
-
   // 상시 드롭존: 드래그/선택 시마다 파일 추가
   inputEl.addEventListener("change",e=>{ if(e.target.files.length) addFiles(e.target.files); inputEl.value=""; });
   ["dragenter","dragover"].forEach(ev=>dropEl.addEventListener(ev,e=>{ e.preventDefault(); dropEl.classList.add("hover"); }));
@@ -1056,7 +1053,6 @@ document.querySelectorAll(".tab").forEach(t=>{
   document.getElementById("xlDownload").addEventListener("click",download);
   document.getElementById("xlDriveSave").addEventListener("click",saveToDrive);
 })();
-
 /* ===== 도구 2: 포스터 이미지 변환 ===== */
 (function(){
   const MAX_BYTES=1024*1024;
@@ -1067,10 +1063,8 @@ document.querySelectorAll(".tab").forEach(t=>{
   ];
   const clearBtn=document.getElementById("imClear");
   const countEl=document.getElementById("imCount");
-
   let results=[];
   const usedNames=new Set();
-
   const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const baseName=name=>name.replace(/\.[^.]+$/,"");
   function uniqueName(name){
@@ -1181,17 +1175,14 @@ document.querySelectorAll(".tab").forEach(t=>{
   });
   clearBtn.addEventListener("click",clearAll);
 })();
-
 // ===== 정산서 레시피 빌더 =====
 // ============================================================
 // 트라이보울 정산서 빌더 (브라우저용)
 // buildSettlementWorkbook(data) → xlsx-js-style workbook 반환
 // ============================================================
 function buildSettlementWorkbook(data){
-
 // ============ 트라이보울 정산서 전체 재생성 레시피 ============
 // 헤더 ~ 4번 표 전체, 회차·권종 가변 동적 생성
-
 // ---- 색 팔레트 (원본 추출, 테마색 tint 해소) ----
 const FILL = {
   gray:   'D9D9D9',  // 항목 라벨 헤더 (theme0 tint-0.15)
@@ -1222,7 +1213,6 @@ const BC = { head:'A6A6A6', sum:'9933FF', t2:'92D050', t3:'FFCC00', t4:'8EB4E3' 
 function thinC(rgb){ return { style:'thin', color:{ rgb } }; }
 function allThinC(rgb){ const t=thinC(rgb); return B(t,t,t,t); }
 let curBC = null;  // 현재 영역 테두리 색 (null이면 검정)
-
 function S(o={}) {
   let border;
   if (o.border) border = o.border;
@@ -1238,7 +1228,6 @@ function S(o={}) {
   if (o.fmt) s.numFmt = o.fmt;
   return s;
 }
-
 // ---------- 시트 빌더 ----------
 const COL = {}; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((l,i)=>COL[l]=i);
 ['AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL'].forEach((l,i)=>COL[l]=26+i);
@@ -1285,8 +1274,6 @@ function row(addr1,addr2,v,style,isF){
   }
   if(!single) M(addr1,addr2);
 }
-
-
 // ================= 1) 헤더 (1~7행) =================
 curBC=null;  // 헤더 내부선은 검정, 외곽 thick만 회색(후처리)
 // 제목: 위만 medium 검정, 좌우는 흰색(구분선 안 보이게)
@@ -1311,7 +1298,6 @@ row('Z5','AC5','지급금액',S({fill:FILL.gray,font:'나눔고딕'})); row('AD5
 const whiteB=B(whiteThin,whiteThin,whiteThin,whiteThin);
 row('B6','AK6','* 원 단위 절사',S({font:'나눔고딕',sz:9,h:'right',fill:'FFFFFF',border:whiteB,color:'FF0000'}));
 row('B7','AK7','=IF(Z4="지급계좌", "정산내역 이상 있으시면 반드시 연락바랍니다. 확인하시고 메일`회신` 주셔야 지급처리가 가능합니다. \n회신주실때 결제계좌 확인 부탁드립니다. 공연 종료 후 10일이내에 정산됩니다.","")',S({font:'나눔고딕',sz:9,h:'left',wrap:true,fill:'FFFFFF',border:whiteB}),true);
-
 // ================= 2) 1.정산요약정보 (8~11행) =================
 curBC=BC.sum;
 row('B8','AK8','1. 정산요약정보',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
@@ -1332,7 +1318,6 @@ row('U11','X11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
 row('Y11','AB11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
 row('AC11','AF11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
 row('AG11','AK11','=IF(Z5="청구금액",M11+Q11,IF(Z5="지급금액",B11-M11-Q11))',S({fill:FILL.white,fmt:F.won}),true);
-
 // ================= 3) 2.회차·등급별 판매내역 (13행~) =================
 curBC=BC.t2;
 row('B13','AK13','2. 회차 및 등급별 판매내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
@@ -1352,7 +1337,6 @@ const chCols=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
 // 채널 헤더 (가변, 규칙 적용)
 data.channels.forEach((ch)=>{ const sl=slotOf(ch); gh(chCols[sl][0]+'15',chCols[sl][1]+'15',ch); });
 for(let i=0;i<5;i++){ if(!data.channels.some(ch=>slotOf(ch)===i)) gh(chCols[i][0]+'15',chCols[i][1]+'15',' '); }
-
 let r=16; const tStart=r;
 const roundEndRows=[];
 data.rounds.forEach((rd,ri)=>{
@@ -1403,7 +1387,6 @@ row(`AE${r}`,`AG${r}`,'',S({fmt:F.num,fill:'EBF1DE'}));  // 원본은 공란 (AH
 // 원본 구조: 총발권수 행은 AH열에 =AE28+AE29
 row(`AH${r}`,`AK${r}`,`AE${calcRow}+AE${inviteRow}`,S({fmt:F.numU}),true);
 const totalIssueRow=r; r+=2;
-
 // ================= 4) 3.수수료 내역 =================
 curBC=BC.t3;
 row(`B${r}`,`AK${r}`,'3. 수수료 내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'})); r++;
@@ -1447,7 +1430,6 @@ row(`AA${r}`,`AC${r}`,`SUM(AA${fStart}:AC${fEnd})`,S({fill:FILL.yellow,fmt:F.num
 row(`AD${r}`,`AG${r}`,`SUM(AD${fStart}:AG${fEnd})`,S({fill:FILL.yellow,fmt:F.won}),true);
 row(`AH${r}`,`AK${r}`,`SUM(AH${fStart}:AK${fEnd})`,S({fill:FILL.yellow,fmt:F.won1}),true);
 const feeTotalRow=r; r+=2;
-
 // ================= 5) 4.기타거래내역 =================
 curBC=BC.t4;
 row(`B${r}`,`AK${r}`,'4. 기타거래내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'})); r++;
@@ -1485,7 +1467,6 @@ etcRows.forEach(([item,sub,d])=>{
 const eEnd=r-1;
 row(`B${r}`,`AG${r}`,'합계',S({fill:FILL.cyan}));
 row(`AH${r}`,`AK${r}`,`SUM(AH${eStart}:AK${eEnd})`,S({fill:FILL.cyan,fmt:F.won}),true);
-
 // ---- 플레이스홀더 → 실제 동적 행번호 치환 ----
 ws['B11'].f = `AH${calcRow}`;                          // 총판매금액 = 2번 계행
 ws['I11'].f = `AE${calcRow}`;                          // 총판매매수 = 2번 계행
@@ -1493,7 +1474,6 @@ ws['M11'].f = `ROUNDDOWN(AH${feeTotalRow},-1)`;        // 판매수수료 = 3번
 ws['U11'].f = `AH${etcRowPos.발권료지정}+AH${etcRowPos.발권료비지정}`;  // 발권수수료
 ws['Y11'].f = `AH${etcRowPos.현장판매}+AH${etcRowPos.현장배부}`;       // 현장지원
 ws['AC11'].f = `AH${etcRowPos.MMS}+AH${etcRowPos.무료등록}`;          // 기타
-
 // ---- 헤더 박스(2~5행) 바깥 둘레 (원본 그대로: 좌·상·하 회색thick, 우 검정thin) ----
 const thickGray={style:'thick',color:{rgb:BC.head}};
 const medBlack={style:'medium',color:{rgb:'000000'}};
@@ -1513,7 +1493,6 @@ for(let Cc=COL.B;Cc<=COL.AK;Cc++){
   setBorder(XLSX.utils.encode_cell({r:1,c:Cc}),'top',thickGray);       // 상: 회색 thick (원본)
   setBorder(XLSX.utils.encode_cell({r:4,c:Cc}),'bottom',thickGray);    // 하: 회색 thick
 }
-
 // ---- 페이지 최외곽 테두리 (A1:AL{끝} medium 검정) ----
 // r은 1-base 합계행 번호. 합계 바로 아래 행 = 0-base 인덱스로 r.
 const pageEndRow = r;  // 0-base: 합계행(1-base r) 바로 아래
@@ -1526,7 +1505,6 @@ for(let Cc=colA;Cc<=colAL;Cc++){
   setBorder(XLSX.utils.encode_cell({r:0,c:Cc}),'top',medBlack);
   setBorder(XLSX.utils.encode_cell({r:pageEndRow,c:Cc}),'bottom',medBlack);
 }
-
 // ---- 테두리 안 색 없는 빈 셀 모두 흰색 채우기 ----
 for(let R=0;R<=pageEndRow;R++){
   for(let Cc=colA;Cc<=colAL;Cc++){
@@ -1542,7 +1520,6 @@ for(let R=0;R<=pageEndRow;R++){
     }
   }
 }
-
 // ---- 시트 마무리 ----
 ws['!merges']=merges;
 ws['!ref']='A1:AL'+(r+3);
@@ -1554,7 +1531,6 @@ for(let i=0;i<lastRow;i++) rows[i]={hpt:16.5};
 rows[0]={hpt:55};
 [1,2,3,4].forEach(i=>rows[i]={hpt:30}); rows[5]={hpt:17.25}; rows[6]={hpt:30}; rows[10]={hpt:24.95};
 ws['!rows']=rows;
-
 // fitToPage 설정 (A4 가로·세로 맞춤)
 ws['!margins']={left:0.25,right:0.25,top:0.5,bottom:0.5};
 const wb=XLSX.utils.book_new();
@@ -1564,16 +1540,13 @@ if(!wb.Workbook) wb.Workbook={};
 if(!wb.Workbook.Sheets) wb.Workbook.Sheets=[{}];
 ws['!pageSetup']={scale:0,fitToWidth:1,fitToHeight:1,orientation:'portrait',paperSize:9};
 return wb;
-
 }
-
 // ===== 페이지 설정 주입 =====
 // ============================================================
 // 페이지 설정 주입 (브라우저, fflate 사용)
 // xlsx-js-style이 pageSetup을 안 써주므로, 생성된 xlsx(zip)의
 // sheet XML에 fitToPage 설정을 직접 주입.
 // ============================================================
-
 /**
  * @param {Uint8Array} xlsxBytes  xlsx-js-style이 만든 .xlsx 바이트
  * @param {number} lastRow  인쇄영역 마지막 행 (A1:AL{lastRow})
@@ -1584,10 +1557,8 @@ function injectPageSetup(xlsxBytes, lastRow) {
   const files = fflate.unzipSync(xlsxBytes);
   const dec = new TextDecoder();
   const enc = new TextEncoder();
-
   const sheetPath = 'xl/worksheets/sheet1.xml';
   let xml = dec.decode(files[sheetPath]);
-
   // 1) <sheetPr>에 fitToPage 추가 (없으면 생성)
   if (xml.includes('<sheetPr')) {
     if (!xml.includes('pageSetUpPr')) {
@@ -1598,14 +1569,12 @@ function injectPageSetup(xlsxBytes, lastRow) {
     // dimension 앞에 sheetPr 삽입
     xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
   }
-
   // 2) 기존 pageSetup 제거 후 새로 삽입 (fitToWidth=1, fitToHeight=1, scale 없음)
   xml = xml.replace(/<pageSetup[^/]*\/>/g, '');
   xml = xml.replace(/<pageMargins[^/]*\/>/g, '');
   const margins = '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>';
   const pageSetup = '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="1" orientation="portrait"/>';
   const printOpts = '<printOptions horizontalCentered="1"/>';
-
   // 3) printOptions/pageMargins/pageSetup 삽입
   // ⚠ OOXML 스키마는 sheet 자식 요소 순서가 엄격함:
   //   sheetData → mergeCells → ... → printOptions → pageMargins → pageSetup → headerFooter → drawing ...
@@ -1627,9 +1596,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
     // 후속 요소가 없으면 </worksheet> 직전에 삽입 (mergeCells 등 모든 요소 뒤)
     xml = xml.replace('</worksheet>', pageBlock + '</worksheet>');
   }
-
   files[sheetPath] = enc.encode(xml);
-
   // 4) workbook.xml에 Print_Area 정의
   const wbPath = 'xl/workbook.xml';
   let wbXml = dec.decode(files[wbPath]);
@@ -1639,17 +1606,14 @@ function injectPageSetup(xlsxBytes, lastRow) {
     wbXml = wbXml.replace('</sheets>', '</sheets>' + printArea);
   }
   files[wbPath] = enc.encode(wbXml);
-
   return fflate.zipSync(files);
 }
-
 // ===== 정산 검산 =====
 // ============================================================
 // 정산서 브라우저 내 즉시 검산 (A층)
 // 생성 직후 호출 → 입력값으로 기대값 독립 계산 + 구조 검증
 // 결과를 직원에게 표시. 이상 시 경고.
 // ============================================================
-
 /**
  * @param {Object} data  생성에 사용한 입력 데이터 (rounds, channels, 수수료율, 기타거래 등)
  * @param {Object} ws    생성된 xlsx-js-style 워크시트 객체 (셀 검증용)
@@ -1658,7 +1622,6 @@ function injectPageSetup(xlsxBytes, lastRow) {
 function validateSettlement(data, ws) {
   const issues = [];
   const ONSITE = '현장판매';
-
   // ---- 1. 입력 무결성 ----
   data.rounds.forEach((rd, ri) => {
     rd.items.forEach((it, ii) => {
@@ -1673,7 +1636,6 @@ function validateSettlement(data, ws) {
   });
   if (!(data.수수료율 >= 0 && data.수수료율 <= 1))
     issues.push(`수수료율 범위 이상: ${data.수수료율}`);
-
   // ---- 2. 합계 독립 계산 (기대값) ----
   let expTotal = 0, expCount = 0;
   const priceSales = {};
@@ -1688,12 +1650,10 @@ function validateSettlement(data, ws) {
   let expFee = 0;
   Object.entries(priceSales).forEach(([p, c]) => { expFee += Math.round(p * c * rate * 10) / 10; });
   const expFeeRounded = Math.floor(expFee / 10) * 10; // ROUNDDOWN(-1)
-
   // 기타거래 총계
   const etc = data.기타거래 || {};
   const etcSum = Object.values(etc).reduce((a, d) => a + ((d.단가 || 0) * (d.수량 || 0)), 0);
   const expPayout = expTotal - expFeeRounded - etcSum;
-
   const expected = {
     총판매금액: expTotal,
     총판매수: expCount,
@@ -1701,7 +1661,6 @@ function validateSettlement(data, ws) {
     기타거래총계: etcSum,
     지급금액: expPayout,
   };
-
   // ---- 3. 구조 검증 (셀 직접 확인) ----
   if (ws) {
     // 채널 헤더: 현장판매가 마지막 슬롯(AB15)에 있는지
@@ -1717,10 +1676,8 @@ function validateSettlement(data, ws) {
       if (!cell || !cell.f) issues.push(`${addr} 수식 누락`);
     });
   }
-
   return { ok: issues.length === 0, expected, issues };
 }
-
 /**
  * 결과를 직원용 카드 HTML로 — 기대값을 보여줘서 엑셀과 대조 가능하게
  */
@@ -1746,10 +1703,7 @@ function renderValidationCard(result) {
   html += `</div>`;
   return html;
 }
-
 // 노드 환경 테스트용 export
-
-
 // ===== 정산서 도구 (통합) =====
 /* ===== 도구 3: 정산서 도구 (통합: 집계 + 정산서 생성) ===== */
 (function(){
@@ -1763,18 +1717,15 @@ function renderValidationCard(result) {
     공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"]
   };
   const SIM_COLORS=["#c084e8","#5bb6c4","#e0a23c","#7f8ce0","#d96aa0","#5fae6f"];
-
   const sessionsEl=document.getElementById("sessions");
   const outputEl=document.getElementById("output");
   const mergeEl=document.getElementById("merge");
-
   let sessions=[];
   let seq=0;
   let dragSource=null;
   let mergeMap={};
   let mergeOpen=false;
   let inviteEdited=false;  // 초대좌석권 입력란을 직원이 수동 편집했는지
-
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const won=n=>Number(n).toLocaleString("ko-KR");
@@ -1782,17 +1733,14 @@ function renderValidationCard(result) {
   function parseNum(v){ const s=String(v==null?"":v).replace(/[^\d.-]/g,""); const n=parseFloat(s); return isNaN(n)?0:n; }
   function emptyChannel(){ return {name:null,headers:[],rows:[],hidden:false,map:{권종:-1,가격:-1,수:-1,일:-1,시:-1}}; }
   function findSession(sid){ return sessions.find(s=>s.id===sid); }
-
   const normName=raw=>String(raw==null?"":raw);
   const canonName=raw=>{ const n=normName(raw); return mergeMap[n]||n; };
   const looseKey=name=>normName(name).replace(/[\(\（][^\)\）]*[\)\）]/g,"").replace(/\s/g,"");
-
   function eyeSVG(open){
     return open
       ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`
       : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.7 9.7 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
   }
-
   function fmtDate(v){
     if(v==null) return "";
     if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${p2(v.getMonth()+1)}-${p2(v.getDate())}`;
@@ -1808,7 +1756,6 @@ function renderValidationCard(result) {
     if(v instanceof Date && !isNaN(v)) return `${p2(v.getHours())}:${p2(v.getMinutes())}`;
     const s=String(v).trim(); const m=s.match(/(\d{1,2}):(\d{2})/); return m?`${p2(m[1])}:${m[2]}`:s;
   }
-
   function findCol(headers, keywords){
     for(const kw of keywords){ const idx=headers.findIndex(h=>norm(h).includes(kw)); if(idx>=0) return idx; }
     return -1;
@@ -1847,7 +1794,6 @@ function renderValidationCard(result) {
       일:findCol(headers,KW.일), 시:findCol(headers,KW.시)
     }};
   }
-
   function makeSession(){
     const id=++seq; const obj={ id, channels:{} };
     CHANNELS.forEach(ch=>obj.channels[ch]=emptyChannel());
@@ -1864,7 +1810,6 @@ function renderValidationCard(result) {
     const tmp=ss.channels[src.ch]; ss.channels[src.ch]=ds.channels[dst.ch]; ds.channels[dst.ch]=tmp;
     renderSessions(); recompute();
   }
-
   function renderSessions(){
     sessionsEl.innerHTML="";
     sessions.forEach((s,i)=>{
@@ -1879,7 +1824,6 @@ function renderValidationCard(result) {
       sessionsEl.appendChild(node);
     });
   }
-
   function buildChannel(session, ch){
     const sid=session.id, data=session.channels[ch], loaded=!!data.name;
     const wrap=document.createElement("div");
@@ -1893,7 +1837,6 @@ function renderValidationCard(result) {
     wrap.querySelector(".ch-eye").addEventListener("click",()=>{ data.hidden=!data.hidden; renderSessions(); recompute(); });
     const slot=wrap.querySelector(".slot");
     const input=wrap.querySelector("input");
-
     function loadFile(file){
       const reader=new FileReader();
       reader.onload=e=>{
@@ -1910,7 +1853,6 @@ function renderValidationCard(result) {
       reader.readAsArrayBuffer(file);
     }
     input.addEventListener("change",e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); input.value=""; });
-
     const chip=document.createElement("div");
     chip.className="ch-drop"+(loaded?" loaded":"");
     if(loaded){
@@ -1924,7 +1866,6 @@ function renderValidationCard(result) {
       chip.addEventListener("click",()=>input.click());
     }
     slot.appendChild(chip);
-
     ["dragenter","dragover"].forEach(ev=>slot.addEventListener(ev,e=>{ e.preventDefault(); slot.classList.add("hover"); }));
     slot.addEventListener("dragleave",e=>{ if(!slot.contains(e.relatedTarget)) slot.classList.remove("hover"); });
     slot.addEventListener("drop",e=>{
@@ -1932,7 +1873,6 @@ function renderValidationCard(result) {
       if(e.dataTransfer.files && e.dataTransfer.files.length){ loadFile(e.dataTransfer.files[0]); dragSource=null; }
       else if(dragSource){ moveChannel(dragSource,{sid,ch}); dragSource=null; }
     });
-
     if(loaded){
       const mapwrap=wrap.querySelector(".mapwrap");
       const ok=data.map.권종>=0 && data.map.가격>=0 && data.map.수>=0;
@@ -1959,7 +1899,6 @@ function renderValidationCard(result) {
     }
     return wrap;
   }
-
   function refreshSummary(summary,data){
     const ok=data.map.권종>=0 && data.map.가격>=0 && data.map.수>=0;
     summary.querySelector("span").className=ok?"ok":"bad";
@@ -1973,9 +1912,7 @@ function renderValidationCard(result) {
     info.textContent=`인식: ${data.rows.length}행 · 합계 ${won(cnt)}장`;
     info.style.color="#999";
   }
-
   function sessionHasData(s){ return CHANNELS.some(ch=>{ const d=s.channels[ch]; return d.name && d.map.권종>=0 && !d.hidden; }); }
-
   function sessionDateTime(s){
     for(const ch of CHANNELS){
       const d=s.channels[ch];
@@ -1989,7 +1926,6 @@ function renderValidationCard(result) {
     }
     return "";
   }
-
   // 권종 분류: 홀딩=완전제외, 초대=초대좌석권으로 별도집계, 일반=정상집계
   // 공백 제거 후 '초대'/'홀딩' 포함 여부로 판별 (초대석·홀딩석·초대권 등 변형 포함)
   function classifyGrade(name){
@@ -1998,7 +1934,6 @@ function renderValidationCard(result) {
     if(n.includes("초대")) return "invite"; // 초대좌석권으로 집계
     return "normal";
   }
-
   function aggregate(list){
     const map=new Map();
     list.forEach(s=>{
@@ -2020,7 +1955,6 @@ function renderValidationCard(result) {
     return [...map.values()].map(o=>({...o, 합계:o.엔티켓+o.예술회관+o.폐쇄몰}))
       .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
   }
-
   // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
   // 초대좌석권 = 초대 + 홀딩 수량 합 (둘 다 권종 행 집계에선 빠지지만 초대좌석권으로 모음)
   function countInvite(list){
@@ -2043,7 +1977,6 @@ function renderValidationCard(result) {
     });
     return total;
   }
-
   // 제외/별도집계 현황 (초대·홀딩 수량과 권종명 모음) — 화면 안내용
   function specialGradeStats(list){
     const inv={qty:0,names:new Set()}, hold={qty:0,names:new Set()};
@@ -2065,14 +1998,12 @@ function renderValidationCard(result) {
     });
     return { inv, hold, allNames };
   }
-
   function recompute(){
     window.__stRows=aggregate(sessions);
     renderOutput();
     renderMerge(window.__stRows);
     updateSettlementLive();   // 정산 미리보기 갱신
   }
-
   function renderOutput(){
     const withData=sessions.filter(sessionHasData);
     if(!withData.length){ outputEl.innerHTML='<div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div>'; return; }
@@ -2112,7 +2043,6 @@ function renderValidationCard(result) {
     if(parts.length) note=`<div style="font-size:12px;color:#555;margin-top:8px;padding:8px 11px;background:#f3eef8;border-radius:7px;line-height:1.6">${parts.join(" · ")}</div>`;
     outputEl.innerHTML=`<div class="table-scroll"><table>${thead}<tbody>${body}${total}</tbody></table></div>${note}`;
   }
-
   function renderMerge(rows){
     if(!rows.length){ mergeEl.innerHTML=""; return; }
     const counts=new Map();
@@ -2186,7 +2116,6 @@ function renderValidationCard(result) {
     });
     renderRules();
   }
-
   function renderRules(){
     const box=mergeEl.querySelector("#mgRules");
     if(!box) return;
@@ -2204,11 +2133,9 @@ function renderValidationCard(result) {
       recompute();
     }));
   }
-
   // ============================================================
   // 보충 입력 패널 + 정산서 생성
   // ============================================================
-
   // 기타거래 입력란 (defPrice: 트라이보울 정산서 원본 기준 기본 단가)
   const ETC_DEF=[
     {key:'현장판매',  label:'현장판매',  sub:'1회',     defPrice:44000},
@@ -2234,7 +2161,6 @@ function renderValidationCard(result) {
       wrap.appendChild(row);
     });
   }
-
   // 집계 결과 → buildSettlementWorkbook 입력 데이터로 변환
   function buildSettlementData(){
     const rate=parseNum(document.getElementById("sf_rate").value)/100;
@@ -2267,7 +2193,6 @@ function renderValidationCard(result) {
     const d=new Date(s); return isNaN(d)?null:d;
   }
   function fmtDt(d){ return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
-
   // 실시간 검산 + 버튼 활성화
   function updateSettlementLive(){
     const hasAgg=sessions.some(sessionHasData);
@@ -2303,7 +2228,6 @@ function renderValidationCard(result) {
     if(r.issues.length) h+='<ul>'+r.issues.map(i=>`<li>${esc(i)}</li>`).join('')+'</ul>';
     h+='</div>'; return h;
   }
-
   // 정산서 바이트 생성 (다운로드·드라이브 저장 공통)
   function buildSettlementFile(){
     const data=buildSettlementData();
@@ -2327,7 +2251,6 @@ function renderValidationCard(result) {
     const filename=`엔티켓_정산서_${t}_${stamp}.xlsx`;
     return { bytes:(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes)), filename, data, check };
   }
-
   // 정산서 생성 (로컬 다운로드)
   function generateSettlement(){
     let built;
@@ -2339,7 +2262,6 @@ function renderValidationCard(result) {
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
   }
-
   // 정산서 드라이브 저장
   async function saveSettlementToDrive(){
     if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
@@ -2358,14 +2280,12 @@ function renderValidationCard(result) {
     }catch(e){ alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
-
   // 접이식 패널 토글
   document.getElementById("suppToggle").addEventListener("click",()=>{
     const body=document.getElementById("suppBody");
     const open=body.classList.toggle("open");
     document.getElementById("suppChev").style.transform=`rotate(${open?90:0}deg)`;
   });
-
   // 이벤트 바인딩
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
@@ -2375,32 +2295,25 @@ function renderValidationCard(result) {
     const inv=document.getElementById("sf_invite");
     inv.addEventListener("input",()=>{ inviteEdited=true; updateSettlementLive(); });
   })();
-
   // 초기화
   renderEtc();
   makeSession();
 })();
-
 /* ===== 도구 4: 문자발송명단 (노드식 추합 + 중복제거) ===== */
 (function(){
-
   // 이름·전화 컬럼 인식 키워드 (예매처마다 컬럼명이 달라 넓게 잡음)
   const KW_NAME=["관람자명","예매자명","구매자명","수령자명","수취인명","고객명","주문자명","성명","성함","이름","예매자","구매자","관람자","수령자","수취인","받는분","주문자","회원명","회원","name"];
   const KW_TEL =["연락처","휴대폰번호","휴대폰 번호","핸드폰번호","휴대폰","휴대전화","핸드폰","전화번호","연락번호","수신번호","수신자번호","전화","mobile","phone"];
-
   const nodesEl=document.getElementById("smsNodes");
   const outputEl=document.getElementById("smsOutput");
   const countEl=document.getElementById("smsCount");
   const dlRow=document.getElementById("smsDownloadRow");
   const dlInfo=document.getElementById("smsDlInfo");
-
   let nodes=[];   // {id, name, headers, rows, map:{이름,전화}}
   let seq=0;
-
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const won=n=>Number(n).toLocaleString("ko-KR");
-
   // 전화번호 정규화: 숫자만 추출 → 010-XXXX-XXXX 형태로. 중복 판정은 숫자열 기준.
   function normTel(v){
     let digits=String(v==null?"":v).replace(/[^\d]/g,"");
@@ -2417,7 +2330,6 @@ function renderValidationCard(result) {
     }
     return {key:digits, disp};
   }
-
   function findCol(headers, keywords){
     const lc=s=>norm(s).toLowerCase();
     // 정확 일치 우선 → 부분 포함 (대소문자 무시)
@@ -2530,10 +2442,8 @@ function renderValidationCard(result) {
     const hr=detectHeaderRow(aoa);
     const headers=(aoa[hr]||[]).map(h=>String(h));
     const rows=aoa.slice(hr+1).filter(r=>r && r.some(c=>String(c).trim()!==""));
-
     const nCols=nameCols(headers,rows);   // 한글 이름 열들
     const tCols=telCols(headers,rows);    // 휴대폰 번호 형태 열들
-
     // ── 전화 열 선택 ──
     // 1) 헤더가 '휴대폰번호' 등으로 명확하고 그 열 값이 실제 전화면 최우선 (헤더 정렬이 맞는 깔끔한 파일)
     // 2) 아니면 전화 형태 열들 중 '값이 가장 많이 채워진' 열
@@ -2552,7 +2462,6 @@ function renderValidationCard(result) {
     } else {
       const h=findCol(headers,KW_TEL); if(telRatio(rows,h)>=0.4) 전화=h;
     }
-
     // ── 이름 열 선택 ──
     // 선택된 전화 열의 '바로 왼쪽'에 가장 가까운 이름 열 (주문자명·관람자명 모두 전화 왼쪽에 붙음)
     // '수신/수신거부' 등 전화보다 오른쪽 한글값이 이름으로 오분류되는 것도 배제됨.
@@ -2562,10 +2471,8 @@ function renderValidationCard(result) {
       if(left.length) 이름=left[left.length-1];
     }
     if(이름<0) 이름 = nCols.length ? nCols[nCols.length-1] : findCol(headers,["관람자명","주문자명","예매자명","구매자명","이름","성명"]);
-
     return { headers, rows, map:{ 이름, 전화 } };
   }
-
   // 파일을 읽어 노드로 추가 (드래그/선택 시마다 호출)
   function addFiles(fileList){
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
@@ -2597,7 +2504,6 @@ function renderValidationCard(result) {
     });
   }
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
-
   function render(){
     nodesEl.innerHTML="";
     nodes.forEach((n,i)=>{
@@ -2610,7 +2516,6 @@ function renderValidationCard(result) {
         </div><div class="ch-info"></div>`;
       const info=node.querySelector(".ch-info");
       node.querySelector(".node-del").addEventListener("click",()=>removeNode(n.id));
-
       if(n.error){
         info.innerHTML=`<span style="color:#c0392b">⚠ ${esc(n.errMsg||"읽을 데이터가 없습니다.")}</span>`;
       }else{
@@ -2634,7 +2539,6 @@ function renderValidationCard(result) {
       nodesEl.appendChild(node);
     });
   }
-
   // 전체 추합 + 전화번호 기준 중복 제거
   let lastResult=[];
   function recompute(){
@@ -2655,7 +2559,6 @@ function renderValidationCard(result) {
     lastResult=out;
     renderOutput();
   }
-
   function renderOutput(){
     const anyLoaded=nodes.length>0;
     if(!anyLoaded){ outputEl.innerHTML='<div class="empty">파일을 넣으면 이름·전화번호가 자동으로 추출됩니다.</div>'; countEl.textContent=""; dlRow.style.display="none"; return; }
@@ -2676,7 +2579,6 @@ function renderValidationCard(result) {
     dlRow.style.display="flex";
     dlInfo.innerHTML=`총 <b>${won(lastResult.length)}명</b>`;
   }
-
   // 다운로드: txt (한 줄에 "이름 전화번호")
   function dlTxt(){
     if(!lastResult.length) return;
@@ -2721,7 +2623,6 @@ function renderValidationCard(result) {
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
   }
-
   // 상시 드롭존: 드래그/선택 시마다 파일 추가
   const smsDrop=document.getElementById("smsDrop");
   const smsInput=document.getElementById("smsFileInput");
@@ -2729,14 +2630,11 @@ function renderValidationCard(result) {
   ["dragenter","dragover"].forEach(ev=>smsDrop.addEventListener(ev,e=>{ e.preventDefault(); smsDrop.classList.add("hover"); }));
   ["dragleave","drop"].forEach(ev=>smsDrop.addEventListener(ev,e=>{ e.preventDefault(); smsDrop.classList.remove("hover"); }));
   smsDrop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
-
   document.getElementById("smsDlTxt").addEventListener("click",dlTxt);
   document.getElementById("smsDlXlsx").addEventListener("click",dlXlsx);
   document.getElementById("smsDriveSave").addEventListener("click",smsSaveToDrive);
 })();
-
 </script>
-
 <script>
 /* ===== 원본대조필 변환 모듈 (window.OrigSeal) =====
    정산서 xlsx → 맨 위 2행(원 본 대 조 필 배너 + 여백) 삽입 + 도장 이미지 + A4 맞춤 인쇄설정.
@@ -2746,17 +2644,15 @@ window.OrigSeal = (function(){
   const ENC = new TextEncoder();
   const TARGET_SHEET = "정산서";
   const DELTA = 2; // 삽입 행 수
-
   /* ---------- 참조 유틸 ---------- */
   function colToNum(c){ let n=0; for(let i=0;i<c.length;i++){ n=n*26+(c.charCodeAt(i)-64); } return n; }
   function numToCol(n){ let s=""; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; }
-
   /* 수식 문자열 내 셀 참조 행번호 +delta (문자열 리터럴은 건너뜀)
      mode 'self'  : 시트 접두어 없는 참조 + 정산서! 접두어 참조를 이동
      mode 'other' : 정산서! 접두어 참조만 이동 */
   function shiftFormula(text, delta, mode){
     const parts = text.split(/("(?:[^"]*)"|&quot;[\s\S]*?&quot;)/);
-    const refRe = /(?<![A-Za-z0-9_$.\uAC00-\uD7A3])((?:'[^']+'|[A-Za-z0-9_.\uAC00-\uD7A3]+)!)?(\$?)([A-Z]{1,3})(\$?)(\d{1,7})(:(\$?)([A-Z]{1,3})(\$?)(\d{1,7}))?(?![\d(A-Za-z_\uAC00-\uD7A3])/g;
+    const refRe = /(?<![A-Za-z0-9_$.가-힣])((?:'[^']+'|[A-Za-z0-9_.가-힣]+)!)?(\$?)([A-Z]{1,3})(\$?)(\d{1,7})(:(\$?)([A-Z]{1,3})(\$?)(\d{1,7}))?(?![\d(A-Za-z_가-힣])/g;
     for(let i=0;i<parts.length;i+=2){
       if(!parts[i]) continue;
       parts[i] = parts[i].replace(refRe, (m, pref, d1, col, d2, row, rng, e1, ecol, e2, erow)=>{
@@ -2771,11 +2667,9 @@ window.OrigSeal = (function(){
     }
     return parts.join("");
   }
-
   function shiftRangeStr(ref, delta){ // "A1:B5" 또는 "A1"
     return ref.replace(/([A-Z]{1,3})(\d+)/g, (m,c,r)=> c+(Number(r)+delta));
   }
-
   /* ---------- 대상 시트 XML 변환 ---------- */
   function transformSheetXml(xml){
     // 1) 수식 내용 이동 (자기 시트 기준)
@@ -2797,7 +2691,6 @@ window.OrigSeal = (function(){
       });
     return xml;
   }
-
   /* ---------- 스타일 추가 (원본대조필 배너용) ---------- */
   function appendStyles(stylesXml){
     // 폰트: 26pt 나눔고딕
@@ -2827,7 +2720,6 @@ window.OrigSeal = (function(){
     stylesXml = stylesXml.replace(/<\/cellXfs>/, X+'</cellXfs>');
     return { stylesXml, xf:{ TXT:xfBase, L:xfBase+1, M:xfBase+2, R:xfBase+3, T:xfBase+4 } };
   }
-
   /* ---------- 배너 2행 XML ---------- */
   function bannerRowsXml(xf){
     let r1cells = `<c r="Y1" s="${xf.TXT}" t="inlineStr"><is><t xml:space="preserve">원 본 대 조 필</t></is></c>`;
@@ -2838,7 +2730,6 @@ window.OrigSeal = (function(){
     return `<row r="1" spans="25:37" ht="64.5" customHeight="1" thickBot="1">${r1cells}</row>`
          + `<row r="2" spans="25:37" ht="30" customHeight="1" thickBot="1">${r2cells}</row>`;
   }
-
   /* ---------- 인쇄 설정 보장 (A4 세로, 너비 맞춤) ---------- */
   function ensurePageSetup(xml){
     // sheetPr / pageSetUpPr fitToPage
@@ -2870,7 +2761,6 @@ window.OrigSeal = (function(){
     }
     return xml;
   }
-
   /* ---------- 도장 드로잉 anchor (예시 파일과 동일 좌표: AI1 영역) ---------- */
   function stampAnchorXml(){
     return '<xdr:oneCellAnchor><xdr:from><xdr:col>34</xdr:col><xdr:colOff>64994</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>49575</xdr:rowOff></xdr:from>'
@@ -2882,13 +2772,11 @@ window.OrigSeal = (function(){
       + '<xdr:spPr><a:xfrm><a:off x="9959788" y="49575"/><a:ext cx="720000" cy="720000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>'
       + '</xdr:pic><xdr:clientData/></xdr:oneCellAnchor>';
   }
-
   /* ---------- 메인 변환 ---------- */
   function transform(inputBytes, stampJpegBytes){
     const files = fflate.unzipSync(inputBytes);
     const get = p => files[p] ? DEC.decode(files[p]) : null;
     const put = (p,s) => { files[p] = ENC.encode(s); };
-
     // 대상 시트 찾기
     let wb = get("xl/workbook.xml");
     if(!wb) throw new Error("올바른 xlsx 파일이 아닙니다 (workbook 없음).");
@@ -2900,7 +2788,6 @@ window.OrigSeal = (function(){
     });
     if(!sheets.length) throw new Error("시트를 찾을 수 없습니다.");
     const target = sheets.find(s=>s.name===TARGET_SHEET) || sheets[0];
-
     let wbRels = get("xl/_rels/workbook.xml.rels");
     const relMap = {};
     wbRels.replace(/<Relationship\b([^>]*)\/>/g, (m,attrs)=>{
@@ -2916,35 +2803,28 @@ window.OrigSeal = (function(){
     if(!sx) throw new Error("시트 파일이 없습니다: "+sheetPath);
     const sstXml = get("xl/sharedStrings.xml") || "";
     if(/원 본 대 조 필/.test(sx) || /원 본 대 조 필/.test(sstXml)) throw new Error("이미 원본대조필 처리가 된 파일로 보입니다.");
-
     // 좌표 이동
     sx = transformSheetXml(sx);
-
     // 스타일 추가
     const stRes = appendStyles(get("xl/styles.xml"));
     put("xl/styles.xml", stRes.stylesXml);
-
     // 배너 2행 삽입
     const banner = bannerRowsXml(stRes.xf);
     if(!/<sheetData>/.test(sx)) throw new Error("sheetData를 찾을 수 없습니다.");
     sx = sx.replace(/<sheetData>/, "<sheetData>"+banner);
-
     // 병합 2개 추가
     if(/<mergeCells count="(\d+)">/.test(sx)){
       sx = sx.replace(/<mergeCells count="(\d+)">/, (m,n)=>'<mergeCells count="'+(Number(n)+2)+'"><mergeCell ref="Y1:AH1"/><mergeCell ref="AI1:AK1"/>');
     } else {
       sx = sx.replace(/<\/sheetData>/, '</sheetData><mergeCells count="2"><mergeCell ref="Y1:AH1"/><mergeCell ref="AI1:AK1"/></mergeCells>');
     }
-
     // 인쇄 설정
     sx = ensurePageSetup(sx);
-
     // ----- 도장 이미지 + 드로잉 -----
     // 미디어 파일명 (충돌 회피)
     let mediaName = "enticket_seal.jpeg", k=1;
     while(files["xl/media/"+mediaName]) mediaName = "enticket_seal"+(++k)+".jpeg";
     files["xl/media/"+mediaName] = stampJpegBytes;
-
     // 시트 rels 준비
     const relsPath = sheetPath.replace(/worksheets\//, "worksheets/_rels/") + ".rels";
     let sRels = get(relsPath) || '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
@@ -2952,10 +2832,8 @@ window.OrigSeal = (function(){
       let mx=0; relsXml.replace(/Id="rId(\d+)"/g,(m,n)=>{ mx=Math.max(mx,Number(n)); return m; });
       return "rId"+(mx+1);
     }
-
     let ct = get("[Content_Types].xml");
     if(!/Extension="jpeg"/.test(ct)) ct = ct.replace(/<Types\b([^>]*)>/, '<Types$1><Default Extension="jpeg" ContentType="image/jpeg"/>');
-
     const existingDrawing = sx.match(/<drawing r:id="([^"]+)"\/>/);
     if(existingDrawing){
       // 기존 드로잉에 anchor 추가
@@ -2993,7 +2871,6 @@ window.OrigSeal = (function(){
     put(relsPath, sRels);
     put("[Content_Types].xml", ct);
     put(sheetPath, sx);
-
     // ----- 다른 시트: 정산서! 참조 이동 -----
     Object.keys(files).forEach(p=>{
       if(/^xl\/worksheets\/[^/]+\.xml$/.test(p) && p !== sheetPath){
@@ -3004,7 +2881,6 @@ window.OrigSeal = (function(){
         }
       }
     });
-
     // ----- workbook.xml: definedNames(인쇄영역 등) 이동 + 전체 재계산 지시 -----
     wb = wb.replace(/(<definedName\b[^>]*>)([\s\S]*?)(<\/definedName>)/g, (m,a,body,c)=> a+shiftFormula(body, DELTA, "other")+c);
     // 정산서 인쇄영역 시작행은 1 유지 (배너 포함 출력)
@@ -3015,7 +2891,6 @@ window.OrigSeal = (function(){
       wb = wb.replace(/<\/workbook>/, '<calcPr fullCalcOnLoad="1"/></workbook>');
     }
     put("xl/workbook.xml", wb);
-
     // ----- calcChain 제거 (좌표가 바뀌므로 Excel이 새로 만들게 함) -----
     if(files["xl/calcChain.xml"]){
       delete files["xl/calcChain.xml"];
@@ -3025,7 +2900,6 @@ window.OrigSeal = (function(){
       wbRels = wbRels.replace(/<Relationship\b[^>]*Target="calcChain\.xml"[^>]*\/>/, "");
       put("xl/_rels/workbook.xml.rels", wbRels);
     }
-
     // ----- 재압축 ([Content_Types].xml 우선) -----
     const ordered = {};
     ordered["[Content_Types].xml"] = files["[Content_Types].xml"];
@@ -3033,7 +2907,6 @@ window.OrigSeal = (function(){
     const out = fflate.zipSync(ordered, { level: 6 });
     return { bytes: out, sheetName: target.name, sheetPath };
   }
-
   /* ==================== PDF용 HTML 렌더러 ==================== */
   /* 값·숫자서식·병합·행높이·열너비는 xlsx-js-style로, 셀 서식(테두리·폰트·채움)은 styles.xml 직접 파싱 */
   const IDX_COLORS={8:"000000",9:"FFFFFF",10:"FF0000",11:"00FF00",12:"0000FF",13:"FFFF00",14:"FF00FF",15:"00FFFF",16:"800000",17:"008000",18:"000080",19:"808000",20:"800080",21:"008080",22:"C0C0C0",23:"808080",64:"000000"};
@@ -3206,10 +3079,8 @@ window.OrigSeal = (function(){
       +'<table style="border-collapse:collapse;table-layout:fixed;width:'+totalW+'px">'+html+'</table>'+stampImg+'</div>';
     return { html: wrap, widthPx: totalW };
   }
-
   return { transform, renderHTML };
 })();
-
 /* ===== 원본대조필 탭 로직 ===== */
 (function(){
   const gate=document.getElementById("osealGate");
@@ -3223,9 +3094,7 @@ window.OrigSeal = (function(){
   const btnXlsx=document.getElementById("osealDlXlsx");
   const btnPdf=document.getElementById("osealDlPdf");
   let out=null;
-
   function setStatus(msg,isErr){ statusEl.textContent=msg||""; statusEl.className="status"+(isErr?" err":""); }
-
   const gateT = gate.querySelector(".g-t");
   function updateGate(){
     const loggedIn = !!(window.gdrive && window.gdrive.isLoggedIn());
@@ -3236,14 +3105,12 @@ window.OrigSeal = (function(){
   }
   document.addEventListener("enticket-auth", updateGate);
   updateGate();
-
   function makeName(orig){
     let base=String(orig||"정산서.xlsx").replace(/\.(xlsx|xls)$/i,"");
     if(base.indexOf("정산서")!==-1) base=base.replace("정산서","원본대조필");
     else base="원본대조필_"+base;
     return base;
   }
-
   async function handleFile(file){
     if(!file) return;
     if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
@@ -3259,7 +3126,6 @@ window.OrigSeal = (function(){
       const name = makeName(file.name);
       const r = OrigSeal.renderHTML(res.bytes, res.sheetName, stamp);
       out = { bytes:res.bytes, sheetName:res.sheetName, name, stamp, html:r.html, widthPx:r.widthPx };
-
       // 미리보기: 폭에 맞춰 축소 렌더
       const wrap=document.createElement("div"); wrap.className="prev-wrap";
       const sizer=document.createElement("div"); sizer.style.overflow="hidden";
@@ -3273,7 +3139,6 @@ window.OrigSeal = (function(){
       inner.style.transform = "scale("+scale+")";
       sizer.style.width  = Math.ceil(r.widthPx*scale)+"px";
       sizer.style.height = Math.ceil(h0*scale)+"px";
-
       btnRow.style.display="";
       fnameEl.textContent = name+".xlsx · "+name+".pdf";
       setStatus("변환 완료. 미리보기를 확인하고 다운로드하세요.");
@@ -3282,12 +3147,10 @@ window.OrigSeal = (function(){
       setStatus("오류: "+(e && e.message || e), true);
     }
   }
-
   drop.addEventListener("dragover",e=>{ e.preventDefault(); drop.classList.add("hover"); });
   drop.addEventListener("dragleave",()=>drop.classList.remove("hover"));
   drop.addEventListener("drop",e=>{ e.preventDefault(); drop.classList.remove("hover"); handleFile(e.dataTransfer.files && e.dataTransfer.files[0]); });
   input.addEventListener("change",()=>{ handleFile(input.files && input.files[0]); input.value=""; });
-
   function saveBlob(bytes,name,mime){
     const b=new Blob([bytes],{type:mime});
     const a=document.createElement("a");
@@ -3299,7 +3162,6 @@ window.OrigSeal = (function(){
     if(!out) return;
     saveBlob(out.bytes, out.name+".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   });
-
   let pdfLibP=null;
   function loadPdfLibs(){
     if(window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
@@ -3345,6 +3207,100 @@ window.OrigSeal = (function(){
       btnPdf.disabled=false;
     }
   });
+})();
+/* ===== 메일 업무 탭 로직 ===== */
+(function(){
+  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const $=id=>document.getElementById(id);
+  let brief=null, status={}, loading=false;
+  /* 로그인 상태 연동 (원본대조필과 동일 게이트 방식) */
+  const gateT=$("mailGate").querySelector(".g-t");
+  function updateGate(){
+    const loggedIn = !!(window.gdrive && window.gdrive.isLoggedIn());
+    const allowed  = !!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed());
+    $("mailGate").style.display = allowed ? "none" : "";
+    $("mailWork").classList.toggle("locked", !allowed);
+    if(gateT) gateT.textContent = (loggedIn && !allowed) ? "허용되지 않은 계정입니다" : "로그인이 필요한 기능입니다";
+    if(allowed && !brief && !loading) load();
+  }
+  document.addEventListener("enticket-auth", updateGate);
+  updateGate();
+  async function load(){
+    if(loading) return; loading=true;
+    const btn=$("mailRefresh"); const orig=btn.textContent;
+    btn.disabled=true; btn.textContent="불러오는 중...";
+    try{
+      const d = await window.gdrive.api("/mailbrief", {});
+      brief = d.brief || null;
+      status = d.status || {};
+      render();
+    }catch(e){ alert("브리핑 불러오기 실패: "+e.message); }
+    finally{ loading=false; btn.disabled=false; btn.textContent=orig; }
+  }
+  $("mailRefresh").addEventListener("click", load);
+  $("mailOnlyOpen").addEventListener("change", render);
+  async function toggle(id, done){
+    const prev = status[id];
+    status[id] = { done: done, at: new Date().toISOString() };  // 낙관적 반영
+    render();
+    try{
+      const d = await window.gdrive.api("/mailstatus", { id: id, done: done ? "1" : "0" });
+      if(d.status){ status = d.status; render(); }
+    }catch(e){
+      if(prev) status[id]=prev; else delete status[id];
+      render();
+      alert("체크 저장 실패: "+e.message);
+    }
+  }
+  function fmtDT(iso){
+    if(!iso) return "";
+    const d=new Date(iso); if(isNaN(d)) return "";
+    const p=n=>String(n).padStart(2,"0");
+    return (d.getMonth()+1)+"/"+d.getDate()+" "+p(d.getHours())+":"+p(d.getMinutes());
+  }
+  function render(){
+    const list=$("mailList"), empty=$("mailEmpty");
+    if(!brief || !Array.isArray(brief.items)){
+      list.innerHTML=""; empty.style.display="";
+      empty.textContent = brief===null && !loading ? "아직 발행된 브리핑이 없습니다. Claude에서 메일 브리핑을 발행해 주세요." : "「업데이트」 버튼을 누르면 최신 브리핑을 불러옵니다.";
+      $("mailMeta").textContent="아직 불러오지 않음";
+      $("mailProg").style.width="0%"; $("mailProgTxt").textContent="";
+      return;
+    }
+    empty.style.display="none";
+    const onlyOpen=$("mailOnlyOpen").checked;
+    const doneCnt = brief.items.filter(it=>status[it.id] && status[it.id].done).length;
+    $("mailMeta").textContent = "기준: "+fmtDT(brief.generatedAt)+" · "+(brief.periodLabel||"");
+    $("mailProg").style.width = brief.items.length? Math.round(doneCnt/brief.items.length*100)+"%" : "0%";
+    $("mailProgTxt").textContent = "처리 "+doneCnt+"/"+brief.items.length;
+    let html="";
+    (brief.categories||[]).forEach(cat=>{
+      const catAll = brief.items.filter(it=>it.cat===cat.id);
+      let items = catAll;
+      const catDone = catAll.filter(it=>status[it.id] && status[it.id].done).length;
+      if(onlyOpen) items = items.filter(it=>!(status[it.id] && status[it.id].done));
+      if(!items.length) return;
+      html += '<div class="m-cat"><div class="m-cat-head"><span>'+esc(cat.title)+'</span>'
+            + '<span class="cnt">'+catDone+'/'+catAll.length+' 처리</span></div>'
+            + '<div class="m-cat-body">';
+      items.forEach(it=>{
+        const st = status[it.id]||{};
+        html += '<div class="m-item'+(st.done?' done':'')+'">'
+              + '<input type="checkbox" data-mid="'+esc(it.id)+'"'+(st.done?' checked':'')+'>'
+              + '<div><div class="m-title">'+esc(it.title)+'</div>'
+              + '<div class="m-detail">'
+              + (it.folder? '<span class="m-chip">'+esc(it.folder)+'</span>':'')
+              + esc(it.detail||"")
+              + (st.done? ' <span class="m-done-info">✓ '+esc(st.by||"")+' '+fmtDT(st.at)+'</span>':'')
+              + '</div></div></div>';
+      });
+      html += '</div></div>';
+    });
+    list.innerHTML = html || '<div class="empty">🎉 미처리 업무가 없습니다.</div>';
+    list.querySelectorAll("input[data-mid]").forEach(cb=>{
+      cb.addEventListener("change", ()=>toggle(cb.dataset.mid, cb.checked));
+    });
+  }
 })();
 </script>
 </body>
