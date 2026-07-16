@@ -3211,6 +3211,7 @@ window.OrigSeal = (function(){
 /* ===== 메일 업무 탭 로직 ===== */
 (function(){
   const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const stripEmoji=s=>s==null?"":String(s).replace(/[\p{Extended_Pictographic}️‍]/gu,"").trim();
   const $=id=>document.getElementById(id);
   let brief=null, status={}, loading=false;
   /* 로그인 상태 연동 (원본대조필과 동일 게이트 방식) */
@@ -3280,7 +3281,7 @@ window.OrigSeal = (function(){
       const catDone = catAll.filter(it=>status[it.id] && status[it.id].done).length;
       if(onlyOpen) items = items.filter(it=>!(status[it.id] && status[it.id].done));
       if(!items.length) return;
-      html += '<div class="m-cat"><div class="m-cat-head"><span>'+esc(cat.title)+'</span>'
+      html += '<div class="m-cat"><div class="m-cat-head"><span>'+esc(stripEmoji(cat.title))+'</span>'
             + '<span class="cnt">'+catDone+'/'+catAll.length+' 처리</span></div>'
             + '<div class="m-cat-body">';
       items.forEach(it=>{
