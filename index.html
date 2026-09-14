@@ -768,7 +768,7 @@ td.c { text-align: center; }
   margin-bottom: var(--spacing-4);
 }
 /* ============================================================
-   탭별 패널 — 이미지 변환 · 정산서 · 원본대조필 · 메일
+   탭별 패널 — 이미지 변환 · 정산서 · 원본대조필
    ============================================================ */
 .bar { display: flex; flex-wrap: wrap; gap: var(--spacing-10); align-items: center; margin-bottom: var(--spacing-16); }
 .count { font-size: var(--font-size-13); color: var(--txt-black-darker); }
@@ -1008,76 +1008,6 @@ td.c { text-align: center; }
 }
 .prev-scale { transform-origin: top left; }
 #panel-oseal .fname { word-break: break-all; }
-/* ── 메일 업무 ── */
-.m-bar { display: flex; align-items: center; gap: var(--spacing-12); flex-wrap: wrap; }
-.m-meta { font-size: var(--font-size-13); color: var(--txt-black-darker); }
-.m-prog {
-  height: 6px; flex: 1; min-width: 120px;
-  border-radius: var(--radius-3);
-  background: var(--bg-grey-light);
-  overflow: hidden;
-}
-.m-prog > div {
-  height: 100%; border-radius: var(--radius-3);
-  background: var(--color-text-success);
-  transition: width var(--motion-transition-default);
-}
-.m-cat { margin-bottom: var(--spacing-12); }
-.m-cat-head {
-  display: flex; justify-content: space-between; align-items: center;
-  background: var(--bg-grey-lighter);
-  color: var(--txt-black-darkest);
-  border: 1px solid var(--color-border-neutral); border-bottom: none;
-  border-radius: var(--radius-12) var(--radius-12) 0 0;
-  padding: var(--spacing-12) var(--spacing-16);
-  font-size: var(--font-size-15);
-  line-height: var(--line-height-22);
-  letter-spacing: var(--letter-spacing-1);
-  font-weight: var(--font-weight-700);
-}
-.m-cat-head .cnt {
-  font-size: var(--font-size-12);
-  font-weight: var(--font-weight-400);
-  color: var(--txt-black-darker);
-  font-variant-numeric: tabular-nums;
-}
-.m-cat-body {
-  background: var(--bg-white-normal);
-  border: 1px solid var(--color-border-neutral);
-  border-radius: 0 0 var(--radius-12) var(--radius-12);
-  padding: var(--spacing-4) var(--spacing-16);
-  box-shadow: var(--elevation-1);
-}
-.m-item {
-  display: flex; gap: var(--spacing-10); align-items: flex-start;
-  padding: var(--spacing-12) 0;
-  border-bottom: 1px solid var(--color-border-neutral);
-}
-.m-item:last-child { border-bottom: none; }
-.m-item input {
-  width: 16px; height: 16px; flex: none; margin-top: 2px;
-  accent-color: var(--color-bg-accent); cursor: pointer;
-}
-.m-title { font-size: var(--font-size-14); font-weight: var(--font-weight-700); color: var(--txt-black-darkest); }
-.m-detail { font-size: var(--font-size-13); line-height: var(--line-height-18); color: var(--txt-black-darker); margin-top: 2px; }
-.m-chip {
-  display: inline-block;
-  background: var(--color-fill-accent); color: var(--color-text-accent);
-  border-radius: var(--radius-6);
-  padding: 2px var(--spacing-6);
-  font-size: var(--font-size-11);
-  font-weight: var(--font-weight-700);
-  margin-right: var(--spacing-6);
-}
-.m-done-info {
-  display: inline-flex; align-items: center; gap: var(--spacing-4);
-  font-size: var(--font-size-12);
-  color: var(--color-text-success);
-  font-weight: var(--font-weight-700);
-}
-.m-done-info .ico { width: 14px; height: 14px; }
-.m-item.done { opacity: 0.55; }
-.m-item.done .m-title { text-decoration: line-through; color: var(--txt-black-darker); }
 /* ── 반응형 (앱 레이어 몫 — 시스템은 브레이크포인트를 발행하지 않는다) ── */
 /* 좁은 화면에서는 GNB가 상단 가로 바로 접힌다 */
 @media (max-width: 860px) {
@@ -1128,7 +1058,6 @@ td.c { text-align: center; }
   <symbol id="i-nav-poster" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="m4 17.5 5-4 3.5 2.6 3-2.1 4.5 3.5"/></symbol>
   <symbol id="i-nav-settlement" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9.5 8h5M9.5 12h5"/></symbol>
   <symbol id="i-nav-oseal" viewBox="0 0 24 24"><rect x="4" y="13.5" width="16" height="4" rx="1"/><path d="M8.5 13.5v-3a3.5 3.5 0 0 1 7 0v3"/><path d="M4 21h16"/></symbol>
-  <symbol id="i-nav-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.6 7.2 8.4 5.9 8.4-5.9"/></symbol>
 </svg>
 <script>
 window.ICO = {
@@ -1148,7 +1077,6 @@ window.ICO = {
     <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg>이미지 변환</button>
     <button class="tab" data-tab="settlement"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
     <button class="tab" data-tab="oseal"><svg class="ico"><use href="#i-nav-oseal"/></svg>원본대조필</button>
-    <button class="tab" data-tab="mail"><svg class="ico"><use href="#i-nav-mail"/></svg>메일 업무</button>
   </nav>
   <div class="gauth">
     <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
@@ -1334,30 +1262,6 @@ window.ICO = {
           <span class="fname" id="osealFname"></span>
         </div>
       </div>
-    </div>
-    <div class="privacy"></div>
-  </section>
-  <!-- ============ 탭 6: 메일 업무 ============ -->
-  <section class="panel-view" id="panel-mail">
-    <h2>메일 업무</h2>
-    <div class="sub">엔티켓 메일함 일일 브리핑 · 처리 체크는 팀 전체에 실시간 공유됩니다</div>
-    <!-- 로그인 게이트 -->
-    <div class="gate" id="mailGate">
-      <div class="g-ico"><svg class="ico ico--lg"><use href="#i-lock"/></svg></div>
-      <div class="g-t">로그인이 필요한 기능입니다</div>
-    </div>
-    <!-- 작업 영역 (로그인 후 표시) -->
-    <div class="work locked" id="mailWork">
-      <div class="panel m-bar">
-        <button class="btn" id="mailRefresh">업데이트</button>
-        <button class="btn ghost" id="mailRun">지금 수집</button>
-        <span class="m-meta" id="mailMeta">아직 불러오지 않음</span>
-        <div class="m-prog"><div id="mailProg" style="width:0%"></div></div>
-        <span class="m-meta" id="mailProgTxt"></span>
-        <label class="toggle"><input type="checkbox" id="mailOnlyOpen">미처리만 보기</label>
-      </div>
-      <div id="mailList"></div>
-      <div class="empty" id="mailEmpty">「업데이트」 버튼을 누르면 최신 브리핑을 불러옵니다.</div>
     </div>
     <div class="privacy"></div>
   </section>
@@ -4321,126 +4225,6 @@ window.OrigSeal = (function(){
       btnPdf.disabled=false;
     }
   });
-})();
-/* ===== 메일 업무 탭 로직 ===== */
-(function(){
-  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-  const stripEmoji=s=>s==null?"":String(s).replace(/[\p{Extended_Pictographic}️‍]/gu,"").trim();
-  const $=id=>document.getElementById(id);
-  let brief=null, status={}, loading=false;
-  /* 로그인 상태 연동 (원본대조필과 동일 게이트 방식) */
-  const gateT=$("mailGate").querySelector(".g-t");
-  function updateGate(){
-    const loggedIn = !!(window.gdrive && window.gdrive.isLoggedIn());
-    const allowed  = !!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed());
-    $("mailGate").style.display = allowed ? "none" : "";
-    $("mailWork").classList.toggle("locked", !allowed);
-    if(gateT) gateT.textContent = (loggedIn && !allowed) ? "허용되지 않은 계정입니다" : "로그인이 필요한 기능입니다";
-    if(allowed && !brief && !loading) load();
-  }
-  document.addEventListener("enticket-auth", updateGate);
-  updateGate();
-  async function load(){
-    if(loading) return; loading=true;
-    const btn=$("mailRefresh"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="불러오는 중...";
-    try{
-      const d = await window.gdrive.api("/mailbrief", {});
-      brief = d.brief || null;
-      status = d.status || {};
-      render();
-    }catch(e){ alert("브리핑 불러오기 실패: "+e.message); }
-    finally{ loading=false; btn.disabled=false; btn.textContent=orig; }
-  }
-  $("mailRefresh").addEventListener("click", load);
-  $("mailOnlyOpen").addEventListener("change", render);
-
-  /* 「지금 수집」 — Claude 루틴을 즉시 실행시킴.
-     결과는 바로 나오지 않고 2~5분 뒤 「업데이트」로 확인함. */
-  $("mailRun").addEventListener("click", async ()=>{
-    const btn=$("mailRun"), orig=btn.textContent;
-    btn.disabled=true; btn.textContent="요청 중...";
-    try{
-      const d = await window.gdrive.api("/mailrun", {});
-      if(d.fired){
-        btn.textContent="요청됨";
-        alert("메일 수집을 시작했습니다.\n2~5분 뒤 「업데이트」를 눌러 확인해 주세요.");
-        setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 60000);
-        return;
-      }
-      if(d.cooldown){
-        const m=Math.max(1, Math.ceil((d.remainingSec||0)/60));
-        alert("방금 수집을 실행했습니다"+(d.by?" ("+d.by+")":"")+".\n약 "+m+"분 뒤에 다시 요청할 수 있습니다.\n\n먼저 「업데이트」로 새 브리핑이 올라왔는지 확인해 주세요.");
-      }
-    }catch(e){
-      alert("수집 요청 실패: "+e.message);
-    }finally{
-      if(btn.textContent==="요청 중..."){ btn.textContent=orig; btn.disabled=false; }
-    }
-  });
-
-  async function toggle(id, done){
-    const prev = status[id];
-    status[id] = { done: done, at: new Date().toISOString() };  // 낙관적 반영
-    render();
-    try{
-      const d = await window.gdrive.api("/mailstatus", { id: id, done: done ? "1" : "0" });
-      if(d.status){ status = d.status; render(); }
-    }catch(e){
-      if(prev) status[id]=prev; else delete status[id];
-      render();
-      alert("체크 저장 실패: "+e.message);
-    }
-  }
-  function fmtDT(iso){
-    if(!iso) return "";
-    const d=new Date(iso); if(isNaN(d)) return "";
-    const p=n=>String(n).padStart(2,"0");
-    return (d.getMonth()+1)+"/"+d.getDate()+" "+p(d.getHours())+":"+p(d.getMinutes());
-  }
-  function render(){
-    const list=$("mailList"), empty=$("mailEmpty");
-    if(!brief || !Array.isArray(brief.items)){
-      list.innerHTML=""; empty.style.display="";
-      empty.textContent = brief===null && !loading ? "아직 발행된 브리핑이 없습니다. Claude에서 메일 브리핑을 발행해 주세요." : "「업데이트」 버튼을 누르면 최신 브리핑을 불러옵니다.";
-      $("mailMeta").textContent="아직 불러오지 않음";
-      $("mailProg").style.width="0%"; $("mailProgTxt").textContent="";
-      return;
-    }
-    empty.style.display="none";
-    const onlyOpen=$("mailOnlyOpen").checked;
-    const doneCnt = brief.items.filter(it=>status[it.id] && status[it.id].done).length;
-    $("mailMeta").textContent = "기준: "+fmtDT(brief.generatedAt)+" · "+(brief.periodLabel||"");
-    $("mailProg").style.width = brief.items.length? Math.round(doneCnt/brief.items.length*100)+"%" : "0%";
-    $("mailProgTxt").textContent = "처리 "+doneCnt+"/"+brief.items.length;
-    let html="";
-    (brief.categories||[]).forEach(cat=>{
-      const catAll = brief.items.filter(it=>it.cat===cat.id);
-      let items = catAll;
-      const catDone = catAll.filter(it=>status[it.id] && status[it.id].done).length;
-      if(onlyOpen) items = items.filter(it=>!(status[it.id] && status[it.id].done));
-      if(!items.length) return;
-      html += '<div class="m-cat"><div class="m-cat-head"><span>'+esc(stripEmoji(cat.title))+'</span>'
-            + '<span class="cnt">'+catDone+'/'+catAll.length+' 처리</span></div>'
-            + '<div class="m-cat-body">';
-      items.forEach(it=>{
-        const st = status[it.id]||{};
-        html += '<div class="m-item'+(st.done?' done':'')+'">'
-              + '<input type="checkbox" data-mid="'+esc(it.id)+'"'+(st.done?' checked':'')+'>'
-              + '<div><div class="m-title">'+esc(it.title)+'</div>'
-              + '<div class="m-detail">'
-              + (it.folder? '<span class="m-chip">'+esc(it.folder)+'</span>':'')
-              + esc(it.detail||"")
-              + (st.done? ' <span class="m-done-info">'+ICO.checkFill+esc(st.by||"")+' '+fmtDT(st.at)+'</span>':'')
-              + '</div></div></div>';
-      });
-      html += '</div></div>';
-    });
-    list.innerHTML = html || '<div class="empty">미처리 업무가 없습니다.</div>';
-    list.querySelectorAll("input[data-mid]").forEach(cb=>{
-      cb.addEventListener("change", ()=>toggle(cb.dataset.mid, cb.checked));
-    });
-  }
 })();
 </script>
 </body>
