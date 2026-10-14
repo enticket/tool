@@ -5,7 +5,9 @@
 통합 버전을 기존 Worker에 배포했습니다: https://enticket-drive.enticketai.workers.dev/
 버전: `dc477c8f-27b8-4884-8d4c-7ba1b547a7a5`. 기존 원격 코드와 설정은 `cloudflare/.private/remote-before-*`에 비공개로 백업했습니다. 기존 비밀 설정 이름/종류와 직원 허용목록 유지, 직인 시크릿 3개 등록을 확인했습니다. 공개 화면·healthz·비공개 경로 404·무인증 및 비허용 출처 API 거부를 실서비스에서 확인했습니다.
 
-Google OAuth의 새 origin 등록 여부, 사용자 실제 로그인/Drive 저장은 아직 미검증입니다. `tools.enticket.kr` DNS 연결과 GitHub Pages의 새 주소 안내/리디렉션은 아직 수행하지 않았습니다. 이번 GitHub 변경은 아래의 임시 local 모드를 반영합니다.
+`tools.enticket.kr` Custom Domain 등록과 공개 DNS의 Cloudflare IP 응답을 확인했습니다. 등록 직후 HTTPS는 TLS 핸드셰이크 오류(접속 프록시의 503)로 아직 확인하지 못했으며, 인증서 발급·반영 완료 후 재확인이 필요합니다. 회사 홈페이지 두 주소는 HTTPS 200 응답을 유지합니다.
+
+Google OAuth의 새 origin 등록 여부, 사용자 실제 로그인/Drive 저장은 아직 미검증입니다. `enticket.kr` DNS가 Cloudflare에서 활성화됐고 `tools.enticket.kr`을 기존 Worker에 Custom Domain으로 연결했습니다. 네임서버는 `clarissa.ns.cloudflare.com`, `dexter.ns.cloudflare.com`입니다. 회사 홈페이지는 기존 Netlify 연결을 유지합니다. GitHub Pages의 새 주소 안내/리디렉션은 아직 수행하지 않았습니다. 이번 GitHub 변경은 아래의 임시 local 모드를 반영합니다.
 
 ## 현재 구현
 
@@ -56,7 +58,7 @@ python3 tests/cloud-browser.py
 
 ## 배포 절차와 남은 설정
 
-Cloudflare 계정 인증을 환경 설정으로 받아 아래 1~4단계의 배포를 완료했습니다. 기존 Google 비밀값은 재입력하지 않았습니다. 5~8단계의 Google 설정·사용자 검증·도메인 이전은 남아 있습니다.
+Cloudflare 계정 인증을 환경 설정으로 받아 아래 1~4단계의 배포를 완료했습니다. 기존 Google 비밀값은 재입력하지 않았습니다. 7단계의 DNS 전환과 Custom Domain 등록도 완료했습니다. Google 설정·사용자 검증·GitHub 이전 안내는 남아 있습니다.
 
 1. Cloudflare 인증이 가능한 터미널에서 같은 계정인지 확인합니다 (`npx wrangler whoami`). 필요한 경우 그 터미널에서 `npx wrangler login`을 사용합니다.
 2. 기존 변수/비밀 **이름**을 대시보드에서 확인하고 원본 Worker 버전을 보존합니다. 시크릿 값은 출력하거나 Git에 올리지 않습니다.
@@ -64,10 +66,10 @@ Cloudflare 계정 인증을 환경 설정으로 받아 아래 1~4단계의 배�
 4. `npm run deploy`로 같은 `enticket-drive`에 배포합니다. **기존 실서비스 코드를 교체**하는 명령입니다. `npm run check`는 배포하지 않습니다. 새 화면 주소는 기존 Worker 주소 `https://enticket-drive.enticketai.workers.dev/`입니다.
 5. Google Cloud Console에서 기존 OAuth 앱의 허용 JavaScript origin에 해당 Worker 주소를 등록합니다. `https://enticket.github.io`는 이전 화면 검증이 끝날 때까지 유지합니다. 이 앱은 GIS 팝업 방식을 쓰므로 이 단계에서 별도 callback URL은 추가하지 않습니다.
 6. 새 사이트에서 허용/거부 계정, 각 종류 Drive 저장, 직인 XLSX/PDF를 실제 확인합니다. Google 토큰과 회사 Drive 권한의 현재 유효성은 아직 검증하지 못했습니다.
-7. 회사 메인 홈페이지는 유지하고 `tools.enticket.kr` 같은 서브도메인을 Worker의 Custom Domain으로 연결합니다. 기존 DNS 충돌을 확인하고 Google 허용 origin에도 추가합니다. 도메인은 아직 확정/변경하지 않았습니다.
+7. 회사 메인 홈페이지는 유지하고 `tools.enticket.kr` 같은 서브도메인을 Worker의 Custom Domain으로 연결합니다. 기존 DNS 충돌을 확인하고 Google 허용 origin에도 추가합니다. 현재 `tools.enticket.kr` 연결을 등록했습니다. Google 허용 JavaScript origin에 `https://tools.enticket.kr`도 추가해야 합니다.
 8. 실제 사용을 확인한 후 GitHub Pages에서 새 주소로 안내합니다. GitHub Pages나 기존 Google origin 삭제는 마지막에 판단합니다.
 
-Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `npm ci --prefix cloudflare && npm --prefix cloudflare run build`, 배포 명령 `npm --prefix cloudflare run deploy`를 사용합니다. 기존 프로젝트가 대시보드에만 있을 수 있으므로 연동은 별도 확인이 필요합니다. 기존 Worker 공개 배포는 완료했습니다. GitHub에는 임시 화면과 통합 Worker 소스를 함께 관리합니다. DNS 변경은 수행하지 않았습니다.
+Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `npm ci --prefix cloudflare && npm --prefix cloudflare run build`, 배포 명령 `npm --prefix cloudflare run deploy`를 사용합니다. 기존 프로젝트가 대시보드에만 있을 수 있으므로 연동은 별도 확인이 필요합니다. 기존 Worker 공개 배포는 완료했습니다. GitHub에는 임시 화면과 통합 Worker 소스를 함께 관리합니다. DNS 관리가 Cloudflare로 전환됐고, `tools.enticket.kr`이 연결됐습니다.
 
 ## 동작 보완 및 한계
 

@@ -15,5 +15,12 @@
     ]
   },
   "main": "src/worker.mjs",
-  "keep_vars": true
+  "keep_vars": true,
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "tools.enticket.kr",
+      "custom_domain": true
+    }
+  ]
 }
