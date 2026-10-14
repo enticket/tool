@@ -5,7 +5,7 @@
 통합 버전을 기존 Worker에 배포했습니다: https://enticket-drive.enticketai.workers.dev/
 버전: `dc477c8f-27b8-4884-8d4c-7ba1b547a7a5`. 기존 원격 코드와 설정은 `cloudflare/.private/remote-before-*`에 비공개로 백업했습니다. 기존 비밀 설정 이름/종류와 직원 허용목록 유지, 직인 시크릿 3개 등록을 확인했습니다. 공개 화면·healthz·비공개 경로 404·무인증 및 비허용 출처 API 거부를 실서비스에서 확인했습니다.
 
-`tools.enticket.kr` Custom Domain 등록과 공개 DNS의 Cloudflare IP 응답을 확인했습니다. 등록 직후 HTTPS는 TLS 핸드셰이크 오류(접속 프록시의 503)로 아직 확인하지 못했으며, 인증서 발급·반영 완료 후 재확인이 필요합니다. 회사 홈페이지 두 주소는 HTTPS 200 응답을 유지합니다.
+`tools.enticket.kr` Custom Domain 등록과 공개 DNS의 Cloudflare IP 응답을 확인했습니다. 등록 직후 잠시 TLS 오류가 있었지만 이후 HTTPS 화면 및 `/healthz` 200, 비공개 파일 404, 무인증 API 거부를 확인했습니다. 회사 홈페이지 두 주소는 HTTPS 200 응답을 유지합니다.
 
 Google OAuth의 새 origin 등록 여부, 사용자 실제 로그인/Drive 저장은 아직 미검증입니다. `enticket.kr` DNS가 Cloudflare에서 활성화됐고 `tools.enticket.kr`을 기존 Worker에 Custom Domain으로 연결했습니다. 네임서버는 `clarissa.ns.cloudflare.com`, `dexter.ns.cloudflare.com`입니다. 회사 홈페이지는 기존 Netlify 연결을 유지합니다. GitHub Pages의 새 주소 안내/리디렉션은 아직 수행하지 않았습니다. 이번 GitHub 변경은 아래의 임시 local 모드를 반영합니다.
 
