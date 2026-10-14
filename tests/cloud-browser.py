@@ -12,10 +12,13 @@ def cdn(route):
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
     page = browser.new_page()
-    errors, calls = [], []
-    state = {'allowed': True, 'expired': False, 'stamp': ''}
+    errors, calls, dialogs = [], [], []
+    state = {'allowed': True, 'expired': False, 'stamp': '', 'server_error': False, 'network_error': False}
     page.on('pageerror', lambda e: errors.append(str(e)))
-    page.on('dialog', lambda d: d.accept())
+    def accept_dialog(dialog):
+        dialogs.append(dialog.message)
+        dialog.accept()
+    page.on('dialog', accept_dialog)
     page.route('https://cdn.jsdelivr.net/**', cdn)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{
@@ -29,7 +32,11 @@ with sync_playwright() as p:
         calls.append(path)
         assert route.request.method == 'POST'
         assert b'synthetic-token' in route.request.post_data_buffer
-        if state['expired']:
+        if state['network_error']:
+            route.abort()
+        elif state['server_error']:
+            route.fulfill(status=502, json={'error':'upstream_error'})
+        elif state['expired']:
             route.fulfill(status=401, json={'error':'invalid_token'})
         elif not state['allowed']:
             route.fulfill(status=403, json={'error':'not_allowed'})
@@ -87,6 +94,23 @@ with sync_playwright() as p:
     page.locator('[data-tab="oseal"]').click()
     expect(page.locator('#osealWork')).to_be_hidden()
     expect(page.locator('#osealGate')).to_contain_text('허용되지 않은 계정')
+    assert '허용목록에 없습니다' in dialogs[-1]
+    page.locator('#gLogoutBtn').click()
+    state['allowed'] = True
+    for failure, message in [('server_error', '계정 확인에 실패'), ('network_error', '연결하지 못했습니다'), ('expired', 'Google 인증을 확인하지 못했습니다')]:
+        state[failure] = True
+        count = len(dialogs)
+        page.locator('#gLoginBtn').click()
+        page.wait_for_function('gdrive.isLoggedIn() === false')
+        expect(page.locator('#gLoginBtn')).to_be_visible()
+        assert len(dialogs) == count + 1, dialogs
+        assert message in dialogs[-1], dialogs[-1]
+        assert '허용목록' not in dialogs[-1]
+        assert not page.evaluate('gdrive.isAllowed()')
+        state[failure] = False
+    page.locator('#gLoginBtn').click()
+    expect(page.locator('#gUser')).to_be_visible()
+    expect(page.locator('#osealWork')).to_be_visible()
     assert not errors, errors
-    print('PASS: cloud UI login, stamp, three Drive uploads, expired-token reset, denied-account gate (mocked providers)')
+    print('PASS: cloud UI login, stamp, three Drive uploads, expiry, denied account, server/network errors and retry (mocked providers)')
     browser.close()

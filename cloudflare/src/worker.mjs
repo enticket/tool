@@ -47,7 +47,10 @@ async function parseForm(request) {
 }
 async function google(url, options = {}) {
   // Never log upstream URLs, tokens, bodies, or provider diagnostics.
-  return fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(20000) });
+  // Workers supports only follow/manual. Reject redirects without forwarding credentials.
+  const response = await fetch(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(20000) });
+  if (response.status >= 300 && response.status < 400) throw new ApiError('google_unavailable');
+  return response;
 }
 async function verifyGoogleAccessToken(token, clientId) {
   const res = await google('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token));

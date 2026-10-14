@@ -1352,14 +1352,19 @@ window.ICO = {
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
-    if(!tokenValid()) return false;
+    if(!tokenValid()) throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+    let r;
     try{
       const fd = new FormData();
       fd.append("access_token", accessToken);
-      const r = await fetch(WORKER_URL + "/verify", { method:"POST", body: fd });
-      const d = await r.json().catch(()=>({}));
-      return !!(r.ok && d.ok && d.allowed !== false);
-    }catch(e){ return false; }
+      r = await fetch(WORKER_URL + "/verify", { method:"POST", body: fd });
+    }catch(e){ throw new Error("로그인 서버에 연결하지 못했습니다. 잠시 후 다시 로그인해 주세요."); }
+    const d = await r.json().catch(()=>({}));
+    if(r.status === 403 && d.error === "not_allowed") return false;
+    if(r.status === 401) throw new Error("Google 인증을 확인하지 못했습니다. 다시 로그인해 주세요.");
+    if(r.status === 403 && d.error === "email_not_verified") throw new Error("Google 계정의 이메일 인증 상태를 확인해 주세요.");
+    if(!r.ok || d.ok !== true || d.allowed !== true) throw new Error("로그인 서버에서 계정 확인에 실패했습니다. 잠시 후 다시 로그인해 주세요.");
+    return true;
   }
   function initGis(){
     if(tokenClient || !(window.google && google.accounts && google.accounts.oauth2)) return;
@@ -1370,11 +1375,18 @@ window.ICO = {
         if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
         accessToken = resp.access_token;
         tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
+        isAllowedUser = false; stampCache = null;
         try{
           const u = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers:{ Authorization:"Bearer "+accessToken } });
           const ud = await u.json(); userEmail = ud.email || "";
         }catch(e){ userEmail = ""; }
-        isAllowedUser = await verifyAllowed();
+        try{
+          isAllowedUser = await verifyAllowed();
+        }catch(e){
+          showLoggedOut();
+          alert(e.message);
+          return;
+        }
         showLoggedIn(userEmail || "로그인됨");
         if(!isAllowedUser){
           alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
