@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>엔티켓 업무 도구</title>
+<script>
+// Keep old bookmarks working after the Cloudflare move.
+if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)?$/.test(location.pathname)) {
+  location.replace("https://tools.enticket.kr/");
+}
+</script>
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
 [hidden] { display: none !important; }

@@ -9,11 +9,11 @@
 
 `tools.enticket.kr` Custom Domain 등록과 공개 DNS의 Cloudflare IP 응답을 확인했습니다. 등록 직후 잠시 TLS 오류가 있었지만 이후 HTTPS 화면 및 `/healthz` 200, 비공개 파일 404, 무인증 API 거부를 확인했습니다. 회사 홈페이지 두 주소는 HTTPS 200 응답을 유지합니다.
 
-사용자가 새 도메인에서 Google 로그인을 완료했습니다. 실제 Drive 저장과 회사 직인 변환은 아직 사용자 검증 전입니다. `enticket.kr` DNS가 Cloudflare에서 활성화됐고 `tools.enticket.kr`을 기존 Worker에 Custom Domain으로 연결했습니다. 네임서버는 `clarissa.ns.cloudflare.com`, `dexter.ns.cloudflare.com`입니다. 회사 홈페이지는 기존 Netlify 연결을 유지합니다. GitHub Pages의 새 주소 안내/리디렉션은 아직 수행하지 않았습니다. 이번 GitHub 변경은 아래의 임시 local 모드를 반영합니다.
+사용자가 새 도메인에서 Google 로그인을 완료했습니다. 실제 Drive 저장은 아직 사용자 검증 전입니다. 직인 기능은 미완성 상태로 그대로 두기로 했으며, 사용자 요청에 따라 이번 이전 완료 조건에서 제외합니다. `enticket.kr` DNS가 Cloudflare에서 활성화됐고 `tools.enticket.kr`을 기존 Worker에 Custom Domain으로 연결했습니다. 네임서버는 `clarissa.ns.cloudflare.com`, `dexter.ns.cloudflare.com`입니다. 회사 홈페이지는 기존 Netlify 연결을 유지합니다. GitHub Pages의 기존 `/tool`, `/tool/`, `/tool/index.html` 주소는 `https://tools.enticket.kr/`로 이동하도록 변경했습니다. 호스트와 경로를 제한하므로 로컬 실행과 Cloudflare 사이트에서는 이동하지 않습니다.
 
 ## 현재 구현
 
-- GitHub Pages용 루트 `index.html`은 `local` 모드입니다. 명단·이미지·정산서 다운로드를 유지하고 로그인/Drive 저장은 숨깁니다. 원본대조필은 사용자가 직접 선택한 직인을 메모리에서만 사용합니다.
+- 루트 `index.html`은 `local` 모드입니다. GitHub Pages 접속 시에만 새 Cloudflare 주소로 이동합니다. 로컬 실행에서는 명단·이미지·정산서 다운로드를 유지하고 로그인/Drive 저장은 숨깁니다. 원본대조필은 사용자가 직접 선택한 직인을 메모리에서만 사용합니다.
 - Cloudflare 빌드는 같은 HTML을 `cloud` 모드로 복사합니다. 기존 `enticket-drive` Worker가 화면과 `/api/verify`, `/api/upload`, `/api/stamp`를 함께 제공합니다.
 - 이전 화면과의 호환을 위해 `/verify`, `/upload`, `/stamp`도 유지합니다. 기존 Worker 주소는 그대로이고 `/`는 이제 도구 화면, 상태 확인은 `/healthz`입니다.
 - 정적 파일은 Workers Assets가 제공하고 지정한 API 경로만 서버 코드를 실행합니다. DB나 유료 스토리지는 추가하지 않습니다.
@@ -60,16 +60,16 @@ python3 tests/cloud-browser.py
 
 ## 배포 절차와 남은 설정
 
-Cloudflare 계정 인증을 환경 설정으로 받아 아래 1~4단계의 배포를 완료했습니다. 기존 Google 비밀값은 재입력하지 않았습니다. 7단계의 DNS 전환과 Custom Domain 등록도 완료했습니다. 새 도메인의 실제 Google 로그인은 사용자 확인을 마쳤습니다. Drive 저장·직인 변환의 사용자 검증과 GitHub 이전 안내는 남아 있습니다.
+Cloudflare 계정 인증을 환경 설정으로 받아 아래 1~4단계의 배포를 완료했습니다. 기존 Google 비밀값은 재입력하지 않았습니다. 7단계의 DNS 전환과 Custom Domain 등록도 완료했습니다. 새 도메인의 실제 Google 로그인은 사용자 확인을 마쳤습니다. Drive 저장의 사용자 확인은 남아 있습니다. 직인은 사용자 요청으로 현 상태를 유지하고, GitHub Pages에는 새 주소로 이동하는 코드를 추가했습니다.
 
 1. Cloudflare 인증이 가능한 터미널에서 같은 계정인지 확인합니다 (`npx wrangler whoami`). 필요한 경우 그 터미널에서 `npx wrangler login`을 사용합니다.
 2. 기존 변수/비밀 **이름**을 대시보드에서 확인하고 원본 Worker 버전을 보존합니다. 시크릿 값은 출력하거나 Git에 올리지 않습니다.
 3. `cloudflare` 디렉터리에서 `npm run configure-stamp`를 실행해 비공개 파일을 `STAMP_JPEG_B64_1`, `STAMP_JPEG_B64_2`, `STAMP_JPEG_B64_3` secret으로 올립니다. 이 명령은 실제 계정 설정 변경입니다. 비공개 파일은 다른 체크아웃에 자동 복원되지 않으며, 없으면 원본 Worker에서 직접 추출해야 합니다. 이 스크립트가 직인을 3개 값으로 나눠 한 번에 등록합니다. 이미지 품질은 바뀌지 않습니다.
 4. `npm run deploy`로 같은 `enticket-drive`에 배포합니다. **기존 실서비스 코드를 교체**하는 명령입니다. `npm run check`는 배포하지 않습니다. 새 화면 주소는 기존 Worker 주소 `https://enticket-drive.enticketai.workers.dev/`입니다.
 5. Google Cloud Console에서 기존 OAuth 앱의 허용 JavaScript origin에 해당 Worker 주소를 등록합니다. `https://enticket.github.io`는 이전 화면 검증이 끝날 때까지 유지합니다. 이 앱은 GIS 팝업 방식을 쓰므로 이 단계에서 별도 callback URL은 추가하지 않습니다.
-6. 새 사이트에서 허용/거부 계정, 각 종류 Drive 저장, 직인 XLSX/PDF를 실제 확인합니다. Google 토큰과 회사 Drive 권한의 현재 유효성은 아직 검증하지 못했습니다.
+6. 새 사이트의 허용 계정 로그인은 사용자 확인을 마쳤습니다. 각 종류 Drive 저장과 회사 Drive 권한은 실제 사용자 확인 전입니다. 직인은 사용자 요청에 따라 현 상태로 둡니다.
 7. 회사 메인 홈페이지는 유지하고 `tools.enticket.kr` 같은 서브도메인을 Worker의 Custom Domain으로 연결합니다. 기존 DNS 충돌을 확인하고 Google 허용 origin에도 추가합니다. 현재 `tools.enticket.kr` 연결을 등록했습니다. Google 허용 JavaScript origin에 `https://tools.enticket.kr`도 추가해야 합니다.
-8. 실제 사용을 확인한 후 GitHub Pages에서 새 주소로 안내합니다. GitHub Pages나 기존 Google origin 삭제는 마지막에 판단합니다.
+8. GitHub Pages의 기존 주소에서 새 주소로 이동합니다. GitHub Pages나 기존 Google origin 삭제는 마지막에 판단합니다.
 
 Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `npm ci --prefix cloudflare && npm --prefix cloudflare run build`, 배포 명령 `npm --prefix cloudflare run deploy`를 사용합니다. 기존 프로젝트가 대시보드에만 있을 수 있으므로 연동은 별도 확인이 필요합니다. 기존 Worker 공개 배포는 완료했습니다. GitHub에는 임시 화면과 통합 Worker 소스를 함께 관리합니다. DNS 관리가 Cloudflare로 전환됐고, `tools.enticket.kr`이 연결됐습니다.
 
@@ -82,13 +82,13 @@ Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `
 - 네트워크 오류 이후 자동 재업로드는 하지 않습니다. 응답을 받지 못했더라도 Drive에는 저장됐을 수 있으니 다시 저장하기 전에 Drive를 확인해야 합니다. 기존 폴더 생성은 동시 요청 시 중복될 가능성이 있으며 이번 이관에서 분산 잠금은 추가하지 않았습니다.
 - 사용량 무료 한도 및 실제 CPU 시간은 운영 계정에서 확인해야 합니다. 로컬 테스트가 무료 한도 내 실행을 보장하지는 않습니다.
 
-2026-10-14 검증: Worker 및 직인 분할 21개 테스트 통과. 추가한 workerd 회귀 테스트는 실제 Workers 런타임과 모의 Google 응답으로 허용/거부 계정, 무효 토큰, 리디렉션 차단을 확인합니다. Cloudflare 화면의 모의 연동 테스트는 서버·연결·인증 오류 메시지와 재로그인도 검증합니다. 배포 dry-run 및 배포 후 무효 토큰 응답 검증을 통과했습니다. 앞서 GitHub 임시 버전 브라우저 테스트, 로컬 Workers 화면/healthz와 비공개 파일 404도 확인했습니다. 실제 Google 로그인은 사용자가 확인했으며, 실제 Drive 쓰기·회사 직인 변환은 사용자 확인 전입니다.
+2026-10-14 검증: Worker 및 직인 분할 21개 테스트 통과. 추가한 workerd 회귀 테스트는 실제 Workers 런타임과 모의 Google 응답으로 허용/거부 계정, 무효 토큰, 리디렉션 차단을 확인합니다. Cloudflare 화면의 모의 연동 테스트는 서버·연결·인증 오류 메시지와 재로그인도 검증합니다. 배포 dry-run 및 배포 후 무효 토큰 응답 검증을 통과했습니다. 앞서 GitHub 임시 버전 브라우저 테스트, 로컬 Workers 화면/healthz와 비공개 파일 404도 확인했습니다. 실제 Google 로그인은 사용자가 확인했으며, 실제 Drive 쓰기는 사용자 확인 전입니다. 회사 직인 변환은 사용자 요청에 따라 추가 수정·검증 없이 현 상태로 둡니다.
 
 
-## 이전 마무리 확인 순서
+## 이전 마무리와 다음 작업
 
-1. `https://tools.enticket.kr/`에서 로그인 후 예매자 명단을 변환하고 **드라이브 저장**을 누릅니다. 성공 알림만이 아니라 회사 Drive의 `enticket/예매자명단/공연명` 폴더에서 파일을 열어 내용까지 확인합니다.
-2. **원본대조필** 탭에서 아직 직인 처리하지 않은 정산서 XLSX를 변환합니다. 회사 직인이 미리보기와 다운로드한 XLSX/PDF에 표시되는지 확인합니다.
-3. 정산서와 문자 명단의 **드라이브 저장**도 확인합니다. 이미지 변환은 내려받은 이미지의 크기와 내용을 확인합니다.
-4. 위 기능이 정상임을 확인하면 GitHub Pages에서 새 주소로 이동하도록 이전을 마무리합니다. 회사 소개 페이지 `enticket.kr`의 Netlify 연결은 유지합니다.
-5. 이후 Instagram 기능을 Cloudflare 환경에 맞춰 통합합니다. 기존 `instagram-admin/` 로컬 초안은 Node/SQLite/Sharp 서버용이므로 Workers에 그대로 배포할 수 없습니다. Meta 개발자 앱 생성과 회사 Instagram 연결이 별도로 필요합니다.
+- 사용자 확인 완료: 새 도메인의 실제 Google 로그인.
+- 기존 GitHub Pages 주소에 새 사이트로 이동하는 코드를 추가했습니다. Cloudflare와 로컬 실행은 기존 동작을 유지합니다.
+- 확인 전: 실제 회사 Drive 저장. 로그인한 사용자가 예매자 명단의 **드라이브 저장**을 누른 뒤 회사 Drive의 `enticket/예매자명단/공연명` 폴더에서 파일을 열어 확인할 수 있습니다. 정산서와 문자 명단 저장도 사용자 확인 전입니다.
+- 직인 기능은 미완성이라는 사용자 설명에 따라 그대로 둡니다. 직인 완성을 이전이나 Instagram 연동의 선행 조건으로 삼지 않습니다.
+- 다음 기능은 Instagram 통합입니다. 기존 `instagram-admin/` 로컬 초안은 Node/SQLite/Sharp 서버용이므로 Workers에 그대로 배포할 수 없습니다. Meta 개발자 앱 생성과 회사 Instagram 연결이 별도로 필요합니다. 기존 회사 소개 페이지의 Netlify 연결은 유지합니다.
