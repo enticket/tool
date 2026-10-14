@@ -36,7 +36,6 @@ with sync_playwright() as p:
     page.route('**/api/**', block_backend)
     page.on('dialog', lambda dialog: dialog.accept())
     response = page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8000'), wait_until='networkidle')
-    expect(page.locator('#localNotice')).to_be_visible()
     expect(page.locator('#gLoginBtn')).to_be_hidden()
     assert page.locator('[data-cloud-only]:visible').count() == 0
     assert page.evaluate('gdrive.isLoggedIn() === false && gdrive.isAllowed() === false')

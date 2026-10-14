@@ -7,7 +7,6 @@
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
 [hidden] { display: none !important; }
-.local-notice { margin-bottom: 20px; padding: 14px; border: 1px solid var(--color-border-neutral); border-radius: 12px; font-size: 13px; line-height: 1.7; }
 /* ============================================================
    엔티켓 업무 도구 — 디자인 토큰
    Bezier Design System 구조를 따른다:
@@ -1089,7 +1088,6 @@ window.ICO = {
   </div>
 </aside>
 <div class="wrap">
-  <div class="local-notice" id="localNotice" role="status">현재 파일을 내 기기에서 처리하는 임시 버전입니다. 결과는 다운로드해서 보관해 주세요. Google Drive 자동 저장은 이전 완료 후 다시 제공됩니다.</div>
   <!-- ============ 탭 1: 예매자 명단 정리 ============ -->
   <section class="panel-view active" id="panel-excel">
     <h2>예매자 명단 정리</h2>
@@ -1288,7 +1286,6 @@ window.ICO = {
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
   const config = JSON.parse(document.getElementById("tool-config").textContent);
   const localMode = config.mode !== "cloud";
-  document.getElementById("localNotice").hidden = !localMode;
   document.getElementById("localStampControls").hidden = !localMode;
   document.querySelectorAll("[data-cloud-only]").forEach(el => { el.hidden = localMode; });
   if(localMode){

@@ -45,7 +45,6 @@ with sync_playwright() as p:
             raise AssertionError(path)
     page.route('**/api/**', api)
     page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8787'), wait_until='networkidle')
-    expect(page.locator('#localNotice')).to_be_hidden()
     expect(page.locator('#localStampControls')).to_be_hidden()
     expect(page.locator('#gLoginBtn')).to_be_enabled()
     page.locator('[data-tab="oseal"]').click()
