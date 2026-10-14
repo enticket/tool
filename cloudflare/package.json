@@ -1,0 +1,15 @@
+{
+  "name": "enticket-tools-cloudflare",
+  "private": true,
+  "scripts": {
+    "build": "python3 ../scripts/build-static.py --mode cloud",
+    "dev": "npm run build && wrangler dev --ip 127.0.0.1 --port 8787",
+    "check": "npm run build && wrangler deploy --dry-run",
+    "deploy": "npm test && npm run build && wrangler deploy",
+    "test": "node --test tests/*.test.mjs",
+    "configure-stamp": "node scripts/configure-stamp.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.150.0"
+  }
+}

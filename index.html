@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>엔티켓 업무 도구</title>
+<script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
+[hidden] { display: none !important; }
+.local-notice { margin-bottom: 20px; padding: 14px; border: 1px solid var(--color-border-neutral); border-radius: 12px; font-size: 13px; line-height: 1.7; }
 /* ============================================================
    엔티켓 업무 도구 — 디자인 토큰
    Bezier Design System 구조를 따른다:
@@ -1078,13 +1082,14 @@ window.ICO = {
     <button class="tab" data-tab="settlement"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
     <button class="tab" data-tab="oseal"><svg class="ico"><use href="#i-nav-oseal"/></svg>원본대조필</button>
   </nav>
-  <div class="gauth">
+  <div class="gauth" data-cloud-only hidden>
     <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
     <span id="gUser" class="guser" style="display:none"></span>
     <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
   </div>
 </aside>
 <div class="wrap">
+  <div class="local-notice" id="localNotice" role="status">현재 파일을 내 기기에서 처리하는 임시 버전입니다. 결과는 다운로드해서 보관해 주세요. Google Drive 자동 저장은 이전 완료 후 다시 제공됩니다.</div>
   <!-- ============ 탭 1: 예매자 명단 정리 ============ -->
   <section class="panel-view active" id="panel-excel">
     <h2>예매자 명단 정리</h2>
@@ -1107,7 +1112,7 @@ window.ICO = {
       <div id="xlOutput"><div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div></div>
       <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
-        <button class="btn ghost" id="xlDriveSave">드라이브 저장</button>
+        <button class="btn ghost" id="xlDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="xlFname"></span>
       </div>
       <div id="xlWarn" style="margin-top:10px"></div>
@@ -1204,7 +1209,7 @@ window.ICO = {
     <div class="st-gen">
       <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
       <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
-      <button class="btn ghost" id="saveSettlementDrive" disabled>드라이브 저장</button>
+      <button class="btn ghost" id="saveSettlementDrive" data-cloud-only hidden disabled>드라이브 저장</button>
     </div>
     <div id="checkResult"></div>
     <div class="privacy"></div>
@@ -1229,7 +1234,7 @@ window.ICO = {
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
-        <button class="btn ghost" id="smsDriveSave">드라이브 저장</button>
+        <button class="btn ghost" id="smsDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="smsDlInfo"></span>
       </div>
     </div>
@@ -1238,7 +1243,18 @@ window.ICO = {
   <!-- ============ 탭 5: 원본대조필 ============ -->
   <section class="panel-view" id="panel-oseal">
     <h2>원본대조필</h2>
-    <!-- 로그인 게이트 -->
+    <div id="localStampControls">
+      <label class="drop">
+        <div class="big">사용할 직인 이미지 선택</div>
+        <div class="small">PNG · JPEG · WebP, 최대 5MB · 이 기기에서만 처리하며 새로고침하면 다시 선택해야 합니다.</div>
+        <input type="file" id="localStampInput" accept="image/png,image/jpeg,image/webp" />
+      </label>
+      <div class="btn-row">
+        <span id="localStampStatus" role="status">사용 권한이 있는 직인 파일을 선택해 주세요.</span>
+        <button class="btn ghost" id="localStampClear" disabled>직인 지우기</button>
+      </div>
+    </div>
+    <!-- 로그인 또는 로컬 직인 선택 게이트 -->
     <div class="gate" id="osealGate">
       <div class="g-ico"><svg class="ico ico--lg"><use href="#i-lock"/></svg></div>
       <div class="g-t">로그인이 필요한 기능입니다</div>
@@ -1266,19 +1282,76 @@ window.ICO = {
     <div class="privacy"></div>
   </section>
 </div>
-<!-- 구글 로그인 (신원 확인, 커스텀 버튼) + 백엔드(Worker) 저장 -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- 로컬 모드는 외부 로그인/백엔드를 호출하지 않습니다. -->
 <script>
 (function(){
   const CLIENT_ID = "739048484816-ts6n8cfc24k04dj5s2els0s7k5l44a29.apps.googleusercontent.com";
-  const WORKER_URL = "https://enticket-drive.enticketai.workers.dev";
+  const config = JSON.parse(document.getElementById("tool-config").textContent);
+  const localMode = config.mode !== "cloud";
+  document.getElementById("localNotice").hidden = !localMode;
+  document.getElementById("localStampControls").hidden = !localMode;
+  document.querySelectorAll("[data-cloud-only]").forEach(el => { el.hidden = localMode; });
+  if(localMode){
+    let localStamp = null, selection = 0;
+    const input = document.getElementById("localStampInput");
+    const clear = document.getElementById("localStampClear");
+    const status = document.getElementById("localStampStatus");
+    function notify(){ document.dispatchEvent(new CustomEvent("enticket-stamp")); }
+    function reset(){
+      selection++; localStamp = null; input.value = ""; clear.disabled = true;
+      status.textContent = "사용 권한이 있는 직인 파일을 선택해 주세요.";
+      notify();
+    }
+    input.addEventListener("change", async () => {
+      const file = input.files[0]; reset();
+      if(!file) return;
+      const current = selection;
+      try {
+        if(!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("PNG, JPEG, WebP 이미지를 선택해 주세요.");
+        if(file.size > 5 * 1024 * 1024) throw new Error("직인 이미지는 5MB 이하여야 합니다.");
+        const bitmap = await createImageBitmap(file);
+        try {
+          if(bitmap.width > 4096 || bitmap.height > 4096) throw new Error("가로·세로 4096px 이하의 직인 이미지를 선택해 주세요.");
+          const canvas = document.createElement("canvas");
+          canvas.width = bitmap.width; canvas.height = bitmap.height;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bitmap, 0, 0);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.95));
+          if(!blob) throw new Error("직인 이미지를 변환하지 못했습니다.");
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          if(current !== selection) return;
+          localStamp = bytes; clear.disabled = false;
+          status.textContent = file.name + " 선택됨 · 아래에 정산서를 넣어 주세요.";
+          notify();
+        } finally { bitmap.close(); }
+      } catch(e) {
+        if(current === selection) status.textContent = "직인 선택 실패: " + e.message;
+      }
+    });
+    clear.addEventListener("click", reset);
+    window.gdrive = {
+      isLocal: true,
+      isLoggedIn: () => false,
+      isAllowed: () => false,
+      hasLocalStamp: () => !!localStamp,
+      fetchStamp: async () => {
+        if(!localStamp) throw new Error("직인 이미지를 먼저 선택해 주세요.");
+        return localStamp;
+      },
+      saveFile: async () => { throw new Error("임시 버전에서는 다운로드를 이용해 주세요."); }
+    };
+    return;
+  }
+  const WORKER_URL = config.apiBase;
+  if(WORKER_URL !== "/api") throw new Error("통합 백엔드는 같은 사이트의 /api 경로를 사용해야 합니다.");
   let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null, isAllowedUser = false;
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
   function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
+  function showLoggedOut(){ accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
   function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
@@ -1292,7 +1365,7 @@ window.ICO = {
     }catch(e){ return false; }
   }
   function initGis(){
-    if(!(window.google && google.accounts && google.accounts.oauth2)) return;
+    if(tokenClient || !(window.google && google.accounts && google.accounts.oauth2)) return;
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: "openid email profile",
@@ -1314,6 +1387,11 @@ window.ICO = {
     loginBtn.disabled = false;
   }
   window.onGoogleLibraryLoad = initGis;
+  const gis = document.createElement("script");
+  gis.src = "https://accounts.google.com/gsi/client"; gis.async = true;
+  gis.onload = initGis;
+  gis.onerror = () => { loginBtn.textContent = "로그인 로딩 실패 · 새로고침"; };
+  document.head.appendChild(gis);
   if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
   loginBtn.addEventListener("click", ()=>{
     if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
@@ -1368,8 +1446,8 @@ window.ICO = {
       return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
     },
     fetchStamp: async function(){
+      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
       if(stampCache) return stampCache;
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
       const fd = new FormData();
       fd.append("access_token", accessToken);
       const r = await fetch(WORKER_URL + "/stamp", { method:"POST", body: fd });
@@ -4111,17 +4189,28 @@ window.OrigSeal = (function(){
   const fnameEl=document.getElementById("osealFname");
   const btnXlsx=document.getElementById("osealDlXlsx");
   const btnPdf=document.getElementById("osealDlPdf");
-  let out=null;
+  let out=null, conversion=0;
   function setStatus(msg,isErr){ statusEl.textContent=msg||""; statusEl.className="status"+(isErr?" err":""); }
   const gateT = gate.querySelector(".g-t");
+  function canUseStamp(){
+    return !!(window.gdrive && (window.gdrive.isLocal
+      ? window.gdrive.hasLocalStamp() : window.gdrive.isAllowed()));
+  }
   function updateGate(){
+    const local = !!(window.gdrive && window.gdrive.isLocal);
     const loggedIn = !!(window.gdrive && window.gdrive.isLoggedIn());
-    const allowed  = !!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed());
+    const allowed = canUseStamp();
     gate.style.display = allowed ? "none" : "";
     work.classList.toggle("locked", !allowed);
-    if(gateT) gateT.textContent = (loggedIn && !allowed) ? "허용되지 않은 계정입니다" : "로그인이 필요한 기능입니다";
+    if(gateT) gateT.textContent = local ? "직인 이미지를 먼저 선택해 주세요." : (loggedIn && !allowed) ? "허용되지 않은 계정입니다" : "로그인이 필요한 기능입니다";
   }
-  document.addEventListener("enticket-auth", updateGate);
+  function invalidate(){
+    conversion++; out=null; btnRow.style.display="none"; fnameEl.textContent="";
+    preview.innerHTML='<div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div>';
+    setStatus(""); updateGate();
+  }
+  document.addEventListener("enticket-auth", invalidate);
+  document.addEventListener("enticket-stamp", invalidate);
   updateGate();
   function makeName(orig){
     let base=String(orig||"정산서.xlsx").replace(/\.(xlsx|xls)$/i,"");
@@ -4132,7 +4221,8 @@ window.OrigSeal = (function(){
   async function handleFile(file){
     if(!file) return;
     if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
-    if(!(window.gdrive && window.gdrive.isAllowed && window.gdrive.isAllowed())){ updateGate(); alert("로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
+    if(!canUseStamp()){ updateGate(); alert(window.gdrive.isLocal ? "직인 이미지를 먼저 선택해 주세요." : "로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
+    const current = ++conversion;
     out=null; btnRow.style.display="none"; fnameEl.textContent="";
     preview.innerHTML='<div class="empty">변환 중…</div>';
     try{
@@ -4140,6 +4230,7 @@ window.OrigSeal = (function(){
       const stamp = await window.gdrive.fetchStamp();
       setStatus("정산서 변환 중…");
       const buf = new Uint8Array(await file.arrayBuffer());
+      if(current !== conversion || !canUseStamp()) return;
       const res = OrigSeal.transform(buf, stamp);
       const name = makeName(file.name);
       const r = OrigSeal.renderHTML(res.bytes, res.sheetName, stamp);
@@ -4161,6 +4252,7 @@ window.OrigSeal = (function(){
       fnameEl.textContent = name+".xlsx · "+name+".pdf";
       setStatus("변환 완료. 미리보기를 확인하고 다운로드하세요.");
     }catch(e){
+      if(current !== conversion) return;
       preview.innerHTML='<div class="empty">변환 실패</div>';
       setStatus("오류: "+(e && e.message || e), true);
     }
@@ -4193,18 +4285,31 @@ window.OrigSeal = (function(){
   }
   btnPdf.addEventListener("click", async ()=>{
     if(!out) return;
+    const pdfOut = out, current = conversion;
     btnPdf.disabled=true; setStatus("PDF 생성 중… (수 초 걸릴 수 있습니다)");
     try{
       await loadPdfLibs();
+      if(current !== conversion) return;
       const host=document.createElement("div");
       host.style.cssText="position:fixed;left:-100000px;top:0;background:#fff;";
-      host.innerHTML=out.html;
+      host.innerHTML=pdfOut.html;
       document.body.appendChild(host);
       try{
         const target=host.firstChild;
         // 선명도용 렌더 배율 (콘텐츠 폭이 넓을수록 배율↓, 과도한 캔버스 방지)
-        const scale=Math.max(1.5, Math.min(2.5, 2800/out.widthPx));
-        const canvas=await html2canvas(target, { scale, useCORS:true, backgroundColor:"#ffffff", logging:false });
+        const scale=Math.max(1.5, Math.min(2.5, 2800/pdfOut.widthPx));
+        const canvas=await html2canvas(target, {
+          scale, useCORS:true, backgroundColor:"#ffffff", logging:false,
+          onclone(doc){
+            // The worksheet has inline Excel styles. App-wide OKLCH theme
+            // colors are unsupported by html2canvas 1.x, so exclude them
+            // from this throwaway PDF document, preserving the real UI.
+            doc.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => el.remove());
+            doc.documentElement.style.cssText = "background:#fff;color:#000;color-scheme:light";
+            doc.body.style.cssText = "background:#fff;color:#000;font-family:Arial,sans-serif";
+          }
+        });
+        if(current !== conversion) return;
         const { jsPDF }=window.jspdf;
         const pdf=new jsPDF({ unit:"mm", format:"a4", orientation:"portrait" });
         const pw=pdf.internal.pageSize.getWidth();   // 210mm
@@ -4216,10 +4321,11 @@ window.OrigSeal = (function(){
         const drawW=canvas.width*ratio, drawH=canvas.height*ratio;
         const x=(pw-drawW)/2, y=margin;
         pdf.addImage(canvas.toDataURL("image/jpeg",0.95), "JPEG", x, y, drawW, drawH, undefined, "FAST");
-        pdf.save(out.name+".pdf");
+        pdf.save(pdfOut.name+".pdf");
       } finally { host.remove(); }
       setStatus("PDF 저장 완료.");
     }catch(e){
+      if(current !== conversion) return;
       setStatus("PDF 생성 실패: "+(e && e.message || e), true);
     }finally{
       btnPdf.disabled=false;

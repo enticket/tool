@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "enticket-drive",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api",
+      "/api/*",
+      "/verify",
+      "/upload",
+      "/stamp",
+      "/healthz"
+    ]
+  },
+  "main": "src/worker.mjs",
+  "keep_vars": true
+}
