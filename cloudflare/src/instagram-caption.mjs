@@ -42,7 +42,7 @@ export function formatCaption(data) {
   const missing=fields.filter(key=>!f[key]); if(!dates) missing.push('schedules');
   const caption=`🎭 ${f.title||'[공연명]'}\n\n${f.description||'[공연의 매력을 소개하는 한두 문장]'}\n\n📅 일시 | ${dates||'0000.00.00.(요일) 오후 0시'}\n📍 장소 | ${f.venue||'[공연장명]'}\n👥 관람 연령 | ${f.age||'[관람 가능 연령]'}\n⏱ 공연 시간 | ${f.duration||'[러닝타임]'}\n🎟 티켓 | ${f.price||'[좌석 등급·가격]'}\n📞 문의 | ${f.inquiry||'[문의 연락처]'}\n\n예매는 프로필 링크에서 확인해 주세요.\n\n${tags.map(t=>'#'+t).join(' ')}`;
   if(caption.length>2200) throw new InstagramError('caption_invalid_response',502);
-  return {caption,missing};
+  return {caption,missing,fields:{...f,schedules:dates,tags:tags.map(t=>'#'+t).join(' ')}};
 }
 export async function generateCaption(env,file) {
   if(!env.GEMINI_API_KEY) throw new InstagramError('caption_not_configured',503);

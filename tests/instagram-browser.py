@@ -43,11 +43,11 @@ with sync_playwright() as p:
             assert fields['file'].startswith(b'\xff\xd8')
             if state['caption_error']:
                 route.fulfill(status=429,json={'error':'caption_rate_limited'}); return
-            route.fulfill(json={'ok':True,'caption':'🎭 자동 공연\n📞 문의 | [문의 연락처]','missing':['inquiry']}); return
+            route.fulfill(json={'ok':True,'caption':'🎭 자동 공연\n📞 문의 | [문의 연락처]','missing':['inquiry'],'fields':{'title':'자동 공연','tags':'#엔티켓'}}); return
         if path == 'instagram/prepare':
             assert fields['file'].startswith(b'\xff\xd8')
             state['published_image'] = fields['file']
-            assert fields['caption'] == (b'' if fields['channel'] == b'story' else '확인한 문구 #엔티켓'.encode())
+            assert fields['caption'] == b'' if fields['channel'] == b'story' else '확인한 문구 #엔티켓' in fields['caption'].decode()
             state['job'] = {'ok': True, 'draftId': fields['draft_id'].decode(), 'fingerprint': 'reviewed-image-digest', 'status': 'prepared', 'account': {'id': '123', 'username': 'en__ticket'}, 'channel': fields['channel'].decode()}
             route.fulfill(json=state['job']); return
         if path == 'instagram/publish':
@@ -90,23 +90,31 @@ with sync_playwright() as p:
     fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=600;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,600,900);return c.toDataURL('image/png').split(',')[1];}''')
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
-    expect(page.locator('#igCaption')).to_contain_text('📞 문의')
+    expect(page.locator('#igField_inquiry')).to_be_visible()
     page.locator('#igAutoCaption').click()
-    expect(page.locator('#igCaption')).to_have_value('🎭 자동 공연\n📞 문의 | [문의 연락처]')
+    expect(page.locator('#igField_title')).to_have_value('자동 공연')
+    expect(page.locator('#igMissing_inquiry')).to_be_visible()
     expect(page.locator('#igCaptionPreview')).to_contain_text('자동 공연')
     assert state['publish_count']==0
     state['caption_error']=True
     page.locator('#igAutoCaption').click()
     expect(page.locator('#igStatus')).to_contain_text('사용 한도')
-    expect(page.locator('#igCaption')).to_have_value('🎭 자동 공연\n📞 문의 | [문의 연락처]')
+    expect(page.locator('#igField_title')).to_have_value('자동 공연')
+    expect(page.locator('#igMissing_inquiry')).to_be_visible()
     state['caption_error']=False
-    page.locator('#igCaption').fill('지울 문구')
+    page.locator('#igField_schedules').fill('2026.11.20.(금) 오후 7시\n2026.11.21.(토) 오후 3시')
+    page.locator('#igField_tags').fill('#하나 #둘 #셋 #넷 #다섯 #여섯')
+    expect(page.locator('#igCaptionPreview')).to_contain_text('2026.11.21.(토) 오후 3시')
+    expect(page.locator('#igCaptionPreview')).not_to_contain_text('📞 문의')
+    assert page.locator('#igCaption').input_value().count('#')==5
+    expect(page.locator('#igMissing_tags')).to_be_visible()
+    page.locator('#igField_title').fill('지울 문구')
     page.locator('#igZoom').fill('50')
     page.locator('#igReset').click()
     expect_reset()
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
-    page.locator('#igCaption').fill('확인한 문구 #엔티켓')
+    page.locator('#igField_title').fill('확인한 문구 #엔티켓')
     page.locator('#igText').fill('엔티켓 테스트')
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionPreview')).to_contain_text('확인한 문구')
@@ -114,7 +122,7 @@ with sync_playwright() as p:
     page.locator('#igPrepare').click()
     expect(page.locator('#igPublish')).to_be_disabled()
     expect(page.locator('#igReviewAccount')).to_contain_text('@en__ticket')
-    expect(page.locator('#igCaption')).to_be_disabled()
+    expect(page.locator('#igField_title')).to_be_disabled()
     preview = page.locator('#igPreview').evaluate('async img=>Array.from(new Uint8Array(await (await fetch(img.src)).arrayBuffer()))')
     assert bytes(preview) == state['published_image']
     assert state['publish_count'] == 0

@@ -1062,13 +1062,13 @@ td.c { text-align: center; }
   .etc-row2 { grid-template-columns: 1fr 1fr; }
 }
 /* 인스타그램 — 기존 카드·입력 필드·상태 색상 토큰 공유 */
-.ig-account { display:flex; align-items:center; gap:var(--spacing-12); }
-.ig-account-icon { display:grid; place-items:center; width:40px; height:40px; flex:none; border-radius:var(--radius-12); color:var(--color-text-accent); background:var(--color-fill-accent); }
-.ig-account-info { flex:1; min-width:0; }
+.ig-account { padding:var(--spacing-12) var(--spacing-16); display:flex; align-items:center; gap:var(--spacing-12); }
+.ig-account-icon { display:grid; place-items:center; width:32px; height:32px; flex:none; border-radius:var(--radius-12); color:var(--color-text-accent); background:var(--color-fill-accent); }
+.ig-account-info { flex:1; min-width:0; display:flex; align-items:center; gap:var(--spacing-12); flex-wrap:wrap; }
 .ig-account-title { display:flex; gap:var(--spacing-8); align-items:center; flex-wrap:wrap; font-weight:var(--font-weight-700); }
 .ig-badge { display:inline-flex; padding:2px var(--spacing-8); border-radius:var(--radius-6); background:var(--bg-grey-lightest); color:var(--txt-black-darker); font-size:var(--font-size-12); font-weight:var(--font-weight-400); white-space:nowrap; }
 .ig-account[data-connected=true] .ig-badge { background:var(--color-fill-success); color:var(--color-text-success); }
-#igConnection { font-size:var(--font-size-12); color:var(--txt-black-darker); white-space:pre-wrap; overflow-wrap:anywhere; margin-top:var(--spacing-4); }
+#igConnection { font-size:var(--font-size-12); color:var(--txt-black-darker); white-space:pre-wrap; overflow-wrap:anywhere; margin:0; }
 .ig-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-16); align-items:start; margin-top:var(--spacing-20); }
 .ig-card { border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); background:var(--bg-white-normal); box-shadow:var(--elevation-1); overflow:hidden; min-width:0; }
 .ig-card-head { display:flex; align-items:center; gap:var(--spacing-8); padding:var(--spacing-16); border-bottom:1px solid var(--color-border-neutral); }
@@ -1079,6 +1079,7 @@ td.c { text-align: center; }
 .ig-field { display:flex; flex-direction:column; gap:var(--spacing-6); min-width:0; font-size:var(--font-size-13); color:var(--txt-black-darker); }
 .ig-field-title { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-8); }
 .ig-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-12); }
+#igCaptionLabel textarea:not([hidden]) { min-height:72px; }
 #panel-instagram textarea { width:100%; min-height:124px; resize:vertical; font:inherit; line-height:var(--line-height-22); padding:var(--spacing-10); color:var(--txt-black-darkest); background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); }
 #panel-instagram textarea:focus-visible, #igDrop:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 #panel-instagram input[type=color] { width:100%; height:36px; padding:4px; background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); cursor:pointer; }
@@ -1117,8 +1118,8 @@ td.c { text-align: center; }
 @media(max-width:640px) {
   .ig-grid { grid-template-columns:minmax(0,1fr); }
   .ig-account { flex-wrap:wrap; }
-  .ig-account-info { flex-basis:calc(100% - 52px); }
-  .ig-account > .btn { margin-left:52px; }
+  .ig-account-info { flex-basis:calc(100% - 44px); }
+  .ig-account > .btn { margin-left:44px; }
   #igEmpty { min-height:220px; }
 }
 </style>
@@ -1371,7 +1372,7 @@ window.ICO = {
         <div class="ig-account-icon"><svg class="ico"><use href="#i-nav-instagram"/></svg></div>
         <div class="ig-account-info">
           <div class="ig-account-title">게시 계정 <span class="ig-badge" id="igConnectionBadge">연결 확인 전</span></div>
-          <p id="igConnection" role="status">연결 확인을 눌러 게시할 계정을 확인해 주세요.</p>
+          <p id="igConnection" role="status">계정을 연결해 주세요.</p>
         </div>
         <button class="btn ghost" id="igCheck">연결 확인</button>
       </div>
@@ -1398,20 +1399,7 @@ window.ICO = {
                 <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
               </div>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
-              <label class="ig-field" id="igCaptionLabel"><span class="ig-field-title">피드 캡션 <span class="fname" id="igCaptionCount">0 / 2,200</span></span><textarea id="igCaption" rows="5" maxlength="2200" placeholder="공연 소개와 해시태그를 입력해 주세요.">🎭 [공연명]
-
-[공연의 매력을 소개하는 한두 문장]
-
-📅 일시 | 0000.00.00.(요일) 오후 0시
-📍 장소 | [공연장명]
-👥 관람 연령 | [관람 가능 연령]
-⏱ 공연 시간 | [러닝타임]
-🎟 티켓 | [좌석 등급·가격]
-📞 문의 | [문의 연락처]
-
-예매는 프로필 링크에서 확인해 주세요.
-
-#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]</textarea><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>포스터로 캡션 채우기</button><span class="ig-hint">포스터를 Gemini로 분석합니다. 작성된 일시·가격·문의처를 확인해 주세요.</span></label>
+<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="공연명 입력"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="2" maxlength="220" id="igField_description" placeholder="공연 소개 입력"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="2" maxlength="600" id="igField_schedules" placeholder="2026.11.20.(금) 오후 7시 · 회차마다 줄을 바꿔 입력"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="장소 입력"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="관람 연령 입력"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="공연 시간 입력"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="2" maxlength="220" id="igField_price" placeholder="티켓 가격 입력"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="문의 입력"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 · 최대 5개"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><textarea id="igCaption" hidden></textarea></div>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
             </fieldset>
           </div>
@@ -1672,7 +1660,33 @@ window.ICO = {
   };
   let account=null, bitmap=null, rendered=null, imageUrl='', job=null, working=false, revision=0, session=0;
   let captionAnalyzing=false;
-  const captionTemplate=$('igCaption').defaultValue;
+  const captionTemplate='';
+  const captionKeys=['title', 'description', 'schedules', 'venue', 'age', 'duration', 'price', 'inquiry', 'tags'];
+  function resetCaption(){
+    for(const key of captionKeys){ $('igField_'+key).value=key==='tags'?'#엔티켓':''; $('igMissing_'+key).hidden=true; }
+    $('igCaption').value='';
+  }
+  function composeCaption(){
+    const f=Object.fromEntries(captionKeys.map(key=>[key,$('igField_'+key).value.trim()]));
+    const tags=[...new Set(f.tags.split(/[\s,]+/).filter(Boolean).map(t=>'#'+t.replace(/^#+/,'').replace(/[^\p{L}\p{N}_]/gu,'')))].filter(t=>t!=='#');
+    const lines=[];
+    if(f.title) lines.push('🎭 '+f.title);
+    if(f.description) lines.push(f.description);
+    const details=[['schedules','📅 일시'],['venue','📍 장소'],['age','👥 관람 연령'],['duration','⏱ 공연 시간'],['price','🎟 티켓'],['inquiry','📞 문의']].filter(([key])=>f[key]).map(([key,label])=>label+' | '+f[key]);
+    if(details.length) lines.push(details.join('\n'));
+    if(lines.length) lines.push('예매는 프로필 링크에서 확인해 주세요.');
+    if(tags.length) lines.push(tags.slice(0,5).join(' '));
+    $('igCaption').value=lines.join('\n\n');
+    $('igMissing_tags').hidden=tags.length<=5;
+    $('igMissing_tags').textContent='해시태그는 처음 5개까지만 반영됩니다.';
+    $('igCaptionPreview').textContent=$('igChannel').value==='feed'?$('igCaption').value:'';
+    return f;
+  }
+  resetCaption();
+  for(const key of captionKeys) $('igField_'+key).addEventListener('input',()=>{
+    $('igMissing_'+key).hidden=true; composeCaption(); render().catch(e=>status(describe(e),'error'));
+  });
+
   const receiptKey='enticket-instagram-last-draft';
   function receipt(){ try { const value=JSON.parse(localStorage.getItem(receiptKey)); return value && /^[0-9a-f-]{36}$/.test(value.id) ? value : null; } catch { return null; } }
   function remember(id){ try { localStorage.setItem(receiptKey,JSON.stringify({id})); } catch {} $('igRecover').hidden=false; }
@@ -1686,7 +1700,7 @@ window.ICO = {
     $('igPrepare').disabled=working || !rendered || !account || !!job;
     $('igDownload').disabled=working || !rendered;
     $('igAutoCaption').disabled=working || !bitmap || !!job;
-    $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'포스터로 캡션 채우기';
+    $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     $('igNew').disabled=working;
     $('igReset').disabled=working;
@@ -1719,7 +1733,7 @@ window.ICO = {
   function resetEditor(){
     job=null; clearImage();
     for(const id of ['igFile','igText']) $(id).value='';
-    $('igCaption').value=captionTemplate;
+    resetCaption();
     $('igChannel').value='feed'; $('igFit').value='contain';
     $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
@@ -1791,7 +1805,7 @@ window.ICO = {
     try {
       const data=await api('connection'); if(current!==session) return;
       account=data.account;
-      $('igConnection').textContent='@'+account.username+'\n마지막 확인 '+new Date(account.checkedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+      $('igConnection').textContent='@'+account.username;
     } catch(e){ $('igConnection').textContent=describe(e); throw e; }
   }));
   function selectImage(file){ return run(async current=>{
@@ -1830,7 +1844,7 @@ window.ICO = {
   }
   $('igAutoCaption').addEventListener('click',()=>{
     if(working || job || !bitmap) return;
-    const existing=$('igCaption').value;
+    const existing=captionKeys.some(key=>key!=='tags' && $('igField_'+key).value.trim())?$('igCaption').value:'';
     if(existing.trim() && existing!==captionTemplate && !confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
     run(async current=>{
       captionAnalyzing=true; controls(); status('포스터에서 공연 정보를 읽고 있습니다.');
@@ -1844,7 +1858,8 @@ window.ICO = {
         if(!blob) throw new Error('분석할 이미지를 준비하지 못했습니다.');
         const data=await api('caption',{file:new File([blob],'poster.jpg',{type:'image/jpeg'})});
         if(current!==session) return;
-        $('igCaption').value=data.caption; await render();
+        for(const key of captionKeys){ $('igField_'+key).value=data.fields?.[key]||''; $('igMissing_'+key).hidden=!data.missing?.includes(key); }
+        composeCaption(); await render();
         status(data.missing?.length?'캡션을 작성했습니다. 포스터에서 확인되지 않은 항목과 일시·가격·문의처를 확인해 주세요.':'캡션을 작성했습니다. 일시·가격·문의처를 확인한 뒤 게시해 주세요.','success');
       } finally { captionAnalyzing=false; }
     });
@@ -1854,6 +1869,11 @@ window.ICO = {
   });
   $('igPrepare').addEventListener('click',()=>run(async current=>{
     if(!rendered || !account) return;
+    const fields=composeCaption();
+    if($('igChannel').value==='feed'){
+      if($('igCaption').value.length>2200){status('캡션을 2,200자 이내로 줄여 주세요.','error');return;}
+      if(['title','schedules','venue'].some(key=>!fields[key]) && !confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
+    }
     const id=crypto.randomUUID(); remember(id); status('확인할 이미지 보관 중…');
     const data=await api('prepare',{draft_id:id,channel:$('igChannel').value,caption:$('igChannel').value==='feed'?$('igCaption').value:'',file:new File([rendered],'instagram.jpg',{type:'image/jpeg'})});
     if(current!==session) return; $('igConfirm').checked=false; showJob(data);
@@ -1889,9 +1909,9 @@ window.ICO = {
     } else showJob(data);
   }));
   document.addEventListener('enticket-auth',()=>{
-    session++; account=null; job=null; clearImage(); $('igFile').value=''; $('igCaption').value=captionTemplate; $('igText').value='';
+    session++; account=null; job=null; clearImage(); $('igFile').value=''; resetCaption(); $('igText').value='';
     $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');
-    $('igConnection').textContent='연결 확인을 눌러 게시 계정을 확인해 주세요.';
+    $('igConnection').textContent='계정을 연결해 주세요.';
     $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'로그인이 필요한 기능입니다';
     $('igRecover').hidden=!receipt(); controls();
   });
