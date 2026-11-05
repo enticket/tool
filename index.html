@@ -370,6 +370,7 @@ h2 {
   margin-bottom: var(--spacing-20);
 }
 /* 제목과 첫 카드 간격은 로그인 상태나 숨겨진 요소와 관계없이 동일하게 유지한다. */
+.panel-view > h2, .feature-heading h2 { min-height: var(--b-form-field-size); display:flex; align-items:center; }
 .panel-view > h2 { margin: 0 0 var(--spacing-20); }
 .feature-heading {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -472,7 +473,7 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   border: 1.5px dashed var(--color-border-neutral-strong);
   border-radius: var(--radius-12);
   background: var(--bg-white-normal);
-  padding: var(--spacing-24) var(--spacing-20);
+  padding: var(--spacing-24) var(--spacing-16);
   text-align: center; cursor: pointer;
   transition: border-color var(--motion-transition-fast), background var(--motion-transition-fast);
 }
@@ -506,7 +507,8 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   gap: var(--spacing-8); margin-bottom: var(--spacing-12);
 }
 .node-title {
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-15);
+  line-height: var(--line-height-22);
   font-weight: var(--font-weight-700);
   color: var(--txt-black-darkest);
 }
@@ -573,7 +575,7 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   background: var(--bg-white-normal);
   border: 1px solid var(--color-border-neutral); border-bottom: none;
   border-radius: var(--radius-12) var(--radius-12) 0 0;
-  padding: var(--spacing-16) var(--spacing-16) var(--spacing-12);
+  padding: var(--spacing-16);
   font-size: var(--font-size-15);
   line-height: var(--line-height-22);
   letter-spacing: var(--letter-spacing-1);
@@ -827,7 +829,7 @@ td.c { text-align: center; }
   background: var(--bg-white-normal);
   border: 1px solid var(--color-border-neutral);
   border-radius: 0 0 var(--radius-12) var(--radius-12);
-  padding: var(--spacing-8) var(--spacing-10);
+  padding: var(--spacing-16);
   min-height: 80px;
   box-shadow: var(--elevation-1);
 }
@@ -1068,7 +1070,7 @@ td.c { text-align: center; }
 .ig-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-16); align-items:start; margin-top:var(--spacing-20); }
 .ig-card { border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); background:var(--bg-white-normal); box-shadow:var(--elevation-1); overflow:hidden; min-width:0; }
 .ig-card-head { display:flex; align-items:center; gap:var(--spacing-8); padding:var(--spacing-16); border-bottom:1px solid var(--color-border-neutral); }
-.ig-card-head h3 { font-size:var(--font-size-15); font-weight:var(--font-weight-700); }
+.ig-card-head h3 { line-height:var(--line-height-22); font-size:var(--font-size-15); font-weight:var(--font-weight-700); }
 .ig-step { display:grid; place-items:center; width:24px; height:24px; border-radius:var(--radius-6); background:var(--color-fill-accent); color:var(--color-text-accent); font-size:var(--font-size-12); font-weight:var(--font-weight-700); flex:none; }
 .ig-card-body { padding:var(--spacing-16); }
 .ig-fields { display:flex; flex-direction:column; gap:var(--spacing-16); min-width:0; border:0; padding:0; margin:0; }
@@ -1080,7 +1082,7 @@ td.c { text-align: center; }
 #panel-instagram input[type=color] { width:100%; height:36px; padding:4px; background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); cursor:pointer; }
 #panel-instagram input[type=range] { width:100%; accent-color:var(--color-bg-accent); box-shadow:none; }
 #panel-instagram fieldset:disabled { opacity:0.65; }
-#igDrop { background:var(--bg-grey-lighter); padding:var(--spacing-20) var(--spacing-12); }
+#igDrop { background:var(--bg-grey-lighter); }
 #igDrop:hover, #igDrop.hover { background:var(--color-fill-accent); }
 #igFileName { display:block; overflow-wrap:anywhere; margin-top:var(--spacing-8); color:var(--color-text-accent); font-size:var(--font-size-12); }
 .ig-background-controls { display:flex; align-items:center; gap:var(--spacing-8); min-height:36px; }
