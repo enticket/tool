@@ -89,9 +89,11 @@ Worker 테스트는 인증 거부, 오류/리디렉션의 비밀 차단과 실�
 
 - 피드 캡션 아래 `포스터로 캡션 채우기` 버튼으로 사용자가 명시적으로 요청할 때만 분석합니다. 문의 항목도 기본 템플릿에 포함합니다.
 - 자르기/확대 전 원본을 긴 변 최대 2048px JPEG로 변환해 인증된 `/api/instagram/caption`에 보냅니다. 기존 Google 허용 계정만 사용할 수 있습니다.
-- Worker는 `GEMINI_API_KEY` Secret을 사용해 `gemini-2.5-flash-lite`의 `generateContent`를 호출합니다. 키·Google 토큰·공급자 오류 상세를 브라우저에 반환하지 않습니다. HTTP 리디렉션은 거부합니다.
+- Worker는 `GEMINI_API_KEY` Secret을 사용해 `gemini-3.5-flash-lite`의 `generateContent`를 호출합니다. 키·Google 토큰·공급자 오류 상세를 브라우저에 반환하지 않습니다. HTTP 리디렉션은 거부합니다.
 - 구조화된 공연 정보를 검증하고 템플릿을 서버에서 구성합니다. 확인되지 않은 항목은 자리표시자로 남기고 날짜·요일·오전오후를 정리하며 태그는 최대 5개로 제한합니다. 추출 결과 자체는 사용자가 포스터와 대조해야 합니다.
 - 기존 캡션 수정본은 확인 후에만 교체하며, 실패/한도 초과 시에는 유지합니다. 자동 작성으로 최종 확인이나 실제 게시를 실행하지 않습니다.
 - 무료 사용: AI Studio에서 결제 연결 없는 무료 등급 프로젝트의 키를 만들고 Worker Settings → Variables and Secrets에 `GEMINI_API_KEY`를 Secret으로 저장합니다. 코드가 무료/유료 프로젝트 여부를 판단하지는 못하므로 결제 연결을 하지 않아야 합니다. 429 응답은 안내만 표시하고 자동 재시도나 다른 유료 모델로 전환하지 않습니다.
 - 공식 문서: https://ai.google.dev/gemini-api/docs/pricing , https://ai.google.dev/gemini-api/docs/image-understanding , https://ai.google.dev/gemini-api/docs/structured-output . 무료 등급 입력/출력은 Google의 제품 개선에 사용될 수 있습니다.
 - 이번 검증: Worker 테스트 38개와 모의 Gemini를 포함한 브라우저 흐름 통과. 구현 당시 Gemini Secret 미등록으로 실제 API/한국어 포스터 인식 검증은 미완료입니다.
+
+2026-11-05 키 등록 후 검증: `GEMINI_API_KEY`가 `secret_text`로 존재함을 확인했습니다. 2.5 Flash-Lite가 신규 사용자에게 제공되지 않는다는 실제 404 응답에 따라 공식 무료 등급 모델 `gemini-3.5-flash-lite`로 변경했습니다. 기존 Secret을 상속하는 토큰 보호 edge preview에서 영어 합성 포스터를 실제 분석했고 공연명·일시(요일/오후)·가격·문의 연락처의 정확한 추출을 확인했습니다. 한글 합성 포스터 추가 검증은 공급자 혼잡 503 응답으로 미완료입니다. 서버 테스트 38개 통과. 진단 코드는 운영에 배포하지 않았고 Instagram 게시도 실행하지 않았습니다.

@@ -47,7 +47,7 @@ export async function generateCaption(env,file) {
   let binary=''; for(let i=0;i<bytes.length;i+=8192) binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
   let res;
   try {
-    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',{
+    res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',{
       method:'POST',redirect:'manual',signal:AbortSignal.timeout(45000),
       headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},
       body:JSON.stringify({systemInstruction:{parts:[{text:instruction}]},contents:[{role:'user',parts:[{inlineData:{mimeType:'image/jpeg',data:btoa(binary)}}]}],
