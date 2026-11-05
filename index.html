@@ -1092,6 +1092,9 @@ td.c { text-align: center; }
 #panel-instagram .ig-background-controls input[type=color] { width:40px; flex:none; }
 .ig-blur-toggle { display:flex; align-items:center; gap:var(--spacing-4); cursor:pointer; font-size:var(--font-size-12); white-space:nowrap; }
 .ig-blur-toggle input { accent-color:var(--color-bg-accent); }
+.ig-adjust { border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); padding:var(--spacing-12) 0; }
+.ig-adjust summary { cursor:pointer; font-size:var(--font-size-13); font-weight:var(--font-weight-700); color:var(--txt-black-darker); }
+.ig-adjust .ig-sliders { padding-top:var(--spacing-16); }
 .ig-sliders { display:flex; flex-direction:column; gap:var(--spacing-12); }
 .ig-sliders output { color:var(--color-text-accent); font-variant-numeric:tabular-nums; }
 .ig-preview-meta { display:flex; justify-content:space-between; align-items:center; gap:var(--spacing-8); padding:var(--spacing-12) var(--spacing-16); font-size:var(--font-size-12); color:var(--txt-black-darker); }
@@ -1393,11 +1396,14 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
-              <div class="ig-sliders">
+              <details class="ig-adjust">
+                <summary>크기·위치 조절</summary>
+                <div class="ig-sliders">
                 <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="0" max="200" value="100"></label>
                 <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
                 <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
               </div>
+              </details>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
 <div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="공연명 입력"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="2" maxlength="220" id="igField_description" placeholder="공연 소개 입력"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="2" maxlength="600" id="igField_schedules" placeholder="2026.11.20.(금) 오후 7시 · 회차마다 줄을 바꿔 입력"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="장소 입력"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="관람 연령 입력"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="공연 시간 입력"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="2" maxlength="220" id="igField_price" placeholder="티켓 가격 입력"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="문의 입력"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 · 최대 5개"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><textarea id="igCaption" hidden></textarea></div>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>

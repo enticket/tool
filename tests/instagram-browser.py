@@ -109,6 +109,7 @@ with sync_playwright() as p:
     assert page.locator('#igCaption').input_value().count('#')==5
     expect(page.locator('#igMissing_tags')).to_be_visible()
     page.locator('#igField_title').fill('지울 문구')
+    page.locator('.ig-adjust summary').click()
     page.locator('#igZoom').fill('50')
     page.locator('#igReset').click()
     expect_reset()
