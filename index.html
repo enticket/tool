@@ -238,6 +238,8 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
    값은 모두 토큰 참조. 색을 hex/rgba로 하드코딩하지 않는다.
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Keep content aligned when switching between short and scrollable tools. */
+html { scrollbar-gutter: stable; }
 /* 앱 셸: 좌측 GNB + 콘텐츠 2열.
    (display:none인 스프라이트·스크립트는 그리드 아이템이 되지 않는다) */
 body {
