@@ -1109,7 +1109,7 @@ td.c { text-align: center; }
 #igStatus:empty { display:none; }
 #igStatus[data-tone=error] { color:var(--color-text-critical); background:var(--color-fill-critical); }
 #igStatus[data-tone=success] { color:var(--color-text-success); background:var(--color-fill-success); }
-.ig-footer { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--spacing-12); margin-top:var(--spacing-16); }
+.ig-footer { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:var(--spacing-12); margin-top:var(--spacing-16); }
 @media(min-width:861px) { .ig-preview-card { position:sticky; top:var(--spacing-20); } }
 @media(max-width:640px) {
   .ig-grid { grid-template-columns:minmax(0,1fr); }
@@ -1426,7 +1426,7 @@ window.ICO = {
         </div>
       </div>
       <p id="igStatus" role="status" aria-live="polite"></p>
-      <div class="ig-footer"><p class="ig-hint">피드·스토리 이미지 한 장씩 바로 게시할 수 있습니다.</p><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
+      <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
     </div>
   </section>
 </div>
