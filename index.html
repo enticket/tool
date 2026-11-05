@@ -1099,12 +1099,18 @@ td.c { text-align: center; }
 .ig-sliders output { color:var(--color-text-accent); font-variant-numeric:tabular-nums; }
 .ig-preview-meta { display:flex; justify-content:space-between; align-items:center; gap:var(--spacing-8); padding:var(--spacing-12) var(--spacing-16); font-size:var(--font-size-12); color:var(--txt-black-darker); }
 .ig-preview-stage { display:grid; place-items:center; padding:var(--spacing-16); background:var(--bg-grey-lightest); border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); }
-.ig-preview { display:block; width:100%; max-height:470px; object-fit:contain; }
-#igEmpty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--spacing-8); min-height:320px; max-width:230px; color:var(--txt-black-dark); text-align:center; font-size:var(--font-size-13); }
+.ig-preview { display:block; width:100%; max-height:300px; object-fit:contain; }
+#igEmpty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--spacing-8); min-height:200px; max-width:230px; color:var(--txt-black-dark); text-align:center; font-size:var(--font-size-13); }
 #igEmpty .ico { width:40px; height:40px; margin-bottom:var(--spacing-4); color:var(--color-icon-neutral); }
 #igEmpty strong { color:var(--txt-black-darker); }
-#igCaptionPreview { white-space:pre-wrap; overflow-wrap:anywhere; max-height:200px; overflow:auto; margin-bottom:var(--spacing-16); font-size:var(--font-size-13); line-height:var(--line-height-22); }
+#igCaptionPreview { white-space:pre-wrap; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin-bottom:var(--spacing-8); font-size:var(--font-size-13); line-height:var(--line-height-22); }
 #igCaptionPreview:empty { display:none; }
+#igCaptionPreview.is-expanded { display:block; overflow:visible; -webkit-line-clamp:unset; }
+#igCaptionToggle { margin-bottom:var(--spacing-12); }
+.ig-review-content { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-16); margin:var(--spacing-16) 0; }
+#igReviewImage { width:100%; height:auto; }
+#igReviewCaption { white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--font-size-13); line-height:var(--line-height-22); }
+@media(max-width:640px) { .ig-review-content { grid-template-columns:minmax(0,1fr); } }
 .ig-preview-actions { display:flex; flex-direction:column; gap:var(--spacing-12); }
 .ig-preview-actions .btn-row { display:grid; grid-template-columns:1fr 1fr; }
 .ig-hint { font-size:var(--font-size-12); color:var(--txt-black-darker); line-height:var(--line-height-18); }
@@ -1125,7 +1131,7 @@ td.c { text-align: center; }
   .ig-account { flex-wrap:wrap; }
   .ig-account-info { flex-basis:calc(100% - 44px); }
   .ig-account > .btn { margin-left:44px; }
-  #igEmpty { min-height:220px; }
+  #igEmpty { min-height:180px; }
 }
 </style>
 </head>
@@ -1418,7 +1424,7 @@ window.ICO = {
             <img id="igPreview" class="ig-preview" alt="인스타그램에 게시할 최종 이미지" hidden>
           </div>
           <div class="ig-card-body">
-            <p id="igCaptionPreview"></p>
+            <p id="igCaptionPreview"></p><button class="btn ghost sm" id="igCaptionToggle" type="button" aria-expanded="false" aria-controls="igCaptionPreview" hidden>전체 보기</button>
             <div class="ig-preview-actions">
               <p class="ig-hint" id="igNextHint">계정을 연결하고 포스터 이미지를 선택해 주세요.</p>
               <div class="btn-row"><button class="btn ghost" id="igDownload" disabled>이미지 다운로드</button><button class="btn" id="igPrepare" disabled>최종 확인하기</button></div>
@@ -1439,6 +1445,7 @@ window.ICO = {
         <div class="ig-card-head"><span class="ig-step">4</span><h3>게시 전 최종 확인</h3></div>
         <div class="ig-card-body">
           <p id="igReviewAccount"></p>
+          <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
           <p class="ig-hint">위 이미지와 문구가 그대로 공개됩니다. 게시용 이미지는 임시 주소로 최대 24시간 보관됩니다.</p>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">게시 계정, 게시 위치, 이미지와 문구를 확인했습니다.</label>
           <div class="btn-row"><button class="btn" id="igPublish" disabled>확인한 내용 지금 게시</button><button class="btn ghost" id="igNew">새 이미지 준비</button></div>
@@ -1734,13 +1741,23 @@ window.ICO = {
     $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
     $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
     for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
-    $('igNextHint').textContent=job?'확인할 내용이 고정되었습니다. 아래에서 게시 여부를 결정해 주세요.':!account?'먼저 게시 계정의 연결을 확인해 주세요.':!rendered?'포스터 이미지를 선택하면 미리보기를 확인할 수 있습니다.':'이미지와 문구를 확인한 뒤 최종 확인으로 진행하세요.';
+    $('igNextHint').textContent=job?'아래에서 최종 확인해 주세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'준비되면 최종 확인으로 진행하세요.';
+    $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
   }
   async function api(path, fields){
     if (!window.gdrive?.isAllowed()) throw new Error('허용된 Google 계정으로 다시 로그인해 주세요.');
     return await window.gdrive.api('/instagram/'+path,fields);
   }
+  $('igCaptionToggle').addEventListener('click',()=>{
+    const expanded=$('igCaptionToggle').getAttribute('aria-expanded')!=='true';
+    $('igCaptionToggle').setAttribute('aria-expanded',String(expanded));
+    $('igCaptionToggle').textContent=expanded?'접기':'전체 보기';
+    $('igCaptionPreview').classList.toggle('is-expanded',expanded);
+  });
   function clearImage(){
+    $('igCaptionPreview').classList.remove('is-expanded');
+    $('igCaptionToggle').setAttribute('aria-expanded','false'); $('igCaptionToggle').textContent='전체 보기';
+    $('igReviewImage').removeAttribute('src'); $('igReviewImage').hidden=true; $('igReviewCaption').textContent='';
     revision++; bitmap?.close(); bitmap=null; rendered=null;
     if(imageUrl) URL.revokeObjectURL(imageUrl); imageUrl='';
     $('igPreview').removeAttribute('src'); $('igPreview').hidden=true; $('igEmpty').hidden=false;
@@ -1892,7 +1909,10 @@ window.ICO = {
     }
     const id=crypto.randomUUID(); remember(id); status('확인할 이미지 보관 중…');
     const data=await api('prepare',{draft_id:id,channel:$('igChannel').value,caption:$('igChannel').value==='feed'?$('igCaption').value:'',file:new File([rendered],'instagram.jpg',{type:'image/jpeg'})});
-    if(current!==session) return; $('igConfirm').checked=false; showJob(data);
+    if(current!==session) return; $('igConfirm').checked=false;
+    $('igReviewImage').src=imageUrl; $('igReviewImage').hidden=false;
+    $('igReviewCaption').textContent=$('igChannel').value==='feed'?$('igCaption').value:'';
+    showJob(data);
   }));
   $('igConfirm').addEventListener('change',controls);
   $('igPublish').addEventListener('click',()=>run(async current=>{

@@ -120,7 +120,20 @@ with sync_playwright() as p:
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionPreview')).to_contain_text('확인한 문구')
     assert page.locator('#igPreview').evaluate('(img)=>[img.naturalWidth,img.naturalHeight]') == [1080, 1350]
+    expect(page.locator('#igPreview')).to_be_visible()
+    assert page.locator('#igPreview').bounding_box()['height']<=300
+    if page.locator('#igChannel').input_value()=='feed':
+        expect(page.locator('#igCaptionToggle')).to_be_visible()
+        expect(page.locator('#igCaptionToggle')).to_have_attribute('aria-expanded','false')
+        page.locator('#igCaptionToggle').click()
+        expect(page.locator('#igCaptionToggle')).to_have_attribute('aria-expanded','true')
+        page.locator('#igCaptionToggle').click()
+    else:
+        expect(page.locator('#igCaptionToggle')).to_be_hidden()
     page.locator('#igPrepare').click()
+    expect(page.locator('#igReviewImage')).to_be_visible()
+    assert page.locator('#igReviewImage').get_attribute('src')==page.locator('#igPreview').get_attribute('src')
+    assert page.locator('#igReviewCaption').text_content()==(page.locator('#igCaption').input_value() if page.locator('#igChannel').input_value()=='feed' else '')
     expect(page.locator('#igPublish')).to_be_disabled()
     expect(page.locator('#igReviewAccount')).to_contain_text('@en__ticket')
     expect(page.locator('#igField_title')).to_be_disabled()
@@ -144,7 +157,20 @@ with sync_playwright() as p:
     expect(page.locator('#igCaptionLabel')).to_be_hidden()
     expect(page.locator('#igStoryNote')).to_be_visible()
     page.wait_for_function("document.getElementById('igPreview').naturalHeight===1920")
+    expect(page.locator('#igPreview')).to_be_visible()
+    assert page.locator('#igPreview').bounding_box()['height']<=300
+    if page.locator('#igChannel').input_value()=='feed':
+        expect(page.locator('#igCaptionToggle')).to_be_visible()
+        expect(page.locator('#igCaptionToggle')).to_have_attribute('aria-expanded','false')
+        page.locator('#igCaptionToggle').click()
+        expect(page.locator('#igCaptionToggle')).to_have_attribute('aria-expanded','true')
+        page.locator('#igCaptionToggle').click()
+    else:
+        expect(page.locator('#igCaptionToggle')).to_be_hidden()
     page.locator('#igPrepare').click()
+    expect(page.locator('#igReviewImage')).to_be_visible()
+    assert page.locator('#igReviewImage').get_attribute('src')==page.locator('#igPreview').get_attribute('src')
+    assert page.locator('#igReviewCaption').text_content()==(page.locator('#igCaption').input_value() if page.locator('#igChannel').input_value()=='feed' else '')
     expect(page.locator('#igReviewAccount')).to_contain_text('스토리')
     expect(page.locator('#igPublish')).to_be_disabled()
     assert state['publish_count'] == 1
