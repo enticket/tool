@@ -1378,6 +1378,8 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <label class="ig-field">배경색 <input id="igBackground" type="color" value="#ffffff"></label>
               </div>
+              <label class="ig-field">여백 배경 <select id="igBackgroundMode"><option value="solid">단색 배경</option><option value="blur">포스터를 흐리게 채우기</option></select></label>
+              <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">원본은 선명하게, 여백은 같은 포스터를 확대해 흐리게 채웁니다.</span></label>
               <details class="ig-adjust">
                 <summary>확대·위치 조절</summary>
                 <div class="ig-adjust-body">
@@ -1662,6 +1664,9 @@ window.ICO = {
     $('igCheck').textContent=account?'다시 확인':'연결 확인';
     $('igDrop').setAttribute('aria-disabled',String(working || !!job));
     $('igDrop').tabIndex=working || job?-1:0;
+    const blur=$('igBackgroundMode').value==='blur';
+    $('igBlurControls').hidden=!blur; $('igBackground').disabled=blur; $('igFit').disabled=blur;
+    $('igBlurMarginValue').textContent=$('igBlurMargin').value+'%';
     const story=$('igChannel').value==='story';
     $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
     $('igPreviewChannel').textContent=story?'스토리':'피드';
@@ -1702,7 +1707,16 @@ window.ICO = {
     $('igCaptionLabel').hidden=channel==='story'; $('igStoryNote').hidden=channel!=='story';
     const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=channel==='story'?1920:1350;
     const ctx=canvas.getContext('2d'); ctx.fillStyle=$('igBackground').value; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const base=$('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height);
+    const blur=$('igBackgroundMode').value==='blur';
+    if(blur){
+      // Overscan the blurred copy so the canvas edges stay fully covered.
+      const pad=96, backgroundScale=Math.max((canvas.width+2*pad)/bitmap.width,(canvas.height+2*pad)/bitmap.height);
+      ctx.save(); ctx.filter='blur(32px)';
+      ctx.drawImage(bitmap,(canvas.width-bitmap.width*backgroundScale)/2,(canvas.height-bitmap.height*backgroundScale)/2,bitmap.width*backgroundScale,bitmap.height*backgroundScale);
+      ctx.restore();
+    }
+    const availableWidth=blur?canvas.width*(1-2*Number($('igBlurMargin').value)/100):canvas.width;
+    const base=!blur && $('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(availableWidth/bitmap.width,canvas.height/bitmap.height);
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
     const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
     const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
@@ -1759,7 +1773,7 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     render().catch(e=>status(describe(e),'error'));
   });
-  for(const id of ['igChannel','igFit','igBackground','igZoom','igX','igY','igText','igCaption']){
+  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igBlurMargin','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{ if(!job) render().catch(e=>status(describe(e))); });
   }
   $('igDownload').addEventListener('click',()=>{
