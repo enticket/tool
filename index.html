@@ -1087,10 +1087,9 @@ td.c { text-align: center; }
 #panel-instagram .ig-background-controls input[type=color] { width:40px; flex:none; }
 .ig-blur-toggle { display:flex; align-items:center; gap:var(--spacing-4); cursor:pointer; font-size:var(--font-size-12); white-space:nowrap; }
 .ig-blur-toggle input { accent-color:var(--color-bg-accent); }
-.ig-adjust { border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); padding:var(--spacing-12) 0; }
-.ig-adjust summary { cursor:pointer; font-size:var(--font-size-13); font-weight:var(--font-weight-700); color:var(--txt-black-darker); }
-.ig-adjust-body { display:flex; flex-direction:column; gap:var(--spacing-12); padding-top:var(--spacing-16); }
-.ig-adjust-body output { color:var(--color-text-accent); font-variant-numeric:tabular-nums; }
+.ig-sliders { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-12); }
+.ig-sliders .ig-field-title { flex-direction:column; align-items:flex-start; gap:var(--spacing-4); }
+.ig-sliders output { color:var(--color-text-accent); font-variant-numeric:tabular-nums; }
 .ig-preview-meta { display:flex; justify-content:space-between; align-items:center; gap:var(--spacing-8); padding:var(--spacing-12) var(--spacing-16); font-size:var(--font-size-12); color:var(--txt-black-darker); }
 .ig-preview-stage { display:grid; place-items:center; padding:var(--spacing-16); background:var(--bg-grey-lightest); border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); }
 .ig-preview { display:block; width:100%; max-height:470px; object-fit:contain; }
@@ -1390,15 +1389,11 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
-              <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="10" max="200" value="100"></label>
-              <details class="ig-adjust">
-                <summary>위치 조절</summary>
-                <div class="ig-adjust-body">
-                  <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
-                  <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
-                  <button class="btn ghost sm" id="igResetLayout" type="button">크기·위치 초기화</button>
-                </div>
-              </details>
+              <div class="ig-sliders">
+                <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="10" max="200" value="100"></label>
+                <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
+                <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
+              </div>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
               <label class="ig-field" id="igCaptionLabel"><span class="ig-field-title">피드 캡션 <span class="fname" id="igCaptionCount">0 / 2,200</span></span><textarea id="igCaption" rows="5" maxlength="2200" placeholder="공연 소개와 해시태그를 입력해 주세요."></textarea></label>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
@@ -1793,18 +1788,15 @@ window.ICO = {
     event.preventDefault(); $('igDrop').classList.remove('hover');
     if(!working && !job) selectImage(event.dataTransfer.files[0]);
   });
-  $('igResetLayout').addEventListener('click',()=>{
-    $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
-    render().catch(e=>status(describe(e),'error'));
-  });
-  // Snap pointer/touch dragging near the default; keep keyboard steps unrestricted.
-  let zoomDragging=false;
-  $('igZoom').addEventListener('pointerdown',()=>{ zoomDragging=true; });
-  for(const event of ['pointerup','pointercancel']) window.addEventListener(event,()=>{ zoomDragging=false; });
+  // Snap pointer/touch dragging near each default; keep keyboard steps unrestricted.
+  const sliderDefaults={igZoom:100,igX:0,igY:0};
+  let draggedSlider=null;
+  for(const id of Object.keys(sliderDefaults)) $(id).addEventListener('pointerdown',()=>{ draggedSlider=id; });
+  for(const event of ['pointerup','pointercancel']) window.addEventListener(event,()=>{ draggedSlider=null; });
   for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{
       if(job) return;
-      if(id==='igZoom' && zoomDragging && Math.abs(Number($('igZoom').value)-100)<=3) $('igZoom').value=100;
+      if(id===draggedSlider && Math.abs(Number($(id).value)-sliderDefaults[id])<=3) $(id).value=sliderDefaults[id];
       if(id==='igChannel'){ $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
       render().catch(e=>status(describe(e)));
     });
