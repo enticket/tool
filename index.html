@@ -1390,7 +1390,7 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
-              <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="10" max="200" value="100"><span class="ig-hint">흐린 배경의 기본 크기는 피드에서 높이를, 스토리에서 가로폭을 채웁니다. 슬라이더로 비율을 유지하며 크기를 조절할 수 있습니다.</span></label>
+              <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="10" max="200" value="100"></label>
               <details class="ig-adjust">
                 <summary>위치 조절</summary>
                 <div class="ig-adjust-body">
@@ -1431,7 +1431,7 @@ window.ICO = {
         </div>
       </div>
       <p id="igStatus" role="status" aria-live="polite"></p>
-      <div class="ig-footer"><p class="ig-hint">피드·스토리 이미지 한 장씩 바로 게시할 수 있습니다.</p><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div>
+      <div class="ig-footer"><p class="ig-hint">피드·스토리 이미지 한 장씩 바로 게시할 수 있습니다.</p><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
     </div>
   </section>
 </div>
@@ -1668,6 +1668,7 @@ window.ICO = {
     $('igDownload').disabled=working || !rendered;
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     $('igNew').disabled=working;
+    $('igReset').disabled=working;
     $('igRecover').disabled=working;
     $('igAccountCard').dataset.connected=!!account;
     $('igConnectionBadge').textContent=account?'연결 확인 완료':'연결 확인 전';
@@ -1694,12 +1695,27 @@ window.ICO = {
     $('igPreview').removeAttribute('src'); $('igPreview').hidden=true; $('igEmpty').hidden=false;
     $('igFileName').textContent=''; $('igFileName').hidden=true;
   }
+  function resetEditor(){
+    job=null; clearImage();
+    for(const id of ['igFile','igCaption','igText']) $(id).value='';
+    $('igChannel').value='feed'; $('igFit').value='contain';
+    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
+    $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
+    $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
+    $('igReview').hidden=true; $('igConfirm').checked=false;
+    $('igPublish').textContent='확인한 내용 지금 게시';
+    controls();
+  }
+  function canStartNew(){
+    return !job || !['unknown','creating','checking','posting'].includes(job.status) || confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
+  }
   function showJob(data){
     job=data; $('igReview').hidden=false;
     $('igReviewAccount').textContent='게시 계정: @'+data.account.username+' · '+(data.channel==='story'?'스토리':'피드');
     $('igPublish').textContent=data.status==='processing'?'확인한 게시 처리 계속':'확인한 내용 지금 게시';
     const labels={prepared:'게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.',processing:'인스타그램에서 이미지를 처리하고 있습니다. 잠시 후 게시 처리 계속을 눌러 주세요.',creating:'이미지를 전송 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',checking:'게시 상태를 확인 중입니다. 잠시 후 다시 확인해 주세요.',posting:'게시 요청 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',published:'인스타그램 게시 완료'+(data.mediaId?' · 게시물 ID: '+data.mediaId:''),failed:'게시 전 처리에 실패했습니다. '+(messages[data.error]||'이미지와 계정 설정을 확인해 주세요.'),unknown:'게시 결과를 확정하지 못했습니다. 재게시하지 말고 마지막 게시 상태와 인스타그램을 확인해 주세요.'};
     status(labels[data.status]||'게시 상태를 확인해 주세요.',data.status==='published'?'success':['failed','unknown'].includes(data.status)?'error':''); controls();
+    if(data.status==='published') resetEditor();
     if(data.status==='prepared') $('igReview').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function run(action){
@@ -1812,8 +1828,12 @@ window.ICO = {
     }
   }));
   $('igNew').addEventListener('click',()=>{
-    if(job && ['unknown','creating','checking','posting'].includes(job.status) && !confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?')) return;
+    if(!canStartNew()) return;
     job=null; $('igReview').hidden=true; $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
+  });
+  $('igReset').addEventListener('click',()=>{
+    if(working || !canStartNew()) return;
+    resetEditor(); status('');
   });
   $('igRecover').addEventListener('click',()=>run(async current=>{
     const saved=receipt(); if(!saved) return;

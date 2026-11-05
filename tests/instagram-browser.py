@@ -67,7 +67,28 @@ with sync_playwright() as p:
     state['instagram_error'] = False
     page.locator('#igCheck').click()
     expect(page.locator('#igConnection')).to_contain_text('@en__ticket')
+    def expect_reset():
+        expect(page.locator('#igReview')).to_be_hidden()
+        expect(page.locator('#igPreview')).to_be_hidden()
+        expect(page.locator('#igEmpty')).to_be_visible()
+        expect(page.locator('#igPrepare')).to_be_disabled()
+        expect(page.locator('#igCaption')).to_be_empty()
+        expect(page.locator('#igText')).to_be_empty()
+        expect(page.locator('#igZoom')).to_have_value('100')
+        expect(page.locator('#igX')).to_have_value('0')
+        expect(page.locator('#igY')).to_have_value('0')
+        expect(page.locator('#igBackgroundMode')).to_be_checked()
+        assert page.locator('#igFile').input_value() == ''
+        assert not page.locator('#igPreview').get_attribute('src')
+        expect(page.locator('#igConnectionBadge')).to_have_text('연결 확인 완료')
+
     fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=600;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,600,900);return c.toDataURL('image/png').split(',')[1];}''')
+    page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
+    expect(page.locator('#igPrepare')).to_be_enabled()
+    page.locator('#igCaption').fill('지울 문구')
+    page.locator('#igZoom').fill('50')
+    page.locator('#igReset').click()
+    expect_reset()
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
     page.locator('#igCaption').fill('확인한 문구 #엔티켓')
@@ -88,8 +109,13 @@ with sync_playwright() as p:
     expect(page.locator('#igStatus')).to_contain_text('게시 완료')
     expect(page.locator('#igPublish')).to_be_disabled()
     assert state['publish_count'] == 1
-    page.locator('#igNew').click()
+    expect_reset()
+    expect(page.locator('#igRecover')).to_be_visible()
+    page.locator('#igFile').set_input_files({'name': 'next.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     page.locator('#igChannel').select_option('story')
+    # Checking an older completed post must preserve the new image being edited.
+    page.locator('#igRecover').click()
+    expect(page.locator('#igPreview')).to_be_visible()
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionLabel')).to_be_hidden()
     expect(page.locator('#igStoryNote')).to_be_visible()
@@ -103,8 +129,11 @@ with sync_playwright() as p:
     page.locator('#igPublish').click()
     expect(page.locator('#igStatus')).to_contain_text('결과를 확정하지 못했습니다')
     expect(page.locator('#igPublish')).to_be_disabled()
+    expect(page.locator('#igReview')).to_be_visible()
+    expect(page.locator('#igPreview')).to_be_visible()
     page.locator('#igRecover').click()
     expect(page.locator('#igStatus')).to_contain_text('게시 완료')
+    expect_reset()
     assert state['publish_count'] == 2
     page.locator('#gLogoutBtn').click()
     expect(page.locator('#igWork')).to_be_hidden()
@@ -117,5 +146,5 @@ with sync_playwright() as p:
     page.set_viewport_size({'width': 390, 'height': 844})
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     assert not errors, errors
-    print('PASS: Google gate, Instagram errors/account, exact JPEG preview, locked review, explicit confirmation, lost-response recovery, feed/story, logout and mobile (mocked providers)')
+    print('PASS: Google gate, manual reset, automatic reset after publish/recovery, preserved account/receipt/new edits, exact JPEG review, explicit confirmation, feed/story, logout and mobile (mocked providers)')
     browser.close()
