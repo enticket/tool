@@ -1662,8 +1662,15 @@ window.ICO = {
   $('igPublish').addEventListener('click',()=>run(async current=>{
     if(!job || !$('igConfirm').checked || !['prepared','processing'].includes(job.status)) return;
     status('Instagram 게시 요청 중…');
-    const data=await api('publish',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'publish'});
-    if(current===session) showJob(data);
+    try {
+      const data=await api('publish',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'publish'});
+      if(current===session) showJob(data);
+    } catch(e) {
+      if(current===session){
+        showJob({...job,status:'unknown'});
+        status('게시 결과를 확정하지 못했습니다. 마지막 게시 상태와 Instagram을 확인해 주세요. '+describe(e));
+      }
+    }
   }));
   $('igNew').addEventListener('click',()=>{
     if(job && ['unknown','creating','checking','posting'].includes(job.status) && !confirm('게시 결과가 불명확합니다. Instagram에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?')) return;

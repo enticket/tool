@@ -15,7 +15,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
     page = browser.new_page()
     errors, calls = [], []
-    state = {'allowed': True, 'instagram_error': False, 'job': None, 'publish_count': 0, 'published_image': b''}
+    state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
     page.route('https://cdn.jsdelivr.net/**', cdn)
@@ -51,6 +51,8 @@ with sync_playwright() as p:
             assert 'file' not in fields
             state['publish_count'] += 1
             state['job'].update(status='published', mediaId='777')
+            if state['network_error']:
+                route.abort(); return
         route.fulfill(json=state['job'])
     page.route('**/api/**', api)
     page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8787'), wait_until='networkidle')
@@ -96,6 +98,14 @@ with sync_playwright() as p:
     expect(page.locator('#igReviewAccount')).to_contain_text('스토리')
     expect(page.locator('#igPublish')).to_be_disabled()
     assert state['publish_count'] == 1
+    state['network_error'] = True
+    page.locator('#igConfirm').check()
+    page.locator('#igPublish').click()
+    expect(page.locator('#igStatus')).to_contain_text('결과를 확정하지 못했습니다')
+    expect(page.locator('#igPublish')).to_be_disabled()
+    page.locator('#igRecover').click()
+    expect(page.locator('#igStatus')).to_contain_text('게시 완료')
+    assert state['publish_count'] == 2
     page.locator('#gLogoutBtn').click()
     expect(page.locator('#igWork')).to_be_hidden()
     assert not page.locator('#igPreview').get_attribute('src')
@@ -107,5 +117,5 @@ with sync_playwright() as p:
     page.set_viewport_size({'width': 390, 'height': 844})
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     assert not errors, errors
-    print('PASS: Google gate, Instagram errors/account, exact JPEG preview, locked review, explicit confirmation, feed/story, logout and mobile (mocked providers)')
+    print('PASS: Google gate, Instagram errors/account, exact JPEG preview, locked review, explicit confirmation, lost-response recovery, feed/story, logout and mobile (mocked providers)')
     browser.close()
