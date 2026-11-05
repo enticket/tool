@@ -1407,10 +1407,11 @@ window.ICO = {
 👥 관람 연령 | [관람 가능 연령]
 ⏱ 공연 시간 | [러닝타임]
 🎟 티켓 | [좌석 등급·가격]
+📞 문의 | [문의 연락처]
 
 예매는 프로필 링크에서 확인해 주세요.
 
-#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]</textarea></label>
+#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]</textarea><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>포스터로 캡션 채우기</button><span class="ig-hint">포스터를 Gemini로 분석합니다. 작성된 일시·가격·문의처를 확인해 주세요.</span></label>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
             </fieldset>
           </div>
@@ -1648,6 +1649,12 @@ window.ICO = {
   if (window.gdrive?.isLocal) return;
   const $ = id => document.getElementById(id);
   const messages = {
+    caption_not_configured:'Gemini API 키 설정이 필요합니다. 템플릿은 직접 작성할 수 있습니다.',
+    caption_invalid_image:'포스터 이미지를 다시 선택해 주세요.',
+    caption_rate_limited:'Gemini 사용 한도에 도달했습니다. 잠시 후 시도하거나 직접 작성해 주세요.',
+    caption_unavailable:'Gemini에 연결하지 못했습니다. 기존 캡션은 유지됩니다. 잠시 후 다시 시도해 주세요.',
+    caption_invalid_response:'포스터 정보를 읽지 못했습니다. 더 선명한 이미지를 사용하거나 직접 작성해 주세요.',
+
     instagram_not_configured:'인스타그램 연결 설정이 없습니다. 운영 설정을 확인해 주세요.',
     instagram_token_invalid:'인스타그램 토큰이 만료되었거나 취소되었습니다. Meta에서 재발급한 뒤 Worker 비밀 설정을 갱신해 주세요.',
     instagram_permission_denied:'인스타그램 권한이 부족합니다. Meta 앱의 계정 연결과 권한을 확인해 주세요.',
@@ -1664,6 +1671,7 @@ window.ICO = {
     instagram_media_failed:'인스타그램이 이미지를 처리하지 못했습니다. 이미지와 계정의 게시 권한을 확인해 주세요.',
   };
   let account=null, bitmap=null, rendered=null, imageUrl='', job=null, working=false, revision=0, session=0;
+  let captionAnalyzing=false;
   const captionTemplate=$('igCaption').defaultValue;
   const receiptKey='enticket-instagram-last-draft';
   function receipt(){ try { const value=JSON.parse(localStorage.getItem(receiptKey)); return value && /^[0-9a-f-]{36}$/.test(value.id) ? value : null; } catch { return null; } }
@@ -1677,6 +1685,8 @@ window.ICO = {
     $('igEditor').disabled=working || !!job;
     $('igPrepare').disabled=working || !rendered || !account || !!job;
     $('igDownload').disabled=working || !rendered;
+    $('igAutoCaption').disabled=working || !bitmap || !!job;
+    $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'포스터로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     $('igNew').disabled=working;
     $('igReset').disabled=working;
@@ -1818,6 +1828,27 @@ window.ICO = {
       render().catch(e=>status(describe(e)));
     });
   }
+  $('igAutoCaption').addEventListener('click',()=>{
+    if(working || job || !bitmap) return;
+    const existing=$('igCaption').value;
+    if(existing.trim() && existing!==captionTemplate && !confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
+    run(async current=>{
+      captionAnalyzing=true; controls(); status('포스터에서 공연 정보를 읽고 있습니다.');
+      try {
+        // Analyze the uncropped original, not the feed/story preview.
+        const canvas=document.createElement('canvas'), scale=Math.min(1,2048/Math.max(bitmap.width,bitmap.height));
+        canvas.width=Math.max(1,Math.round(bitmap.width*scale)); canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+        const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.9));
+        if(current!==session) return;
+        if(!blob) throw new Error('분석할 이미지를 준비하지 못했습니다.');
+        const data=await api('caption',{file:new File([blob],'poster.jpg',{type:'image/jpeg'})});
+        if(current!==session) return;
+        $('igCaption').value=data.caption; await render();
+        status(data.missing?.length?'캡션을 작성했습니다. 포스터에서 확인되지 않은 항목과 일시·가격·문의처를 확인해 주세요.':'캡션을 작성했습니다. 일시·가격·문의처를 확인한 뒤 게시해 주세요.','success');
+      } finally { captionAnalyzing=false; }
+    });
+  });
   $('igDownload').addEventListener('click',()=>{
     if(!rendered) return; const a=document.createElement('a'); a.href=imageUrl; a.download='enticket-'+$('igChannel').value+'.jpg'; a.click();
   });

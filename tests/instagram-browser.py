@@ -15,7 +15,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
     page = browser.new_page()
     errors, calls = [], []
-    state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'publish_count': 0, 'published_image': b''}
+    state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'caption_error':False, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
     page.route('https://cdn.jsdelivr.net/**', cdn)
@@ -39,6 +39,11 @@ with sync_playwright() as p:
             if state['instagram_error']:
                 route.fulfill(status=503, json={'error': 'instagram_token_invalid'}); return
             route.fulfill(json={'ok': True, 'connected': True, 'account': {'id': '123', 'username': 'en__ticket', 'checkedAt': '2026-11-05T04:00:00Z'}}); return
+        if path == 'instagram/caption':
+            assert fields['file'].startswith(b'\xff\xd8')
+            if state['caption_error']:
+                route.fulfill(status=429,json={'error':'caption_rate_limited'}); return
+            route.fulfill(json={'ok':True,'caption':'🎭 자동 공연\n📞 문의 | [문의 연락처]','missing':['inquiry']}); return
         if path == 'instagram/prepare':
             assert fields['file'].startswith(b'\xff\xd8')
             state['published_image'] = fields['file']
@@ -85,6 +90,16 @@ with sync_playwright() as p:
     fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=600;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,600,900);return c.toDataURL('image/png').split(',')[1];}''')
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
+    expect(page.locator('#igCaption')).to_contain_text('📞 문의')
+    page.locator('#igAutoCaption').click()
+    expect(page.locator('#igCaption')).to_have_value('🎭 자동 공연\n📞 문의 | [문의 연락처]')
+    expect(page.locator('#igCaptionPreview')).to_contain_text('자동 공연')
+    assert state['publish_count']==0
+    state['caption_error']=True
+    page.locator('#igAutoCaption').click()
+    expect(page.locator('#igStatus')).to_contain_text('사용 한도')
+    expect(page.locator('#igCaption')).to_have_value('🎭 자동 공연\n📞 문의 | [문의 연락처]')
+    state['caption_error']=False
     page.locator('#igCaption').fill('지울 문구')
     page.locator('#igZoom').fill('50')
     page.locator('#igReset').click()

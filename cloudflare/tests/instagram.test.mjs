@@ -55,7 +55,7 @@ test('Workers + SQLite: immutable review, protected media, one publish and uncer
   const jpeg = new Uint8Array([255,216,255,192,0,17,8,5,70,4,56,3,1,17,0,2,17,0,3,17,0,255,217]);
   const storyJpeg = jpeg.slice(); storyJpeg[7] = 7; storyJpeg[8] = 128;
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: ['worker.mjs', 'instagram.mjs', 'instagram-job.mjs'].map(name => ({
+    modules: ['worker.mjs', 'instagram.mjs', 'instagram-job.mjs', 'instagram-caption.mjs'].map(name => ({
       type: 'ESModule', path: fileURLToPath(new URL('../src/' + name, import.meta.url)),
     })),
     compatibilityDate: '2026-10-13', bindings,
