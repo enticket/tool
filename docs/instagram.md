@@ -64,3 +64,13 @@ python tests/cloud-browser.py
 Worker 테스트는 인증 거부, 오류/리디렉션의 비밀 차단과 실제 workerd+SQLite 저장소에서 최종 확인 누락·내용 변경·미디어 URL 권한·동시/반복 게시·응답 유실·원격 완료 재조회를 검증합니다. 브라우저 테스트는 실제 JPEG 렌더링과 전송 바이트 일치, 확인 전 미게시, 피드/스토리, 로그아웃, 비허용 계정 및 모바일 폭을 확인합니다. 외부 Google/Meta 응답은 모의 처리하므로 실제 게시 검증과 구분합니다.
 
 검증 결과: Worker 테스트 30개 통과, Instagram 브라우저 흐름 통과, 기존 cloud-browser 회귀 통과, Wrangler 배포 dry-run 통과. 브라우저·게시 테스트의 Meta/Google 응답은 합성입니다.
+
+## 운영 반영 기록
+
+- 운영 주소: https://tools.enticket.kr/
+- Worker: `enticket-drive`, 최종 배포 버전 `e7452154-e02f-4c15-a2b2-061154130c51`.
+- 배포 코드: `08a529e` (후속 문서 커밋은 실행 코드에 영향 없음).
+- [초안 PR #1](https://github.com/enticket/tool/pull/1), 브랜치 `codex/instagram-unified-integration`. `main`에는 아직 병합하지 않았습니다. 운영 배포는 이 브랜치의 코드를 사용합니다.
+- 운영 화면/healthz 200, 무효 Google 토큰 401, 비허용 출처 403, 서버 소스/로컬 초안 비밀 경로 404를 확인했습니다. 배포 전후 모든 기존 바인딩의 이름/유형을 비교해 보존을 확인했고 `INSTAGRAM_JOBS`만 추가됐습니다. 유료 플랜 변경은 하지 않았습니다.
+- 실제 연결 확인 함수도 기존 비밀을 상속한 edge preview에서 다시 실행해 `en__ticket`과 고정 ID가 일치함을 확인했습니다. 운영 API의 Google 인증을 우회하는 경로는 없습니다.
+- 브라우저가 게시 응답을 잃는 경우도 모의 검증했습니다. 화면은 게시 결과를 `unknown`으로 잠그고, 상태 재조회로만 결과를 갱신합니다.

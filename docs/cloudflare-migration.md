@@ -98,3 +98,5 @@ Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `
 새 Cloudflare 계정 토큰 인증 및 두 Instagram 설정의 존재를 확인했습니다. Unified Login의 실제 `graph.facebook.com/v27.0` 계정 조회와 할당 계정 조회에서 `17841465620686597` / `en__ticket` 연결을 확인했습니다. 기존 Google 허용 계정 인증 뒤에 연결 확인, 브라우저 이미지 편집, 최종 미리보기와 명시적 확인 게시 흐름을 추가했습니다. SQLite 기반 무료 Durable Objects 바인딩(`INSTAGRAM_JOBS`)으로 게시용 이미지와 중복 방지 상태를 보관합니다. 운영 설정은 `keep_vars`로 유지합니다.
 
 자세한 검증 범위, 공식 문서와 동작은 [Instagram 연동](instagram.md)을 참조하세요. 실제 Instagram 게시와 Drive 저장의 사용자 확인은 남아 있습니다. 리디렉션/Webhook, 직인, 회사 홈페이지 Netlify 연결과 `instagram-admin/` 초안은 이번 작업에서 변경하지 않았습니다.
+
+Instagram 최종 운영 버전은 `e7452154-e02f-4c15-a2b2-061154130c51`이며, [초안 PR #1](https://github.com/enticket/tool/pull/1)의 `08a529e` 코드를 배포했습니다. `main` 병합은 하지 않았습니다. 기존 바인딩 이름/유형 보존, 무효 Google 토큰 401 및 비허용 출처 403을 운영에서 확인했습니다.
