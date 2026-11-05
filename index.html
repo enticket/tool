@@ -1390,14 +1390,13 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
-              <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">위아래를 꽉 채우고 양옆만 흐리게 만듭니다. 이미지 비율에 따라 좌우 일부가 잘릴 수 있습니다.</span></label>
+              <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="10" max="200" value="100"><span class="ig-hint">흐린 배경의 기본 크기는 상하를 채웁니다. 슬라이더로 비율을 유지하며 크기를 조절할 수 있습니다.</span></label>
               <details class="ig-adjust">
-                <summary>확대·위치 조절</summary>
+                <summary>위치 조절</summary>
                 <div class="ig-adjust-body">
-                  <label class="ig-field"><span class="ig-field-title">확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="100" max="200" value="100"></label>
                   <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
                   <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
-                  <button class="btn ghost sm" id="igResetLayout" type="button">확대·위치 초기화</button>
+                  <button class="btn ghost sm" id="igResetLayout" type="button">크기·위치 초기화</button>
                 </div>
               </details>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
@@ -1676,8 +1675,7 @@ window.ICO = {
     $('igDrop').setAttribute('aria-disabled',String(working || !!job));
     $('igDrop').tabIndex=working || job?-1:0;
     const blur=$('igBackgroundMode').checked;
-    $('igBlurControls').hidden=!blur; $('igBackground').disabled=blur; $('igFit').disabled=blur;
-    $('igBlurMarginValue').textContent=$('igBlurMargin').value+'%';
+    $('igBackground').disabled=blur; $('igFit').disabled=blur;
     const story=$('igChannel').value==='story';
     $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
     $('igPreviewChannel').textContent=story?'스토리':'피드';
@@ -1726,21 +1724,11 @@ window.ICO = {
       ctx.drawImage(bitmap,(canvas.width-bitmap.width*backgroundScale)/2,(canvas.height-bitmap.height*backgroundScale)/2,bitmap.width*backgroundScale,bitmap.height*backgroundScale);
       ctx.restore();
     }
-    const availableWidth=blur?canvas.width*(1-2*Number($('igBlurMargin').value)/100):canvas.width;
     const base=blur?canvas.height/bitmap.height:($('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height));
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
-    let x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
-    let y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
-    ctx.save();
-    if(blur){
-      // Fill the full height without distorting the poster; crop only inside the sharp column.
-      const columnWidth=Math.min(availableWidth,bitmap.width*base), left=(canvas.width-columnWidth)/2;
-      x=Math.max(left+columnWidth-w,Math.min(left,x));
-      y=Math.max(canvas.height-h,Math.min(0,y));
-      ctx.beginPath(); ctx.rect(left,0,columnWidth,canvas.height); ctx.clip();
-    }
+    const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
+    const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
     ctx.drawImage(bitmap,x,y,w,h);
-    ctx.restore();
     const text=$('igText').value.trim();
     if(text){
       ctx.font='bold 48px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -1793,7 +1781,7 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     render().catch(e=>status(describe(e),'error'));
   });
-  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igBlurMargin','igZoom','igX','igY','igText','igCaption']){
+  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{ if(!job) render().catch(e=>status(describe(e))); });
   }
   $('igDownload').addEventListener('click',()=>{
