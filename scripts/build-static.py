@@ -14,6 +14,10 @@ config = json.loads(re.search(r'<script id="tool-config" type="application/json"
 config.update(mode=args.mode, apiBase='/api')
 html = re.sub(r'(<script id="tool-config" type="application/json">).*?(</script>)',
               lambda m: m[1] + json.dumps(config) + m[2], html, count=1)
+if args.mode == 'cloud':
+    # The cloud navigation/account controls must be visible in the initial HTML,
+    # even before the browser has initialized JavaScript and the Google library.
+    html = html.replace(' data-cloud-only hidden', ' data-cloud-only')
 output = root / 'dist'
 output.mkdir(exist_ok=True)
 # Refuse unexpected leftovers rather than publishing them or deleting user data.
