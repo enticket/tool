@@ -1797,9 +1797,14 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     render().catch(e=>status(describe(e),'error'));
   });
+  // Snap pointer/touch dragging near the default; keep keyboard steps unrestricted.
+  let zoomDragging=false;
+  $('igZoom').addEventListener('pointerdown',()=>{ zoomDragging=true; });
+  for(const event of ['pointerup','pointercancel']) window.addEventListener(event,()=>{ zoomDragging=false; });
   for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{
       if(job) return;
+      if(id==='igZoom' && zoomDragging && Math.abs(Number($('igZoom').value)-100)<=3) $('igZoom').value=100;
       if(id==='igChannel'){ $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
       render().catch(e=>status(describe(e)));
     });
