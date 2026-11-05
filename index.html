@@ -1152,7 +1152,7 @@ window.ICO = {
     <button class="tab" data-tab="instagram" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg>인스타그램</button>
   </nav>
   <div class="gauth" data-cloud-only hidden>
-    <button class="gbtn" id="gLoginBtn" disabled>Google 로그인</button>
+    <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
     <span id="gUser" class="guser" style="display:none"></span>
     <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
   </div>
@@ -1353,8 +1353,7 @@ window.ICO = {
     <h2>인스타그램</h2>
     <div class="gate" id="igGate">
       <div class="g-ico"><svg class="ico ico--lg"><use href="#i-lock"/></svg></div>
-      <div class="g-t">Google 로그인이 필요한 기능입니다</div>
-      <p id="igGateMessage" role="status">Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.</p>
+      <div class="g-t" id="igGateMessage" role="status">로그인이 필요한 기능입니다</div>
     </div>
     <div id="igWork" hidden>
       <div class="panel ig-account" id="igAccountCard">
@@ -1547,7 +1546,7 @@ window.ICO = {
   const gis = document.createElement("script");
   gis.src = "https://accounts.google.com/gsi/client"; gis.async = true;
   gis.onload = initGis;
-  gis.onerror = () => { loginBtn.textContent = "Google 로그인 로딩 실패 · 새로고침"; };
+  gis.onerror = () => { loginBtn.textContent = "로그인 로딩 실패 · 새로고침"; };
   document.head.appendChild(gis);
   if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
   loginBtn.addEventListener("click", ()=>{
@@ -1567,7 +1566,7 @@ window.ICO = {
     isAllowed: function(){ return tokenValid() && isAllowedUser; },
     // 공용 Worker 호출: FormData(access_token + fields) POST → JSON 응답
     api: async function(path, fields){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       const fd = new FormData();
       fd.append("access_token", accessToken);
       Object.entries(fields||{}).forEach(([k,v])=>fd.append(k,v));
@@ -1583,7 +1582,7 @@ window.ICO = {
       return d;
     },
     saveFile: async function(segments, filename, bytes, mimeType){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
       const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
       const fd = new FormData();
@@ -1603,7 +1602,7 @@ window.ICO = {
       return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
     },
     fetchStamp: async function(){
-      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       if(stampCache) return stampCache;
       const fd = new FormData();
       fd.append("access_token", accessToken);
@@ -1818,7 +1817,7 @@ window.ICO = {
     session++; account=null; job=null; clearImage(); $('igFile').value=''; $('igCaption').value=''; $('igText').value='';
     $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');
     $('igConnection').textContent='연결 확인을 눌러 게시 계정을 확인해 주세요.';
-    $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.';
+    $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'로그인이 필요한 기능입니다';
     $('igRecover').hidden=!receipt(); controls();
   });
   $('igRecover').hidden=!receipt(); controls();
@@ -2346,7 +2345,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
   async function saveToDrive(){
     if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
@@ -3576,7 +3575,7 @@ function renderValidationCard(result) {
   }
   // 정산서 드라이브 저장
   async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     let built;
     try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
     if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
@@ -4055,7 +4054,7 @@ function renderValidationCard(result) {
   // 드라이브 저장 (엑셀)
   async function smsSaveToDrive(){
     if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
