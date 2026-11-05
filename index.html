@@ -1390,7 +1390,7 @@ window.ICO = {
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
-              <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">원본은 선명하게, 여백은 같은 포스터를 확대해 흐리게 채웁니다.</span></label>
+              <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">위아래를 꽉 채우고 양옆만 흐리게 만듭니다. 이미지 비율에 따라 좌우 일부가 잘릴 수 있습니다.</span></label>
               <details class="ig-adjust">
                 <summary>확대·위치 조절</summary>
                 <div class="ig-adjust-body">
@@ -1727,11 +1727,20 @@ window.ICO = {
       ctx.restore();
     }
     const availableWidth=blur?canvas.width*(1-2*Number($('igBlurMargin').value)/100):canvas.width;
-    const base=!blur && $('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(availableWidth/bitmap.width,canvas.height/bitmap.height);
+    const base=blur?canvas.height/bitmap.height:($('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height));
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
-    const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
-    const y=(blur?canvas.height-h:(canvas.height-h)/2)+Number($('igY').value)/100*canvas.height/2;
+    let x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
+    let y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
+    ctx.save();
+    if(blur){
+      // Fill the full height without distorting the poster; crop only inside the sharp column.
+      const columnWidth=Math.min(availableWidth,bitmap.width*base), left=(canvas.width-columnWidth)/2;
+      x=Math.max(left+columnWidth-w,Math.min(left,x));
+      y=Math.max(canvas.height-h,Math.min(0,y));
+      ctx.beginPath(); ctx.rect(left,0,columnWidth,canvas.height); ctx.clip();
+    }
     ctx.drawImage(bitmap,x,y,w,h);
+    ctx.restore();
     const text=$('igText').value.trim();
     if(text){
       ctx.font='bold 48px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
