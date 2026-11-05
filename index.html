@@ -326,14 +326,14 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
 .tab:hover { background: var(--bg-grey-light); color: var(--txt-black-darkest); }
 .tab.active { background: var(--color-fill-accent); color: var(--color-text-accent); }
 .tab:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 1px; }
-/* ── 계정 (GNB 상단) ── */
+/* ── 계정 (GNB 하단) ── */
 .gauth {
   flex: none;
   display: flex; align-items: center; flex-wrap: wrap;
   gap: var(--spacing-8);
-  margin-bottom: var(--spacing-12);
-  padding: 0 var(--spacing-12) var(--spacing-12);
-  border-bottom: 1px solid var(--color-border-neutral);
+  margin-top: var(--spacing-12);
+  padding-top: var(--spacing-12);
+  border-top: 1px solid var(--color-border-neutral);
 }
 .gauth .gbtn {
   display: inline-flex; align-items: center;
@@ -1049,8 +1049,8 @@ td.c { text-align: center; }
   }
   .tab { width: auto; }
   .gauth {
-    margin: 0 0 0 auto; padding: 0;
-    border-bottom: none; flex-wrap: nowrap;
+    margin: 0 0 0 auto; padding-top: 0;
+    border-top: none; flex-wrap: nowrap;
   }
   .gauth .guser { flex: none; max-width: 180px; }
   .wrap { padding: var(--spacing-20) var(--spacing-16) var(--spacing-32); }
@@ -1089,11 +1089,6 @@ window.ICO = {
 </script>
 <aside class="gnb">
   <div class="gnb-brand">엔티켓 업무 도구</div>
-  <div class="gauth" data-cloud-only hidden>
-    <button class="gbtn" id="gLoginBtn" disabled>Google 로그인</button>
-    <span id="gUser" class="guser" style="display:none"></span>
-    <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
-  </div>
   <nav class="tabs">
     <div class="section-label">업무</div>
     <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg>예매자 명단 정리</button>
@@ -1103,6 +1098,11 @@ window.ICO = {
     <button class="tab" data-tab="oseal"><svg class="ico"><use href="#i-nav-oseal"/></svg>원본대조필</button>
     <button class="tab" data-tab="instagram" data-cloud-only hidden><svg class="ico"><use href="#i-nav-poster"/></svg>Instagram</button>
   </nav>
+  <div class="gauth" data-cloud-only hidden>
+    <button class="gbtn" id="gLoginBtn" disabled>Google 로그인</button>
+    <span id="gUser" class="guser" style="display:none"></span>
+    <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
+  </div>
 </aside>
 <div class="wrap">
   <!-- ============ 탭 1: 예매자 명단 정리 ============ -->
@@ -1299,7 +1299,7 @@ window.ICO = {
   <section class="panel-view" id="panel-instagram" data-cloud-only hidden>
     <h2>Instagram</h2>
     <p class="sub">회사 계정의 연결을 확인하고 게시할 이미지를 준비합니다.</p>
-    <p id="igGate" role="status">화면 상단의 Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.</p>
+    <p id="igGate" role="status">Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.</p>
     <div id="igWork" hidden>
       <button class="btn ghost" id="igCheck">Instagram 연결 확인</button>
       <p id="igConnection" role="status">연결 확인을 눌러 게시 계정을 확인해 주세요.</p>
@@ -1482,7 +1482,7 @@ window.ICO = {
     isAllowed: function(){ return tokenValid() && isAllowedUser; },
     // 공용 Worker 호출: FormData(access_token + fields) POST → JSON 응답
     api: async function(path, fields){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
       const fd = new FormData();
       fd.append("access_token", accessToken);
       Object.entries(fields||{}).forEach(([k,v])=>fd.append(k,v));
@@ -1498,7 +1498,7 @@ window.ICO = {
       return d;
     },
     saveFile: async function(segments, filename, bytes, mimeType){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
       const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
       const fd = new FormData();
@@ -1518,7 +1518,7 @@ window.ICO = {
       return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
     },
     fetchStamp: async function(){
-      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); }
+      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. Google 로그인 버튼으로 로그인해 주세요."); }
       if(stampCache) return stampCache;
       const fd = new FormData();
       fd.append("access_token", accessToken);
@@ -1688,7 +1688,7 @@ window.ICO = {
     session++; account=null; job=null; clearImage(); $('igFile').value=''; $('igCaption').value=''; $('igText').value='';
     $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');
     $('igConnection').textContent='연결 확인을 눌러 게시 계정을 확인해 주세요.';
-    $('igGate').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'화면 상단의 Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.';
+    $('igGate').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'Google 로그인 버튼을 눌러 허용된 계정으로 로그인해 주세요.';
     $('igRecover').hidden=!receipt(); controls();
   });
   $('igRecover').hidden=!receipt(); controls();
@@ -2216,7 +2216,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
   async function saveToDrive(){
     if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
@@ -3446,7 +3446,7 @@ function renderValidationCard(result) {
   }
   // 정산서 드라이브 저장
   async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
     let built;
     try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
     if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
@@ -3925,7 +3925,7 @@ function renderValidationCard(result) {
   // 드라이브 저장 (엑셀)
   async function smsSaveToDrive(){
     if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 화면 상단의 Google 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 Google 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
