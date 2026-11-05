@@ -8,8 +8,9 @@ test('Workers runtime verifies accounts and rejects invalid tokens/redirects', a
   let mode = 'allowed';
   const calls = [];
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: true,
-    scriptPath: fileURLToPath(new URL('../src/worker.mjs', import.meta.url)),
+    modules: ['worker.mjs', 'instagram.mjs', 'instagram-job.mjs'].map(name => ({
+      type: 'ESModule', path: fileURLToPath(new URL('../src/' + name, import.meta.url)),
+    })),
     compatibilityDate: '2026-10-13',
     bindings: { GOOGLE_CLIENT_ID: 'synthetic-client', ALLOWED_EMAILS: 'staff@example.test' },
     outboundService: async request => {

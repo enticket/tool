@@ -92,3 +92,9 @@ Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `
 - 확인 전: 실제 회사 Drive 저장. 로그인한 사용자가 예매자 명단의 **드라이브 저장**을 누른 뒤 회사 Drive의 `enticket/예매자명단/공연명` 폴더에서 파일을 열어 확인할 수 있습니다. 정산서와 문자 명단 저장도 사용자 확인 전입니다.
 - 직인 기능은 미완성이라는 사용자 설명에 따라 그대로 둡니다. 직인 완성을 이전이나 Instagram 연동의 선행 조건으로 삼지 않습니다.
 - 다음 기능은 Instagram 통합입니다. 기존 `instagram-admin/` 로컬 초안은 Node/SQLite/Sharp 서버용이므로 Workers에 그대로 배포할 수 없습니다. Meta 개발자 앱 생성과 회사 Instagram 연결이 별도로 필요합니다. 기존 회사 소개 페이지의 Netlify 연결은 유지합니다.
+
+## Instagram 통합 (2026-11-05)
+
+새 Cloudflare 계정 토큰 인증 및 두 Instagram 설정의 존재를 확인했습니다. Unified Login의 실제 `graph.facebook.com/v27.0` 계정 조회와 할당 계정 조회에서 `17841465620686597` / `en__ticket` 연결을 확인했습니다. 기존 Google 허용 계정 인증 뒤에 연결 확인, 브라우저 이미지 편집, 최종 미리보기와 명시적 확인 게시 흐름을 추가했습니다. SQLite 기반 무료 Durable Objects 바인딩(`INSTAGRAM_JOBS`)으로 게시용 이미지와 중복 방지 상태를 보관합니다. 운영 설정은 `keep_vars`로 유지합니다.
+
+자세한 검증 범위, 공식 문서와 동작은 [Instagram 연동](instagram.md)을 참조하세요. 실제 Instagram 게시와 Drive 저장의 사용자 확인은 남아 있습니다. 리디렉션/Webhook, 직인, 회사 홈페이지 Netlify 연결과 `instagram-admin/` 초안은 이번 작업에서 변경하지 않았습니다.

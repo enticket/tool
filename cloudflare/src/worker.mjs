@@ -1,6 +1,10 @@
 // Existing enticket-drive behavior, now serving the tools and their API together.
 // Credentials and the protected company stamp stay in Worker secrets.
-const ROUTES = new Set(['/verify', '/stamp', '/upload']);
+import { instagramConnection, InstagramError } from './instagram.mjs';
+import { validDraftId } from './instagram-job.mjs';
+export { InstagramJob } from './instagram-job.mjs';
+const ROUTES = new Set(['/verify', '/stamp', '/upload', '/instagram/connection',
+  '/instagram/prepare', '/instagram/publish', '/instagram/status']);
 const MAX_FILE = 10 * 1024 * 1024;
 const MAX_BODY = MAX_FILE + 1024 * 1024;
 class ApiError extends Error {
@@ -131,6 +135,14 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/healthz') return json({ ok: true, service: 'enticket-drive' });
+    if (url.pathname.startsWith('/instagram-media/')) {
+      const match = /^\/instagram-media\/([^/]+)\/([0-9a-f-]{72})$/.exec(url.pathname);
+      if (!match || !validDraftId(match[1]) || !env.INSTAGRAM_JOBS || !['GET', 'HEAD'].includes(request.method))
+        return new Response(null, { status: 404 });
+      const stub = env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName(match[1]));
+      const response = await stub.fetch('https://job/media?key=' + match[2]);
+      return request.method === 'HEAD' ? new Response(null, { status: response.status, headers: response.headers }) : response;
+    }
     const route = url.pathname.startsWith('/api/') ? url.pathname.slice(4) : url.pathname;
     if (!ROUTES.has(route)) {
       if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404);
@@ -149,6 +161,24 @@ export default {
       const allowed = env.ALLOWED_EMAILS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
       if (!allowed.includes(email)) throw new ApiError('not_allowed', 403);
       if (route === '/verify') return json({ ok: true, allowed: true, email }, 200, cors);
+      if (route === '/instagram/connection')
+        return json({ ok: true, connected: true, account: await instagramConnection(env) }, 200, cors);
+      if (route.startsWith('/instagram/')) {
+        if (!env.INSTAGRAM_JOBS) throw new InstagramError('instagram_storage_not_configured', 503);
+        const id = form.get('draft_id');
+        if (!validDraftId(id)) throw new InstagramError('instagram_invalid_draft', 400);
+        const stub = env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName(id));
+        const prepare = route === '/instagram/prepare';
+        // Google access tokens never enter durable storage or the Meta API.
+        form.delete('access_token');
+        const result = await stub.fetch('https://job/' + route.split('/').pop(), {
+          method: 'POST', ...(prepare ? { body: form } : {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fingerprint: form.get('fingerprint'), confirm: form.get('confirm') }),
+          }),
+        });
+        return json(await result.json(), result.status, cors);
+      }
       if (route === '/stamp') {
         // Worker secrets have a 5 KB per-value limit; preserve the original
         // image by reassembling three private chunks only after authorization.
@@ -174,8 +204,9 @@ export default {
       const saved = await uploadFile(company, parent, filename, mime, file);
       return json({ ok: true, by: email, fileId: saved.id, name: saved.name, webViewLink: saved.webViewLink || null }, 200, cors);
     } catch (error) {
-      return json({ error: error instanceof ApiError ? error.message : 'upstream_error' },
-        error instanceof ApiError ? error.status : 502, cors);
+      const known = error instanceof ApiError || error instanceof InstagramError;
+      return json({ error: known ? error.message : 'upstream_error' },
+        known ? error.status : 502, cors);
     }
   },
 };
