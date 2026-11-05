@@ -369,7 +369,14 @@ h2 {
   color: var(--txt-black-darker);
   margin-bottom: var(--spacing-20);
 }
-h2 + .drop, h2 + .node, h2 + #sessions, h2 + .gate, h2 + .bar,
+/* 제목과 첫 카드 간격은 로그인 상태나 숨겨진 요소와 관계없이 동일하게 유지한다. */
+.panel-view > h2 { margin: 0 0 var(--spacing-20); }
+.feature-heading {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--spacing-12); margin-bottom: var(--spacing-20);
+}
+.feature-heading h2 { margin: 0; flex-shrink: 0; }
+.feature-heading .bar { margin: 0; justify-content: flex-end; }
 .sub + .gate, .sub + .panel { margin-top: var(--spacing-20); }
 /* ── 흐름 커넥터: 문자 대신 선 ── */
 .connector { display: flex; justify-content: center; padding: var(--spacing-10) 0; font-size: 0; }
@@ -1189,10 +1196,12 @@ window.ICO = {
   </section>
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
   <section class="panel-view" id="panel-poster">
-    <h2>이미지 변환</h2>
-    <div class="bar">
-      <button class="btn ghost" id="imClear" disabled>초기화</button>
-      <span class="count" id="imCount"></span>
+    <div class="feature-heading">
+      <h2>이미지 변환</h2>
+      <div class="bar">
+        <button class="btn ghost" id="imClear" disabled>초기화</button>
+        <span class="count" id="imCount"></span>
+      </div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">포스터</div>
