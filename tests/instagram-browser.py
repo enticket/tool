@@ -72,7 +72,7 @@ with sync_playwright() as p:
         expect(page.locator('#igPreview')).to_be_hidden()
         expect(page.locator('#igEmpty')).to_be_visible()
         expect(page.locator('#igPrepare')).to_be_disabled()
-        expect(page.locator('#igCaption')).to_be_empty()
+        expect(page.locator('#igCaption')).to_have_value(page.locator('#igCaption').evaluate('(el)=>el.defaultValue'))
         expect(page.locator('#igText')).to_be_empty()
         expect(page.locator('#igZoom')).to_have_value('100')
         expect(page.locator('#igX')).to_have_value('0')
@@ -138,7 +138,7 @@ with sync_playwright() as p:
     page.locator('#gLogoutBtn').click()
     expect(page.locator('#igWork')).to_be_hidden()
     assert not page.locator('#igPreview').get_attribute('src')
-    assert page.locator('#igCaption').input_value() == ''
+    assert page.locator('#igCaption').input_value() == page.locator('#igCaption').evaluate('(el)=>el.defaultValue')
     state['allowed'] = False
     page.locator('#gLoginBtn').click()
     expect(page.locator('#igGate')).to_contain_text('허용목록에 없습니다')

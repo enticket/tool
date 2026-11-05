@@ -1398,7 +1398,19 @@ window.ICO = {
                 <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
               </div>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
-              <label class="ig-field" id="igCaptionLabel"><span class="ig-field-title">피드 캡션 <span class="fname" id="igCaptionCount">0 / 2,200</span></span><textarea id="igCaption" rows="5" maxlength="2200" placeholder="공연 소개와 해시태그를 입력해 주세요."></textarea></label>
+              <label class="ig-field" id="igCaptionLabel"><span class="ig-field-title">피드 캡션 <span class="fname" id="igCaptionCount">0 / 2,200</span></span><textarea id="igCaption" rows="5" maxlength="2200" placeholder="공연 소개와 해시태그를 입력해 주세요.">🎭 [공연명]
+
+[공연의 매력을 소개하는 한두 문장]
+
+📅 일시 | 0000.00.00.(요일) 오후 0시
+📍 장소 | [공연장명]
+👥 관람 연령 | [관람 가능 연령]
+⏱ 공연 시간 | [러닝타임]
+🎟 티켓 | [좌석 등급·가격]
+
+예매는 프로필 링크에서 확인해 주세요.
+
+#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]</textarea></label>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
             </fieldset>
           </div>
@@ -1652,6 +1664,7 @@ window.ICO = {
     instagram_media_failed:'인스타그램이 이미지를 처리하지 못했습니다. 이미지와 계정의 게시 권한을 확인해 주세요.',
   };
   let account=null, bitmap=null, rendered=null, imageUrl='', job=null, working=false, revision=0, session=0;
+  const captionTemplate=$('igCaption').defaultValue;
   const receiptKey='enticket-instagram-last-draft';
   function receipt(){ try { const value=JSON.parse(localStorage.getItem(receiptKey)); return value && /^[0-9a-f-]{36}$/.test(value.id) ? value : null; } catch { return null; } }
   function remember(id){ try { localStorage.setItem(receiptKey,JSON.stringify({id})); } catch {} $('igRecover').hidden=false; }
@@ -1695,7 +1708,8 @@ window.ICO = {
   }
   function resetEditor(){
     job=null; clearImage();
-    for(const id of ['igFile','igCaption','igText']) $(id).value='';
+    for(const id of ['igFile','igText']) $(id).value='';
+    $('igCaption').value=captionTemplate;
     $('igChannel').value='feed'; $('igFit').value='contain';
     $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
@@ -1844,7 +1858,7 @@ window.ICO = {
     } else showJob(data);
   }));
   document.addEventListener('enticket-auth',()=>{
-    session++; account=null; job=null; clearImage(); $('igFile').value=''; $('igCaption').value=''; $('igText').value='';
+    session++; account=null; job=null; clearImage(); $('igFile').value=''; $('igCaption').value=captionTemplate; $('igText').value='';
     $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');
     $('igConnection').textContent='연결 확인을 눌러 게시 계정을 확인해 주세요.';
     $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'로그인이 필요한 기능입니다';
