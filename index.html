@@ -1379,7 +1379,7 @@ window.ICO = {
               <label class="ig-field">게시 위치 <select id="igChannel"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></label>
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
-                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox">흐린 배경</label></div></div>
+                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
               <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">원본은 선명하게, 여백은 같은 포스터를 확대해 흐리게 채웁니다.</span></label>
               <details class="ig-adjust">
@@ -1721,7 +1721,7 @@ window.ICO = {
     const base=!blur && $('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(availableWidth/bitmap.width,canvas.height/bitmap.height);
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
     const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
-    const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
+    const y=(blur?canvas.height-h:(canvas.height-h)/2)+Number($('igY').value)/100*canvas.height/2;
     ctx.drawImage(bitmap,x,y,w,h);
     const text=$('igText').value.trim();
     if(text){
