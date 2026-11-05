@@ -1067,7 +1067,7 @@ td.c { text-align: center; }
 .ig-fields { display:flex; flex-direction:column; gap:var(--spacing-16); min-width:0; border:0; padding:0; margin:0; }
 .ig-field { display:flex; flex-direction:column; gap:var(--spacing-6); min-width:0; font-size:var(--font-size-13); color:var(--txt-black-darker); }
 .ig-field-title { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-8); }
-.ig-row { display:grid; grid-template-columns:minmax(0,1fr) 88px; gap:var(--spacing-12); }
+.ig-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-12); }
 #panel-instagram textarea { width:100%; min-height:124px; resize:vertical; font:inherit; line-height:var(--line-height-22); padding:var(--spacing-10); color:var(--txt-black-darkest); background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); }
 #panel-instagram textarea:focus-visible, #igDrop:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 #panel-instagram input[type=color] { width:100%; height:36px; padding:4px; background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); cursor:pointer; }
@@ -1076,6 +1076,10 @@ td.c { text-align: center; }
 #igDrop { background:var(--bg-grey-lighter); padding:var(--spacing-20) var(--spacing-12); }
 #igDrop:hover, #igDrop.hover { background:var(--color-fill-accent); }
 #igFileName { display:block; overflow-wrap:anywhere; margin-top:var(--spacing-8); color:var(--color-text-accent); font-size:var(--font-size-12); }
+.ig-background-controls { display:flex; align-items:center; gap:var(--spacing-8); min-height:36px; }
+#panel-instagram .ig-background-controls input[type=color] { width:40px; flex:none; }
+.ig-blur-toggle { display:flex; align-items:center; gap:var(--spacing-4); cursor:pointer; font-size:var(--font-size-12); white-space:nowrap; }
+.ig-blur-toggle input { accent-color:var(--color-bg-accent); }
 .ig-adjust { border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); padding:var(--spacing-12) 0; }
 .ig-adjust summary { cursor:pointer; font-size:var(--font-size-13); font-weight:var(--font-weight-700); color:var(--txt-black-darker); }
 .ig-adjust-body { display:flex; flex-direction:column; gap:var(--spacing-12); padding-top:var(--spacing-16); }
@@ -1376,9 +1380,8 @@ window.ICO = {
               <label class="ig-field">게시 위치 <select id="igChannel"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></label>
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
-                <label class="ig-field">배경색 <input id="igBackground" type="color" value="#ffffff"></label>
+                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox">흐린 배경</label></div></div>
               </div>
-              <label class="ig-field">여백 배경 <select id="igBackgroundMode"><option value="solid">단색 배경</option><option value="blur">포스터를 흐리게 채우기</option></select></label>
               <label class="ig-field" id="igBlurControls" hidden><span class="ig-field-title">양옆 최소 여백 <output id="igBlurMarginValue" for="igBlurMargin">8%</output></span><input id="igBlurMargin" type="range" min="0" max="20" value="8"><span class="ig-hint">원본은 선명하게, 여백은 같은 포스터를 확대해 흐리게 채웁니다.</span></label>
               <details class="ig-adjust">
                 <summary>확대·위치 조절</summary>
@@ -1664,7 +1667,7 @@ window.ICO = {
     $('igCheck').textContent=account?'다시 확인':'연결 확인';
     $('igDrop').setAttribute('aria-disabled',String(working || !!job));
     $('igDrop').tabIndex=working || job?-1:0;
-    const blur=$('igBackgroundMode').value==='blur';
+    const blur=$('igBackgroundMode').checked;
     $('igBlurControls').hidden=!blur; $('igBackground').disabled=blur; $('igFit').disabled=blur;
     $('igBlurMarginValue').textContent=$('igBlurMargin').value+'%';
     const story=$('igChannel').value==='story';
@@ -1707,7 +1710,7 @@ window.ICO = {
     $('igCaptionLabel').hidden=channel==='story'; $('igStoryNote').hidden=channel!=='story';
     const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=channel==='story'?1920:1350;
     const ctx=canvas.getContext('2d'); ctx.fillStyle=$('igBackground').value; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const blur=$('igBackgroundMode').value==='blur';
+    const blur=$('igBackgroundMode').checked;
     if(blur){
       // Overscan the blurred copy so the canvas edges stay fully covered.
       const pad=96, backgroundScale=Math.max((canvas.width+2*pad)/bitmap.width,(canvas.height+2*pad)/bitmap.height);
