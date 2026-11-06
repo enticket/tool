@@ -1173,8 +1173,8 @@ td.c { text-align: center; }
 #igScheduleField:has(input:disabled) .ig-schedule-heading { color:#a99faf; }
 @media(max-width:400px) { .ig-schedule-heading { font-size:11px; gap:4px; } .ig-schedule-heading .ig-hint { font-size:10px; } }
 #igReview .ig-confirm { padding:12px 0; margin:0; background:none; border-radius:0; color:#63576c; font-size:12px; border-top:1px solid #eeeaf2; }
-.ig-review-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:4px; }
-.ig-review-footer #igNew { background:transparent; color:#8b7d96; padding-left:0; }
+.ig-review-footer { display:flex; align-items:center; justify-content:flex-end; gap:16px; padding-top:4px; }
+
 .ig-review-footer #igPublish { min-width:120px; }
 #igReviewStatus:empty { display:none; }
 .ig-retention { color:#a195a8; font-size:11px; margin-top:14px; }
@@ -1616,7 +1616,7 @@ window.ICO = {
           <div class="ig-review-timing"><div class="ig-field"><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><div class="ig-time-slot"><div class="ig-field" id="igScheduleField"><div class="ig-schedule-heading"><span>예약 시각 · 한국 시간</span><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></div><input id="igScheduleTime" type="datetime-local" aria-label="예약 시각 · 한국 시간" disabled></div></div></div>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">이미지와 캡션, 게시 시각을 확인했습니다.</label>
           <p id="igReviewStatus" role="status" class="ig-hint"></p>
-          <div class="ig-review-footer"><button class="btn ghost" id="igNew">내용 수정</button><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
+          <div class="ig-review-footer"><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
         </div>
       </dialog>
       <p id="igStatus" role="status" aria-live="polite"></p>
@@ -1934,8 +1934,8 @@ window.ICO = {
   function status(message,tone=''){ $('igStatus').textContent=message; $('igStatus').dataset.tone=tone; $('igReviewStatus').textContent=message==='게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.'?'':message; }
   function openReview(){ $('igReview').hidden=false; if(!$('igReview').open) $('igReview').showModal(); }
   function closeReview(){ $('igReview').close(); $('igReview').hidden=true; $('igConfirm').checked=false; }
-  $('igReviewClose').onclick=()=>{if(!working){closeReview();controls();}};
-  $('igReview').addEventListener('cancel',event=>{event.preventDefault();if(!working){closeReview();controls();}});
+  $('igReviewClose').onclick=editReview;
+  $('igReview').addEventListener('cancel',event=>{event.preventDefault();editReview();});
   function controls(){
     const allowed=window.gdrive?.isAllowed();
     $('igGate').hidden=allowed; $('igWork').hidden=!allowed;
@@ -1949,7 +1949,7 @@ window.ICO = {
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.checked=button.dataset.publishMode===$('igPublishMode').value;}
     $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working || $('igPublishMode').value!=='schedule';
-    $('igNew').disabled=working; $('igReviewClose').disabled=working;
+    $('igReviewClose').disabled=working;
     const extra=['age','duration','price','inquiry','tags'];
     const filled=extra.filter(key=>$('igField_'+key).value.trim()).length;
     const missing=extra.filter(key=>!$('igMissing_'+key).hidden).length;
@@ -2000,7 +2000,7 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
     closeReview(); $('igConfirm').checked=false;
-    $('igPublishMode').value='now'; $('igScheduleTime').value=''; 
+    $('igPublishMode').value='now'; $('igScheduleTime').value='';
     $('igPublish').textContent='게시하기';
     controls();
   }
@@ -2181,10 +2181,10 @@ window.ICO = {
       }
     }
   }));
-  $('igNew').addEventListener('click',()=>{
-    if(!canStartNew()) return;
+  function editReview(){
+    if(working || !canStartNew()) return;
     job=null; closeReview(); $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
-  });
+  }
   $('igReset').addEventListener('click',()=>{
     if(working || !canStartNew()) return;
     resetEditor(); status('');
