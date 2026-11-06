@@ -1179,6 +1179,16 @@ td.c { text-align: center; }
 .ig-load-more:hover { background:var(--bg-grey-lighter); color:var(--color-text-accent); }
 .ig-load-more:disabled { opacity:var(--opacity-disabled); cursor:wait; }
 .ig-load-more:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-detail { scrollbar-width:thin; scrollbar-color:var(--color-border-neutral-strong) transparent; overscroll-behavior:contain; }
+.ig-detail::-webkit-scrollbar { width:6px; height:6px; }
+.ig-detail::-webkit-scrollbar-track { background:transparent; margin:12px 0; }
+.ig-detail::-webkit-scrollbar-thumb { background:var(--color-border-neutral-strong); border-radius:999px; }
+.ig-detail::-webkit-scrollbar-thumb:hover { background:var(--txt-black-dark); }
+.ig-detail::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.ig-detail-head { position:sticky; top:0; z-index:1; background:var(--bg-white-normal); }
+.ig-detail-close { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; border:0; border-radius:var(--radius-8); background:transparent; color:var(--txt-black-darker); cursor:pointer; }
+.ig-detail-close:hover { background:var(--bg-grey-lighter); color:var(--txt-black-darkest); }
+.ig-detail-close:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -1503,7 +1513,7 @@ window.ICO = {
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
       </div>
       <dialog class="ig-detail" id="igDetail" aria-labelledby="igDetailTitle">
-        <div class="ig-detail-head"><strong id="igDetailTitle">게시물 상세</strong><button class="btn ghost sm" type="button" id="igDetailClose" autofocus>닫기</button></div>
+        <div class="ig-detail-head"><strong id="igDetailTitle">게시물 상세</strong><button class="ig-detail-close" type="button" id="igDetailClose" aria-label="게시물 상세 닫기" title="닫기" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
         <div class="ig-detail-body"><div><div id="igDetailMedia"></div><div class="ig-detail-nav" id="igDetailNav" hidden><button class="btn ghost sm" id="igDetailPrev" type="button">이전</button><span id="igDetailPage"></span><button class="btn ghost sm" id="igDetailNext" type="button">다음</button></div></div><div><p class="fname" id="igDetailDate"></p><p id="igDetailCaption"></p><a class="ig-detail-link" id="igDetailLink" target="_blank" rel="noopener noreferrer"><span>인스타그램에서 보기</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M10 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4"/></svg></a></div></div>
       </dialog>
       <div id="igManageView" hidden>
