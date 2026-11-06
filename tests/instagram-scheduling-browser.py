@@ -97,7 +97,7 @@ with sync_playwright() as p:
     expect(page.locator('#igScheduleField')).to_be_visible()
     page.locator('#igScheduleField .ig-date-trigger').click()
     box=page.locator('.ig-calendar').bounding_box()
-    viewport=page.evaluate('({width:document.documentElement.clientWidth,height:document.documentElement.clientHeight})')
+    viewport=page.viewport_size
     assert abs(box['x']+box['width']/2-viewport['width']/2)<2
     assert abs(box['y']+box['height']/2-viewport['height']/2)<2
     expect(page.locator('.ig-calendar [data-prev]')).to_be_disabled()
