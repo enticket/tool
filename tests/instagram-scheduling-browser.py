@@ -89,7 +89,7 @@ with sync_playwright() as p:
     page.locator('#igFile').set_input_files({'name':'test.png','mimeType':'image/png','buffer':base64.b64decode(fixture)})
     page.locator('#igField_title').fill('확인한 문구 #엔티켓')
     page.locator('#igPrepare').click()
-    page.locator('#igPublishMode').select_option('schedule')
+    page.locator('[data-publish-mode="schedule"]').click()
     expect(page.locator('#igScheduleField')).to_be_visible()
     page.locator('#igScheduleTime').fill('2026-11-20T19:00')
     state['expected_time']='2026-11-20T10:00:00.000Z'
