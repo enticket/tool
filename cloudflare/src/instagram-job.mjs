@@ -6,7 +6,7 @@ export const validDraftId = value => typeof value === 'string' && /^[0-9a-f]{8}-
 const reply = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const publicJob = job => ({ ok: true, draftId: job.id, fingerprint: job.fingerprint,
   account: { id: job.accountId, username: job.username }, channel: job.channel,
-  caption: job.caption, status: job.status, mediaId: job.mediaId || null,
+  caption: job.caption, scheduledAt:job.scheduledAt?new Date(job.scheduledAt).toISOString():null, previewUrl:job.scheduledAt && job.expiresAt>Date.now()?`/instagram-media/${job.id}/${job.capability}`:null, status: job.status, mediaId: job.mediaId || null,
   error: job.error || null, expiresAt: new Date(job.expiresAt).toISOString() });
 const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', value)), b => b.toString(16).padStart(2, '0')).join('');
 
@@ -37,12 +37,15 @@ export class InstagramJob {
   async fetch(request) {
     try {
       const path = new URL(request.url).pathname;
+      if (path === '/register' || path === '/schedules') return await this.registry(request,path);
       if (path === '/media') return await this.media(request);
       if (path === '/prepare') return await this.prepare(request);
       const job = await this.ctx.storage.get('job');
       if (!job) throw new InstagramError('instagram_draft_not_found', 404);
       if (job.accountId !== instagramConfig(this.env)) throw new InstagramError('instagram_account_mismatch', 409);
+      if(path==='/snapshot')return reply(publicJob(job));
       const input = await request.json();
+      if (path === '/schedule' || path === '/cancel') return await this.schedule(job,input,path);
       if (path === '/publish') return await this.publish(job, input);
       if (path === '/status') {
         // A worker can stop after a remote request but before saving its response.
@@ -61,6 +64,47 @@ export class InstagramJob {
     } catch (e) {
       return reply({ error: e instanceof InstagramError ? e.message : 'instagram_unavailable' }, e instanceof InstagramError ? e.status : 502);
     }
+  }
+  async registry(request,path){
+    if(path==='/register'){
+      const {id,until}=await request.json();
+      if(!validDraftId(id)||!Number.isFinite(until)) throw new InstagramError('instagram_invalid_draft',400);
+      await this.ctx.storage.transaction(async txn=>{const old=await txn.get('entry:'+id);await txn.put('entry:'+id,{id,when:until-31*DAY,until:Math.max(until,old?.until||0)});});return reply({ok:true});
+    }
+    const entries=await this.ctx.storage.list({prefix:'entry:',limit:500});const items=[];
+    const {after='0'}=await request.json();
+    if(!/^\d{1,4}$/.test(String(after)))throw new InstagramError('instagram_invalid_cursor',400);
+    const active=[...entries].filter(([,e])=>e.until>=Date.now()).sort((a,b)=>a[1].when-b[1].when);
+    for(const [key,entry] of entries)if(entry.until<Date.now())await this.ctx.storage.delete(key);
+    const offset=Number(after);
+    for(const [key,entry] of active.slice(offset,offset+20)){
+      if(entry.until<Date.now()){await this.ctx.storage.delete(key);continue;}
+      const stub=this.env.INSTAGRAM_JOBS.get(this.env.INSTAGRAM_JOBS.idFromName(entry.id));
+      const r=await stub.fetch('https://job/snapshot',{method:'POST',body:'{}'});
+      if(r.status===404){await this.ctx.storage.delete(key);continue;}
+      if(!r.ok) throw new InstagramError('instagram_unavailable');
+      const job=await r.json();if(job.scheduledAt)items.push(job);
+    }
+    return reply({ok:true,nextCursor:offset+20<active.length?String(offset+20):null,items:items.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt))});
+  }
+  async schedule(original,input,path){
+    const cancel=path==='/cancel';
+    if(input.fingerprint!==original.fingerprint || input.confirm!==(cancel?'cancel':'schedule')) throw new InstagramError('instagram_confirmation_required',409);
+    const time=typeof input.scheduled_at==='string' && /Z$/.test(input.scheduled_at)?Date.parse(input.scheduled_at):NaN;
+    if(!cancel && (!Number.isFinite(time)||time<Date.now()+120000||time>Date.now()+30*DAY)) throw new InstagramError('instagram_invalid_schedule',400);
+    if(!cancel){
+      const registry=this.env.INSTAGRAM_JOBS.get(this.env.INSTAGRAM_JOBS.idFromName('schedule-index'));
+      await registry.fetch('https://job/register',{method:'POST',body:JSON.stringify({id:original.id,until:time+31*DAY})}).then(r=>{if(!r.ok)throw new InstagramError('instagram_unavailable');});
+    }
+    const job=await this.ctx.storage.transaction(async txn=>{
+      const j=await txn.get('job');
+      if(cancel && j.status==='cancelled')return j;
+      if(!(cancel?j.status==='scheduled':['prepared','scheduled'].includes(j.status)) || j.expiresAt<=Date.now()) throw new InstagramError('instagram_schedule_locked',409);
+      if(cancel){j.status='cancelled';j.expiresAt=Date.now();await txn.setAlarm(Date.now()+1000);}
+      else {j.status='scheduled';j.scheduledAt=time;j.expiresAt=time+DAY;await txn.setAlarm(time);}
+      await txn.put('job',j);return j;
+    });
+    return reply(publicJob(job));
   }
   async prepare(request) {
     const form = await request.formData();
@@ -112,15 +156,15 @@ export class InstagramJob {
     return new Response(new Blob(chunks), { headers: { 'Content-Type': 'image/jpeg',
       'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } });
   }
-  async publish(original, input) {
+  async publish(original, input, automatic=false) {
     if (input.confirm !== 'publish' || input.fingerprint !== original.fingerprint)
       throw new InstagramError('instagram_confirmation_required', 409);
     // The transaction is the only place that grants permission for a remote write.
     const claim = await this.ctx.storage.transaction(async txn => {
       const job = await txn.get('job');
       if (job.expiresAt <= Date.now()) throw new InstagramError('instagram_draft_expired', 410);
-      if (!['prepared', 'processing'].includes(job.status)) return { claimed: false, job };
-      const create = job.status === 'prepared';
+      if (!(automatic?((job.status==='scheduled' && job.scheduledAt<=Date.now())||job.status==='processing'):(!job.scheduledAt && ['prepared','processing'].includes(job.status)))) return { claimed: false, job };
+      const create = ['prepared','scheduled'].includes(job.status);
       job.status = create ? 'creating' : 'checking'; job.attemptedAt = Date.now();
       await txn.put('job', job); return { claimed: true, create, job };
     });
@@ -161,13 +205,31 @@ export class InstagramJob {
     return reply(publicJob(job));
   }
   async alarm() {
-    const job = await this.ctx.storage.get('job');
-    if (!job) return;
-    if (job.expiresAt <= Date.now()) {
-      await this.ctx.storage.delete(Array.from({ length: job.chunks }, (_, i) => 'image:' + i));
-      // Keep a small receipt for 30 days, including uncertainty/duplicate protection.
-      if (Date.now() >= job.expiresAt + 29 * DAY) await this.ctx.storage.deleteAll();
-      else await this.ctx.storage.setAlarm(job.expiresAt + 29 * DAY);
+    let job=await this.ctx.storage.get('job');if(!job)return;
+    if(job.scheduledAt && job.expiresAt>Date.now()){
+      if(job.status==='scheduled' && job.scheduledAt>Date.now()){await this.ctx.storage.setAlarm(job.scheduledAt);return;}
+      if(['scheduled','processing'].includes(job.status)){
+        // Persist a watchdog before remote calls. After an interrupted write, never publish twice.
+        await this.ctx.storage.setAlarm(Date.now()+90000);
+        await this.publish(job,{confirm:'publish',fingerprint:job.fingerprint},true);
+        job=await this.ctx.storage.get('job');
+        if(job.status==='processing'){
+          job.polls=(job.polls||0)+1;
+          if(job.polls>=20){job.status='failed';job.error='instagram_media_failed';}
+          await this.ctx.storage.put('job',job);
+          if(job.status==='processing'){await this.ctx.storage.setAlarm(Date.now()+30000);return;}
+        }
+      }else if(['creating','checking','posting'].includes(job.status)){
+        job.status='unknown';job.error='instagram_unavailable';await this.ctx.storage.put('job',job);
+      }
     }
+    job=await this.ctx.storage.get('job');if(!job)return;
+    if(job.status==='scheduled' && job.scheduledAt>Date.now()){await this.ctx.storage.setAlarm(job.scheduledAt);return;}
+    if(job.expiresAt<=Date.now()){
+      if(job.scheduledAt && ['scheduled','processing'].includes(job.status)){job.status='failed';job.error='instagram_draft_expired';await this.ctx.storage.put('job',job);}
+      await this.ctx.storage.delete(Array.from({length:job.chunks},(_,i)=>'image:'+i));
+      if(Date.now()>=job.expiresAt+29*DAY)await this.ctx.storage.deleteAll();
+      else await this.ctx.storage.setAlarm(job.expiresAt+29*DAY);
+    }else await this.ctx.storage.setAlarm(job.expiresAt);
   }
 }

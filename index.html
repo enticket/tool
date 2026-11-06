@@ -1194,6 +1194,7 @@ td.c { text-align: center; }
 .ig-detail-arrow:disabled { opacity:var(--opacity-disabled); cursor:default; }
 .ig-detail-arrow:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 .ig-media-carousel { position:absolute; top:var(--spacing-12); right:var(--spacing-12); display:flex; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)); pointer-events:none; }
+.ig-management-tabs .btn[aria-pressed="false"] { background:transparent; color:var(--txt-black-darker); }
 </style>
 </head>
 <body>
@@ -1509,8 +1510,9 @@ window.ICO = {
         <div class="ig-card-body">
           <p id="igReviewAccount"></p>
           <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
-          <p class="ig-hint">위 이미지와 문구가 그대로 공개됩니다. 게시용 이미지는 임시 주소로 최대 24시간 보관됩니다.</p>
-          <label class="ig-confirm"><input id="igConfirm" type="checkbox">게시 계정, 게시 위치, 이미지와 문구를 확인했습니다.</label>
+          <p class="ig-hint">위 이미지와 문구가 그대로 공개됩니다. 즉시 게시 이미지는 준비 후 24시간, 예약 이미지는 예약 시각 후 24시간까지 보관됩니다.</p>
+          <div class="ig-row"><label class="ig-field">게시 방식<select id="igPublishMode"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></label><label class="ig-field" id="igScheduleField" hidden>예약 시각 · 한국 시간<input id="igScheduleTime" type="datetime-local"><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></label></div>
+          <label class="ig-confirm"><input id="igConfirm" type="checkbox">게시 계정, 게시 위치, 이미지·문구와 게시 시각을 확인했습니다.</label>
           <div class="btn-row"><button class="btn" id="igPublish" disabled>확인한 내용 지금 게시</button><button class="btn ghost" id="igNew">새 이미지 준비</button></div>
         </div>
       </div>
@@ -1522,10 +1524,18 @@ window.ICO = {
         <div class="ig-detail-body"><div><div id="igDetailMedia"></div><div class="ig-detail-nav" id="igDetailNav" hidden><button class="ig-detail-arrow" id="igDetailPrev" type="button" aria-label="이전 이미지" title="이전 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><span id="igDetailPage"></span><button class="ig-detail-arrow" id="igDetailNext" type="button" aria-label="다음 이미지" title="다음 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div><div><p class="fname" id="igDetailDate"></p><p id="igDetailCaption"></p><a class="ig-detail-link" id="igDetailLink" target="_blank" rel="noopener noreferrer"><span>인스타그램에서 보기</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M10 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4"/></svg></a></div></div>
       </dialog>
       <div id="igManageView" hidden>
+        <div class="btn-row ig-management-tabs" style="margin-bottom:16px"><button class="btn ghost sm" id="igShowPublished" aria-pressed="true">게시물</button><button class="btn ghost sm" id="igShowScheduled" aria-pressed="false">예약</button></div>
+        <div id="igPublishedPane">
         <div class="ig-manage-toolbar"><strong id="igManageAccount">게시물 관리</strong><button class="btn ghost sm" id="igRefresh" type="button">새로고침</button></div>
         <p id="igManageStatus" role="status" aria-live="polite"></p>
         <div class="ig-media-grid" id="igMediaList"></div>
         <div class="ig-load-more-row"><button class="ig-load-more" type="button" id="igLoadMore" aria-label="게시물 더 보기" title="게시물 더 보기" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+        </div>
+        <div id="igScheduledPane" hidden>
+          <div class="ig-manage-toolbar"><strong>예약 게시</strong><button class="btn ghost sm" id="igScheduleRefresh">새로고침</button></div>
+          <p class="ig-hint">한국 시간 기준 · 예약 시각에 게시를 요청하며 처리에 따라 공개가 늦어질 수 있습니다.</p>
+          <p id="igScheduleStatus" role="status"></p><div id="igScheduleList" class="ig-fields" style="margin-top:16px"></div><button class="btn ghost sm" id="igScheduleMore" hidden>예약 더 보기</button>
+        </div>
       </div>
     </div>
   </section>
@@ -1733,6 +1743,8 @@ window.ICO = {
   if (window.gdrive?.isLocal) return;
   const $ = id => document.getElementById(id);
   const messages = {
+    instagram_invalid_schedule:'예약은 현재부터 2분 이후, 30일 이내의 한국 시간으로 입력해 주세요.',
+    instagram_schedule_locked:'이미 게시를 시작했거나 취소된 예약입니다. 목록을 새로고침해 주세요.',
     caption_not_configured:'Gemini API 키 설정이 필요합니다. 템플릿은 직접 작성할 수 있습니다.',
     caption_invalid_image:'포스터 이미지를 다시 선택해 주세요.',
     caption_rate_limited:'Gemini 사용 한도에 도달했습니다. 잠시 후 시도하거나 직접 작성해 주세요.',
@@ -1800,6 +1812,7 @@ window.ICO = {
     $('igAutoCaption').disabled=working || !bitmap || !!job;
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
+    $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working;
     $('igNew').disabled=working;
     $('igReset').disabled=working;
     $('igRecover').disabled=working;
@@ -1847,6 +1860,7 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
     $('igReview').hidden=true; $('igConfirm').checked=false;
+    $('igPublishMode').value='now'; $('igScheduleTime').value=''; $('igScheduleField').hidden=true;
     $('igPublish').textContent='확인한 내용 지금 게시';
     controls();
   }
@@ -1857,9 +1871,9 @@ window.ICO = {
     job=data; $('igReview').hidden=false;
     $('igReviewAccount').textContent='게시 계정: @'+data.account.username+' · '+(data.channel==='story'?'스토리':'피드');
     $('igPublish').textContent=data.status==='processing'?'확인한 게시 처리 계속':'확인한 내용 지금 게시';
-    const labels={prepared:'게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.',processing:'인스타그램에서 이미지를 처리하고 있습니다. 잠시 후 게시 처리 계속을 눌러 주세요.',creating:'이미지를 전송 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',checking:'게시 상태를 확인 중입니다. 잠시 후 다시 확인해 주세요.',posting:'게시 요청 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',published:'인스타그램 게시 완료'+(data.mediaId?' · 게시물 ID: '+data.mediaId:''),failed:'게시 전 처리에 실패했습니다. '+(messages[data.error]||'이미지와 계정 설정을 확인해 주세요.'),unknown:'게시 결과를 확정하지 못했습니다. 재게시하지 말고 마지막 게시 상태와 인스타그램을 확인해 주세요.'};
+    const labels={scheduled:'예약이 완료되었습니다. '+new Date(data.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' · 관리의 예약 메뉴에서 확인하세요.',cancelled:'예약이 취소되었습니다.',prepared:'게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.',processing:'인스타그램에서 이미지를 처리하고 있습니다. 잠시 후 게시 처리 계속을 눌러 주세요.',creating:'이미지를 전송 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',checking:'게시 상태를 확인 중입니다. 잠시 후 다시 확인해 주세요.',posting:'게시 요청 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',published:'인스타그램 게시 완료'+(data.mediaId?' · 게시물 ID: '+data.mediaId:''),failed:'게시 전 처리에 실패했습니다. '+(messages[data.error]||'이미지와 계정 설정을 확인해 주세요.'),unknown:'게시 결과를 확정하지 못했습니다. 재게시하지 말고 마지막 게시 상태와 인스타그램을 확인해 주세요.'};
     status(labels[data.status]||'게시 상태를 확인해 주세요.',data.status==='published'?'success':['failed','unknown'].includes(data.status)?'error':''); controls();
-    if(data.status==='published') resetEditor();
+    if(['published','scheduled'].includes(data.status)) resetEditor();
     if(data.status==='prepared') $('igReview').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function run(action){
@@ -1990,8 +2004,26 @@ window.ICO = {
     showJob(data);
   }));
   $('igConfirm').addEventListener('change',controls);
+  function scheduleISO(value){
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw new Error('예약 시각을 입력해 주세요.');
+    const time=new Date(value+':00+09:00');if(!Number.isFinite(time.getTime()))throw new Error('예약 시각을 확인해 주세요.');
+    return time.toISOString();
+  }
+  function koreaInput(value){return new Date(new Date(value).getTime()+9*3600000).toISOString().slice(0,16);}
+  $('igPublishMode').addEventListener('change',()=>{
+    const scheduled=$('igPublishMode').value==='schedule';$('igScheduleField').hidden=!scheduled;
+    if(scheduled && !$('igScheduleTime').value)$('igScheduleTime').value=koreaInput(Date.now()+3600000);
+    $('igPublish').textContent=scheduled?'확인한 내용 예약하기':'확인한 내용 지금 게시';$('igConfirm').checked=false;controls();
+  });
+  $('igScheduleTime').addEventListener('input',()=>{$('igConfirm').checked=false;controls();});
   $('igPublish').addEventListener('click',()=>run(async current=>{
     if(!job || !$('igConfirm').checked || !['prepared','processing'].includes(job.status)) return;
+    if($('igPublishMode').value==='schedule'){
+      if(job.status!=='prepared')throw new Error('새 게시 내용을 준비한 뒤 예약해 주세요.');
+      const scheduled_at=scheduleISO($('igScheduleTime').value);
+      const data=await api('schedule',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'schedule',scheduled_at});
+      if(current===session)showJob(data);return;
+    }
     status('인스타그램 게시 요청 중…');
     try {
       const data=await api('publish',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'publish'});
@@ -2019,6 +2051,54 @@ window.ICO = {
       status((data.status==='published'?'마지막 게시 완료':data.status==='prepared'?'마지막 이미지는 준비만 되었으며 게시되지 않았습니다. 새 이미지를 준비해 주세요.':'마지막 게시 상태: '+data.status+'. 인스타그램에서 게시 여부를 확인해 주세요.')+(data.mediaId?' · 게시물 ID: '+data.mediaId:''));
     } else showJob(data);
   }));
+  let scheduleBusy=false,scheduleCursor=null;
+  const scheduleNames={scheduled:'예약 대기',processing:'처리 중',creating:'처리 중',checking:'처리 중',posting:'게시 중',published:'게시 완료',failed:'실패',unknown:'결과 확인 필요',cancelled:'취소됨'};
+  async function loadSchedules(more=false){
+    if(scheduleBusy || !window.gdrive?.isAllowed())return;
+    const current=session;scheduleBusy=true;$('igScheduleRefresh').disabled=true;
+    $('igScheduleStatus').textContent='예약을 불러오는 중…';
+    try{
+      const data=await api('schedules',more?{after:scheduleCursor}:{});if(current!==session)return;
+      if(!more)$('igScheduleList').replaceChildren();
+      scheduleCursor=data.nextCursor||null;$('igScheduleMore').hidden=!scheduleCursor;
+      for(const item of data.items){
+        const card=document.createElement('div');card.className='panel';
+        const row=document.createElement('div');row.className='btn-row';
+        if(item.previewUrl){const image=document.createElement('img');image.src=item.previewUrl;image.alt='예약 이미지';image.style.cssText='width:72px;height:90px;object-fit:contain';row.append(image);}
+        const title=document.createElement('strong');title.textContent=(scheduleNames[item.status]||item.status)+' · '+(item.channel==='story'?'스토리':'피드')+' · '+new Date(item.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});row.append(title);card.append(row);
+        const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'스토리 이미지';card.append(caption);
+        if(item.error){const error=document.createElement('p');error.className='ig-hint';error.style.color='var(--color-text-critical)';error.textContent=describe({code:item.error});card.append(error);}
+        const actions=document.createElement('div');actions.className='btn-row';
+        if(item.previewUrl){const view=document.createElement('button');view.className='btn ghost sm';view.textContent='내용 보기';view.onclick=()=>openMedia({caption:item.caption,type:'예약 '+(item.channel==='story'?'스토리':'피드'),timestamp:item.scheduledAt,assets:[{type:'image',url:item.previewUrl}]});actions.append(view);}
+        if(item.status==='unknown'){
+          const check=document.createElement('button');check.className='btn ghost sm';check.textContent='게시 상태 확인';
+          check.onclick=async()=>{if(scheduleBusy)return;scheduleBusy=true;check.disabled=true;try{await api('status',{draft_id:item.draftId});if(current!==session)return;scheduleBusy=false;await loadSchedules();}catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}finally{if(current===session){scheduleBusy=false;check.disabled=false;}}};actions.append(check);
+        }
+        if(item.status==='scheduled'){
+          const time=document.createElement('input');time.type='datetime-local';time.value=koreaInput(item.scheduledAt);time.setAttribute('aria-label','변경할 예약 시각 · 한국 시간');time.style.width='auto';
+          const change=document.createElement('button');change.className='btn ghost sm';change.textContent='시간 변경';
+          const cancel=document.createElement('button');cancel.className='btn ghost sm';cancel.textContent='예약 취소';
+          async function mutate(action){
+            if(scheduleBusy)return;
+            let scheduled_at;try{if(action==='schedule')scheduled_at=scheduleISO(time.value);}catch(e){$('igScheduleStatus').textContent=e.message;return;}
+            if(!confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
+            scheduleBusy=true;change.disabled=true;cancel.disabled=true;
+            try{await api(action,{draft_id:item.draftId,fingerprint:item.fingerprint,confirm:action,...(scheduled_at?{scheduled_at}:{})});if(current!==session)return;scheduleBusy=false;await loadSchedules();}
+            catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
+            finally{if(current===session){scheduleBusy=false;change.disabled=false;cancel.disabled=false;}}
+          }
+          change.onclick=()=>mutate('schedule');cancel.onclick=()=>mutate('cancel');actions.append(time,change,cancel);
+        }
+        card.append(actions);$('igScheduleList').append(card);
+      }
+      $('igScheduleStatus').textContent=$('igScheduleList').children.length?$('igScheduleList').children.length+'개 예약 기록':'예약된 게시물이 없습니다.';
+    }catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
+    finally{if(current===session){scheduleBusy=false;$('igScheduleRefresh').disabled=false;}}
+  }
+  $('igShowPublished').onclick=()=>{$('igPublishedPane').hidden=false;$('igScheduledPane').hidden=true;$('igShowPublished').setAttribute('aria-pressed','true');$('igShowScheduled').setAttribute('aria-pressed','false');if(!mediaLoaded)loadMedia();};
+  $('igShowScheduled').onclick=()=>{$('igPublishedPane').hidden=true;$('igScheduledPane').hidden=false;$('igShowPublished').setAttribute('aria-pressed','false');$('igShowScheduled').setAttribute('aria-pressed','true');loadSchedules();};
+  $('igScheduleRefresh').onclick=()=>loadSchedules();
+  $('igScheduleMore').onclick=()=>loadSchedules(true);
   let manageView=false, mediaLoaded=false, mediaBusy=false, mediaCursor=null, mediaGeneration=0;
   const mediaSeen=new Set();
   function mediaControls(){ $('igRefresh').disabled=mediaBusy; $('igLoadMore').disabled=mediaBusy; $('igLoadMore').hidden=!mediaCursor; }
@@ -2087,12 +2167,13 @@ window.ICO = {
     manageView=button.dataset.igView==='manage';
     $('igPostView').hidden=manageView;$('igManageView').hidden=!manageView;
     for(const tab of document.querySelectorAll('[data-ig-view]')){const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));}
-    if(manageView && !mediaLoaded) loadMedia();
+    if(manageView){if(!$('igScheduledPane').hidden)loadSchedules();else if(!mediaLoaded)loadMedia();}
   });
   $('igRefresh').addEventListener('click',()=>loadMedia());
   $('igLoadMore').addEventListener('click',()=>loadMedia(true));
   document.addEventListener('enticket-auth',()=>{
     $('igDetail').close();
+    scheduleBusy=false;scheduleCursor=null;$('igScheduleMore').hidden=true;$('igScheduleRefresh').disabled=false;$('igScheduleList').replaceChildren();$('igScheduleStatus').textContent='';
     mediaGeneration++;mediaBusy=false;mediaLoaded=false;mediaCursor=null;mediaSeen.clear();
     $('igMediaList').replaceChildren();$('igManageAccount').textContent='게시물 관리';$('igManageStatus').textContent='';mediaControls();
     if(manageView && window.gdrive?.isAllowed()) loadMedia();

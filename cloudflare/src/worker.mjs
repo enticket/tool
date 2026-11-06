@@ -5,7 +5,7 @@ import { generateCaption } from './instagram-caption.mjs';
 import { validDraftId } from './instagram-job.mjs';
 export { InstagramJob } from './instagram-job.mjs';
 const ROUTES = new Set(['/verify', '/stamp', '/upload', '/instagram/connection',
-  '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
+  '/instagram/schedule', '/instagram/cancel', '/instagram/schedules', '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
 const MAX_FILE = 10 * 1024 * 1024;
 const MAX_BODY = MAX_FILE + 1024 * 1024;
 class ApiError extends Error {
@@ -170,6 +170,10 @@ export default {
         return json({ ok: true, ...await generateCaption(env, form.get('file')) }, 200, cors);
       if (route.startsWith('/instagram/')) {
         if (!env.INSTAGRAM_JOBS) throw new InstagramError('instagram_storage_not_configured', 503);
+        if(route==='/instagram/schedules'){
+          const registry=env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName('schedule-index'));
+          const r=await registry.fetch('https://job/schedules',{method:'POST',body:JSON.stringify({after:form.get('after')||'0'})});return json(await r.json(),r.status,cors);
+        }
         const id = form.get('draft_id');
         if (!validDraftId(id)) throw new InstagramError('instagram_invalid_draft', 400);
         const stub = env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName(id));
@@ -179,7 +183,7 @@ export default {
         const result = await stub.fetch('https://job/' + route.split('/').pop(), {
           method: 'POST', ...(prepare ? { body: form } : {
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fingerprint: form.get('fingerprint'), confirm: form.get('confirm') }),
+            body: JSON.stringify({ fingerprint: form.get('fingerprint'), confirm: form.get('confirm'), scheduled_at:form.get('scheduled_at') }),
           }),
         });
         return json(await result.json(), result.status, cors);

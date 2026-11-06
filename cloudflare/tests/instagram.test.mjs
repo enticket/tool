@@ -15,7 +15,7 @@ const google = email => Response.json({ aud: 'test-client', email, email_verifie
 test('Instagram authorization fails before any Meta call', async t => {
   const calls = []; let identity = { email: 'other@example.test' };
   t.mock.method(globalThis, 'fetch', async url => { calls.push(String(url)); return Response.json({ aud: 'test-client', expires_in: 300, email_verified: true, ...identity }); });
-  for (const path of ['connection', 'media', 'prepare', 'publish', 'status']) {
+  for (const path of ['connection', 'media', 'prepare', 'publish', 'status', 'schedule', 'cancel', 'schedules']) {
     assert.equal((await worker.fetch(request(path), bindings)).status, 403);
     assert.equal((await worker.fetch(request(path, {}, 'https://other.test'), bindings)).status, 403);
   }
