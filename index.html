@@ -1195,11 +1195,12 @@ td.c { text-align: center; }
 .ig-detail-arrow:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 .ig-media-carousel { position:absolute; top:var(--spacing-12); right:var(--spacing-12); display:flex; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)); pointer-events:none; }
 .ig-management-tabs .btn[aria-pressed="false"] { background:transparent; color:var(--txt-black-darker); }
-.ig-publish-choice { display:flex; gap:var(--spacing-4); padding:var(--spacing-4); border:1px solid var(--color-border-neutral); border-radius:var(--radius-8); background:var(--bg-grey-lighter); }
-.ig-publish-choice button { flex:1; min-height:36px; padding:var(--spacing-6) var(--spacing-12); border:0; border-radius:var(--radius-6); font:inherit; font-weight:var(--font-weight-700); background:transparent; color:var(--txt-black-dark); cursor:pointer; }
-.ig-publish-choice button[aria-pressed="true"] { background:var(--bg-white-normal); color:var(--color-text-accent); box-shadow:var(--elevation-1); }
-.ig-publish-choice button:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:1px; }
-.ig-publish-choice button:disabled { opacity:var(--opacity-disabled); cursor:default; }
+.ig-publish-choice { display:flex; align-items:center; gap:24px; min-height:36px; }
+.ig-publish-choice label { display:inline-flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--txt-black-dark); cursor:pointer; }
+.ig-publish-choice input[type="radio"] { appearance:auto; width:16px; height:16px; margin:0; padding:0; accent-color:var(--color-text-accent); cursor:pointer; }
+.ig-publish-choice label:has(input:checked) { color:var(--color-text-accent); }
+.ig-publish-choice label:has(input:disabled) { opacity:var(--opacity-disabled); cursor:default; }
+
 #panel-instagram input[type="datetime-local"] { box-sizing:border-box; min-width:0; max-width:100%; width:100%; height:46px; padding:0 var(--spacing-12); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); background:var(--bg-white-normal); color:var(--txt-black-darkest); font:inherit; font-size:var(--font-size-14); }
 #igReview .ig-row { margin-top:var(--spacing-16); gap:var(--spacing-16); align-items:start; }
 @media(max-width:640px) { #igReview .ig-row { grid-template-columns:minmax(0,1fr); } }
@@ -1556,7 +1557,7 @@ window.ICO = {
           <p id="igReviewAccount"></p>
           <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
           <p class="ig-hint">위 이미지와 문구가 그대로 공개됩니다. 즉시 게시 이미지는 준비 후 24시간, 예약 이미지는 예약 시각 후 24시간까지 보관됩니다.</p>
-          <div class="ig-row"><div class="ig-field"><span>게시 방식</span><div class="ig-publish-choice" role="group" aria-label="게시 방식"><button type="button" data-publish-mode="now" aria-pressed="true">지금 게시</button><button type="button" data-publish-mode="schedule" aria-pressed="false">예약 게시</button></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><label class="ig-field" id="igScheduleField" hidden>예약 시각 · 한국 시간<input id="igScheduleTime" type="datetime-local"><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></label></div>
+          <div class="ig-row"><div class="ig-field"><span>게시 방식</span><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><label class="ig-field" id="igScheduleField" hidden>예약 시각 · 한국 시간<input id="igScheduleTime" type="datetime-local"><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></label></div>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">게시 계정, 게시 위치, 이미지·문구와 게시 시각을 확인했습니다.</label>
           <div class="btn-row"><button class="btn" id="igPublish" disabled>확인한 내용 지금 게시</button><button class="btn ghost" id="igNew">새 이미지 준비</button></div>
         </div>
@@ -1885,7 +1886,7 @@ window.ICO = {
     $('igAutoCaption').disabled=working || !bitmap || !!job;
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
-    for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.setAttribute('aria-pressed',String(button.dataset.publishMode===$('igPublishMode').value));}
+    for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.checked=button.dataset.publishMode===$('igPublishMode').value;}
     $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working;
     $('igNew').disabled=working;
     $('igReset').disabled=working;
