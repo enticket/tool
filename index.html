@@ -1969,7 +1969,7 @@ window.ICO = {
     $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
     $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
     for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
-    $('igNextHint').textContent=job?'게시 준비를 눌러 최종 확인을 이어가세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
+    $('igNextHint').textContent=job?'':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
     $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
   }
   async function api(path, fields){
