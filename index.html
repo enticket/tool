@@ -1134,17 +1134,20 @@ td.c { text-align: center; }
   .ig-account > .btn { margin-left:44px; }
   #igEmpty { min-height:180px; }
 }
-.ig-subnav { display:none; padding:0 var(--spacing-12) var(--spacing-8) var(--spacing-32); gap:var(--spacing-6); }
+.ig-subnav { display:none; flex-direction:column; gap:var(--spacing-4); margin:var(--spacing-4) 0 var(--spacing-8) 22px; padding-left:var(--spacing-12); border-left:1px solid var(--color-border-neutral-strong); }
 .tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) { display:flex; }
-.ig-subtab { border:0; border-radius:var(--radius-8); padding:var(--spacing-8) var(--spacing-12); font:inherit; cursor:pointer; background:transparent; color:var(--txt-black-darker); }
-.ig-subtab.active { background:var(--color-fill-accent); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
+.ig-subtab { position:relative; display:flex; align-items:center; min-height:34px; width:100%; border:0; border-radius:var(--radius-6); padding:var(--spacing-6) var(--spacing-12); text-align:left; font:inherit; font-size:var(--font-size-13); cursor:pointer; background:transparent; color:var(--txt-black-darker); }
+.ig-subtab:hover { background:var(--bg-grey-lighter); color:var(--txt-black-darkest); }
+.ig-subtab.active { background:var(--bg-grey-lighter); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
+.ig-subtab.active::before { content:""; position:absolute; left:-14px; top:9px; bottom:9px; width:3px; border-radius:var(--radius-2); background:var(--color-bg-accent); }
+.ig-subtab:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 .ig-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-16); margin:var(--spacing-16) 0; }
 .ig-media-cover { width:100%; aspect-ratio:1; object-fit:cover; background:var(--bg-grey-lighter); display:block; }
 .ig-media-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; white-space:pre-wrap; overflow-wrap:anywhere; margin:var(--spacing-8) 0; font-size:var(--font-size-13); line-height:var(--line-height-20); }
 #igManageStatus { margin-top:var(--spacing-12); font-size:var(--font-size-13); }
 #igManageStatus[data-error=true] { color:var(--color-text-critical); }
 #igManageAccount { flex:1; }
-@media(max-width:860px) { .ig-subnav { flex-basis:100%; padding:0; } }
+@media(max-width:860px) { .ig-subnav { flex-basis:100%; margin-left:var(--spacing-12); } }
 @media(max-width:640px) { .ig-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:360px) { .ig-media-grid { grid-template-columns:minmax(0,1fr); } }
 </style>
