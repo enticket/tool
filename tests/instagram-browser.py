@@ -159,11 +159,10 @@ with sync_playwright() as p:
     expect(page.locator('#igPublish')).to_be_disabled()
     assert state['publish_count'] == 1
     expect_reset()
-    expect(page.locator('#igRecover')).to_be_visible()
+    expect(page.locator('#igRecover')).to_have_count(0)
     page.locator('#igFile').set_input_files({'name': 'next.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     page.locator('[name=ig-channel-choice][value=story]').check()
     # Checking an older completed post must preserve the new image being edited.
-    page.locator('#igRecover').click()
     expect(page.locator('#igPreview')).to_be_visible()
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionLabel')).to_be_hidden()
@@ -194,8 +193,7 @@ with sync_playwright() as p:
     expect(page.locator('#igReview')).to_be_visible()
     expect(page.locator('#igPreview')).to_be_visible()
     page.locator('#igReviewClose').click()
-    page.locator('#igRecover').click()
-    expect(page.locator('#igStatus')).to_contain_text('게시 완료')
+    page.locator('#igReset').click()
     expect_reset()
     assert state['publish_count'] == 2
     page.locator('#gLogoutBtn').click()
