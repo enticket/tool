@@ -1,11 +1,11 @@
 // Existing enticket-drive behavior, now serving the tools and their API together.
 // Credentials and the protected company stamp stay in Worker secrets.
-import { instagramConnection, InstagramError } from './instagram.mjs';
+import { instagramConnection, instagramMedia, InstagramError } from './instagram.mjs';
 import { generateCaption } from './instagram-caption.mjs';
 import { validDraftId } from './instagram-job.mjs';
 export { InstagramJob } from './instagram-job.mjs';
 const ROUTES = new Set(['/verify', '/stamp', '/upload', '/instagram/connection',
-  '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
+  '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
 const MAX_FILE = 10 * 1024 * 1024;
 const MAX_BODY = MAX_FILE + 1024 * 1024;
 class ApiError extends Error {
@@ -164,6 +164,8 @@ export default {
       if (route === '/verify') return json({ ok: true, allowed: true, email }, 200, cors);
       if (route === '/instagram/connection')
         return json({ ok: true, connected: true, account: await instagramConnection(env) }, 200, cors);
+      if (route === '/instagram/media')
+        return json({ok:true,...await instagramMedia(env,form.get('after')||'')},200,cors);
       if (route === '/instagram/caption')
         return json({ ok: true, ...await generateCaption(env, form.get('file')) }, 200, cors);
       if (route.startsWith('/instagram/')) {

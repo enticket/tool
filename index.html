@@ -1134,6 +1134,19 @@ td.c { text-align: center; }
   .ig-account > .btn { margin-left:44px; }
   #igEmpty { min-height:180px; }
 }
+.ig-subnav { display:none; padding:0 var(--spacing-12) var(--spacing-8) var(--spacing-32); gap:var(--spacing-6); }
+.tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) { display:flex; }
+.ig-subtab { border:0; border-radius:var(--radius-8); padding:var(--spacing-8) var(--spacing-12); font:inherit; cursor:pointer; background:transparent; color:var(--txt-black-darker); }
+.ig-subtab.active { background:var(--color-fill-accent); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
+.ig-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-16); margin:var(--spacing-16) 0; }
+.ig-media-cover { width:100%; aspect-ratio:1; object-fit:cover; background:var(--bg-grey-lighter); display:block; }
+.ig-media-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; white-space:pre-wrap; overflow-wrap:anywhere; margin:var(--spacing-8) 0; font-size:var(--font-size-13); line-height:var(--line-height-20); }
+#igManageStatus { margin-top:var(--spacing-12); font-size:var(--font-size-13); }
+#igManageStatus[data-error=true] { color:var(--color-text-critical); }
+#igManageAccount { flex:1; }
+@media(max-width:860px) { .ig-subnav { flex-basis:100%; padding:0; } }
+@media(max-width:640px) { .ig-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:360px) { .ig-media-grid { grid-template-columns:minmax(0,1fr); } }
 </style>
 </head>
 <body>
@@ -1172,6 +1185,7 @@ window.ICO = {
     <button class="tab" data-tab="settlement"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
     <button class="tab" data-tab="oseal"><svg class="ico"><use href="#i-nav-oseal"/></svg>원본대조필</button>
     <button class="tab" data-tab="instagram" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg>인스타그램</button>
+    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
     <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
@@ -1380,6 +1394,7 @@ window.ICO = {
       <div class="g-t" id="igGateMessage" role="status">로그인이 필요한 기능입니다</div>
     </div>
     <div id="igWork" hidden>
+      <div id="igPostView">
       <div class="panel ig-account" id="igAccountCard">
         <div class="ig-account-icon"><svg class="ico"><use href="#i-nav-instagram"/></svg></div>
         <div class="ig-account-info">
@@ -1454,6 +1469,14 @@ window.ICO = {
       </div>
       <p id="igStatus" role="status" aria-live="polite"></p>
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
+      </div>
+      <div id="igManageView" hidden>
+        <div class="panel ig-account"><strong id="igManageAccount">게시물 관리</strong><button class="btn ghost sm" id="igRefresh" type="button">새로고침</button></div>
+        <p class="ig-hint">피드·릴스 게시물을 최신순으로 표시합니다. 수정·삭제는 인스타그램에서 진행해 주세요.</p>
+        <p id="igManageStatus" role="status" aria-live="polite"></p>
+        <div class="ig-media-grid" id="igMediaList"></div>
+        <div class="btn-row"><button class="btn ghost" type="button" id="igLoadMore" hidden>더 보기</button></div>
+      </div>
     </div>
   </section>
 </div>
@@ -1668,6 +1691,7 @@ window.ICO = {
 
     instagram_not_configured:'인스타그램 연결 설정이 없습니다. 운영 설정을 확인해 주세요.',
     instagram_token_invalid:'인스타그램 토큰이 만료되었거나 취소되었습니다. Meta에서 재발급한 뒤 Worker 비밀 설정을 갱신해 주세요.',
+    instagram_access_blocked:'Meta에서 API 접근을 차단했습니다. Meta 앱 대시보드의 알림과 계정 연결 상태를 확인해 주세요.',
     instagram_permission_denied:'인스타그램 권한이 부족합니다. Meta 앱의 계정 연결과 권한을 확인해 주세요.',
     instagram_account_mismatch:'설정된 인스타그램 계정과 조회한 계정이 일치하지 않습니다.',
     instagram_rate_limited:'인스타그램 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.',
@@ -1945,6 +1969,51 @@ window.ICO = {
       status((data.status==='published'?'마지막 게시 완료':data.status==='prepared'?'마지막 이미지는 준비만 되었으며 게시되지 않았습니다. 새 이미지를 준비해 주세요.':'마지막 게시 상태: '+data.status+'. 인스타그램에서 게시 여부를 확인해 주세요.')+(data.mediaId?' · 게시물 ID: '+data.mediaId:''));
     } else showJob(data);
   }));
+  let manageView=false, mediaLoaded=false, mediaBusy=false, mediaCursor=null, mediaGeneration=0;
+  const mediaSeen=new Set();
+  function mediaControls(){ $('igRefresh').disabled=mediaBusy; $('igLoadMore').disabled=mediaBusy; $('igLoadMore').hidden=!mediaCursor; }
+  function mediaCard(item){
+    const card=document.createElement('article'); card.className='ig-card';
+    const placeholder=document.createElement('div'); placeholder.className='ig-media-cover empty'; placeholder.textContent='미리보기 없음';
+    if(item.thumbnail){
+      const img=document.createElement('img'); img.className='ig-media-cover'; img.src=item.thumbnail; img.alt='게시물 이미지'; img.loading='lazy'; img.referrerPolicy='no-referrer';
+      img.addEventListener('error',()=>img.replaceWith(placeholder),{once:true});card.append(img);
+    } else card.append(placeholder);
+    const body=document.createElement('div');body.className='ig-card-body';
+    const meta=document.createElement('div');meta.className='fname';meta.textContent=item.type+' · '+(item.timestamp?new Date(item.timestamp).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 없음');
+    const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'캡션 없음';
+    body.append(meta,caption);
+    if(item.permalink){const a=document.createElement('a');a.className='btn ghost sm';a.href=item.permalink;a.target='_blank';a.rel='noopener noreferrer';a.textContent='인스타그램에서 보기';body.append(a);}
+    card.append(body);return card;
+  }
+  async function loadMedia(more=false){
+    if(mediaBusy || !window.gdrive?.isAllowed()) return;
+    mediaBusy=true;const generation=mediaGeneration;mediaControls();
+    $('igManageStatus').textContent='게시물을 불러오고 있습니다…';$('igManageStatus').dataset.error='false';
+    try{
+      const data=await api('media',more?{after:mediaCursor}:{});
+      if(generation!==mediaGeneration) return;
+      if(!more){$('igMediaList').replaceChildren();mediaSeen.clear();}
+      $('igManageAccount').textContent='@'+data.account.username+' · 게시물 관리';
+      for(const item of data.items) if(!mediaSeen.has(item.id)){mediaSeen.add(item.id);$('igMediaList').append(mediaCard(item));}
+      mediaCursor=data.nextCursor||null;mediaLoaded=true;
+      $('igManageStatus').textContent=mediaSeen.size?mediaSeen.size+'개 게시물 표시 중':'아직 조회할 게시물이 없습니다.';
+    } catch(e){if(generation===mediaGeneration){$('igManageStatus').textContent=describe(e);$('igManageStatus').dataset.error='true';}}
+    finally{if(generation===mediaGeneration){mediaBusy=false;mediaControls();}}
+  }
+  for(const button of document.querySelectorAll('[data-ig-view]')) button.addEventListener('click',()=>{
+    manageView=button.dataset.igView==='manage';
+    $('igPostView').hidden=manageView;$('igManageView').hidden=!manageView;
+    for(const tab of document.querySelectorAll('[data-ig-view]')){const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));}
+    if(manageView && !mediaLoaded) loadMedia();
+  });
+  $('igRefresh').addEventListener('click',()=>loadMedia());
+  $('igLoadMore').addEventListener('click',()=>loadMedia(true));
+  document.addEventListener('enticket-auth',()=>{
+    mediaGeneration++;mediaBusy=false;mediaLoaded=false;mediaCursor=null;mediaSeen.clear();
+    $('igMediaList').replaceChildren();$('igManageAccount').textContent='게시물 관리';$('igManageStatus').textContent='';mediaControls();
+    if(manageView && window.gdrive?.isAllowed()) loadMedia();
+  });
   document.addEventListener('enticket-auth',()=>{
     session++; account=null; job=null; clearImage(); $('igFile').value=''; resetCaption(); $('igText').value='';
     $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');

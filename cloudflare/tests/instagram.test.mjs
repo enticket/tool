@@ -15,7 +15,7 @@ const google = email => Response.json({ aud: 'test-client', email, email_verifie
 test('Instagram authorization fails before any Meta call', async t => {
   const calls = []; let identity = { email: 'other@example.test' };
   t.mock.method(globalThis, 'fetch', async url => { calls.push(String(url)); return Response.json({ aud: 'test-client', expires_in: 300, email_verified: true, ...identity }); });
-  for (const path of ['connection', 'prepare', 'publish', 'status']) {
+  for (const path of ['connection', 'media', 'prepare', 'publish', 'status']) {
     assert.equal((await worker.fetch(request(path), bindings)).status, 403);
     assert.equal((await worker.fetch(request(path, {}, 'https://other.test'), bindings)).status, 403);
   }
@@ -28,6 +28,7 @@ test('Instagram authorization fails before any Meta call', async t => {
 for (const [scenario, response, status, error] of [
   ['valid', () => Response.json({ id: bindings.INSTAGRAM_ACCOUNT_ID, username: 'en__ticket', access_token: 'MUST_NOT_LEAK' }), 200],
   ['wrong account', () => Response.json({ id: '123', username: 'another' }), 409, 'instagram_account_mismatch'],
+  ['blocked', () => Response.json({error:{code:200,message:'API access blocked.'}},{status:400}),503,'instagram_access_blocked'],
   ['expired', () => Response.json({ error: { code: 190, message: 'MUST_NOT_LEAK' } }, { status: 400 }), 503, 'instagram_token_invalid'],
   ['permissions', () => Response.json({ error: { code: 200 } }, { status: 403 }), 503, 'instagram_permission_denied'],
   ['rate limit', () => Response.json({ error: { code: 4 } }, { status: 400 }), 429, 'instagram_rate_limited'],
@@ -131,4 +132,29 @@ test('Workers + SQLite: immutable review, protected media, one publish and uncer
     assert.equal((await (await invoke('publish', { draft_id: storyId, fingerprint: readyStory.fingerprint, confirm: 'publish' })).json()).status, 'published');
     identity = 'other@example.test'; assert.equal((await invoke('status', { draft_id: id })).status, 403);
   } finally { await mf.dispose(); }
+});
+
+test('media list exposes safe fields and cursor without provider next URLs or secrets',async t=>{
+ const calls=[];
+ t.mock.method(globalThis,'fetch',async(input,opts)=>{
+  const url=new URL(input);calls.push(url);
+  if(url.hostname==='oauth2.googleapis.com')return google('staff@example.test');
+  assert.equal(opts.method,'GET');assert.equal(opts.redirect,'manual');
+  if(!url.pathname.endsWith('/media'))return Response.json({id:bindings.INSTAGRAM_ACCOUNT_ID,username:'en__ticket'});
+  assert.equal(url.searchParams.get('after'),'cursor_1');assert.equal(url.searchParams.get('limit'),'12');
+  return Response.json({data:[{id:'12',caption:'<script>unsafe</script>',media_type:'IMAGE',media_url:'https://evil.example/a',permalink:'javascript:alert(1)',timestamp:'bad'},
+   {id:'13',media_type:'VIDEO',media_product_type:'REELS',thumbnail_url:'https://scontent.cdninstagram.com/image.jpg',permalink:'https://www.instagram.com/reel/abc/',timestamp:'2026-11-06T00:00:00Z'}],paging:{next:'https://graph.facebook.com/next?access_token=MUST_NOT_LEAK',cursors:{after:'cursor_2'}}});
+ });
+ const res=await worker.fetch(request('media',{after:'cursor_1'}),bindings);assert.equal(res.status,200);
+ const text=await res.text();assert.ok(!text.includes('MUST_NOT_LEAK'));const data=JSON.parse(text);
+ assert.equal(data.nextCursor,'cursor_2');assert.equal(data.items[0].type,'릴스');assert.equal(data.items[1].thumbnail,null);assert.equal(data.items[1].permalink,null);
+ const count=calls.length;assert.equal((await worker.fetch(request('media',{after:'https://evil.example'}),bindings)).status,400);assert.equal(calls.length,count+1);
+});
+test('media permission failure is sanitized and never modifies Meta posts',async t=>{
+ t.mock.method(globalThis,'fetch',async(input,opts)=>{
+  if(String(input).includes('tokeninfo'))return google('staff@example.test');
+  assert.equal(opts.method,'GET');
+  return Response.json({error:{code:200,message:'MUST_NOT_LEAK'}},{status:403});
+ });
+ assert.deepEqual(await (await worker.fetch(request('media'),bindings)).json(),{error:'instagram_permission_denied'});
 });
