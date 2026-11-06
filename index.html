@@ -1372,7 +1372,7 @@ window.ICO = {
       <div class="controls" id="xlControls" style="display:none">
         <label class="toggle"><input type="checkbox" id="xlMask"> 연락처 가운데 가리기</label>
       </div>
-      <div id="xlOutput"><div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div></div>
+      <div id="xlOutput"></div>
       <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
         <button class="btn ghost" id="xlDriveSave" data-cloud-only hidden>드라이브 저장</button>
@@ -1399,7 +1399,7 @@ window.ICO = {
         <div class="small">238px · 650px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="poster"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="poster"></div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">롤배너</div>
@@ -1409,7 +1409,7 @@ window.ICO = {
         <div class="small">가로 2000px · 720px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="roll"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="roll"></div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">띠배너</div>
@@ -1419,7 +1419,7 @@ window.ICO = {
         <div class="small">가로 1000px · 412px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="strip"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="strip"></div>
     </div>
     <div class="privacy"></div>
   </section>
@@ -1467,7 +1467,7 @@ window.ICO = {
     <!-- 집계 결과 -->
     <div class="out-head">집계 결과</div>
     <div class="out-body">
-      <div id="output"><div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div></div>
+      <div id="output"></div>
       <div id="merge"></div>
     </div>
     <!-- 정산서 생성 -->
@@ -1495,7 +1495,7 @@ window.ICO = {
     <!-- 결과 -->
     <div class="out-head">추출 결과 <span id="smsCount"></span></div>
     <div class="out-body">
-      <div id="smsOutput"><div class="empty">파일을 넣으면 관람자 이름·연락처가 자동으로 추출됩니다.</div></div>
+      <div id="smsOutput"></div>
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
@@ -1536,7 +1536,7 @@ window.ICO = {
       <div class="connector"></div>
       <div class="out-head">원본대조필 미리보기</div>
       <div class="out-body">
-        <div id="osealPreview"><div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div></div>
+        <div id="osealPreview"></div>
         <div class="btn-row" id="osealBtnRow" style="margin-top:14px;display:none">
           <button class="btn" id="osealDlXlsx">엑셀 다운로드</button>
           <button class="btn ghost" id="osealDlPdf">PDF 다운로드</button>
@@ -2834,7 +2834,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   function renderOutput(){
     if(!nodes.length){
-      outputEl.innerHTML='<div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div>';
+      outputEl.innerHTML='';
       countEl.textContent=""; controlsEl.style.display="none"; dlRow.style.display="none"; warnBox.innerHTML=""; return;
     }
     const rows=getViewRows();
@@ -2978,7 +2978,7 @@ document.querySelectorAll(".tab").forEach(t=>{
       results=results.filter(x=>x!==r);
       usedNames.delete(r.filename);
       card.remove();
-      if(!resultsEl.querySelector(".card")) resultsEl.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>';
+      if(!resultsEl.querySelector(".card")) resultsEl.innerHTML='';
       updateBar();
     });
     resultsEl.appendChild(card);
@@ -2995,7 +2995,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function clearAll(){
     results.forEach(r=>URL.revokeObjectURL(r.url));
     results=[]; usedNames.clear();
-    boxEls.forEach(b=>{ b.resultsEl.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>'; });
+    boxEls.forEach(b=>{ b.resultsEl.innerHTML=''; });
     updateBar();
   }
   const boxEls=BOXES.map(b=>{
@@ -3840,7 +3840,7 @@ function renderValidationCard(result) {
   }
   function renderOutput(){
     const withData=sessions.filter(sessionHasData);
-    if(!withData.length){ outputEl.innerHTML='<div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div>'; return; }
+    if(!withData.length){ outputEl.innerHTML=''; return; }
     const money=n=>`₩${won(n)}`;
     const dash=v=>v?won(v):"-";
     let thead=`<thead>
@@ -4536,7 +4536,7 @@ function renderValidationCard(result) {
   }
   function renderOutput(){
     const anyLoaded=nodes.length>0;
-    if(!anyLoaded){ outputEl.innerHTML='<div class="empty">파일을 넣으면 관람자 이름·연락처가 자동으로 추출됩니다.</div>'; countEl.textContent=""; dlRow.style.display="none"; return; }
+    if(!anyLoaded){ outputEl.innerHTML=''; countEl.textContent=""; dlRow.style.display="none"; return; }
     if(!lastResult.length){
       outputEl.innerHTML='<div class="warn">추출된 전화번호가 없습니다. 각 파일에서 전화 컬럼이 올바르게 지정됐는지 확인해 주세요.</div>';
       countEl.textContent=""; dlRow.style.display="none"; return;
@@ -5085,7 +5085,7 @@ window.OrigSeal = (function(){
   }
   function invalidate(){
     conversion++; out=null; btnRow.style.display="none"; fnameEl.textContent="";
-    preview.innerHTML='<div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div>';
+    preview.innerHTML='';
     setStatus(""); updateGate();
   }
   document.addEventListener("enticket-auth", invalidate);
