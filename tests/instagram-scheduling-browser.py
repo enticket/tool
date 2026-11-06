@@ -96,6 +96,16 @@ with sync_playwright() as p:
     page.locator('[data-publish-mode="schedule"]').click()
     expect(page.locator('#igScheduleField')).to_be_visible()
     page.locator('#igScheduleField .ig-date-trigger').click()
+    box=page.locator('.ig-calendar').bounding_box()
+    viewport=page.evaluate('({width:document.documentElement.clientWidth,height:document.documentElement.clientHeight})')
+    assert abs(box['x']+box['width']/2-viewport['width']/2)<2
+    assert abs(box['y']+box['height']/2-viewport['height']/2)<2
+    expect(page.locator('.ig-calendar [data-prev]')).to_be_disabled()
+    page.locator('.ig-calendar [data-next]').click()
+    expect(page.locator('.ig-calendar [data-next]')).to_be_disabled()
+    expect(page.get_by_role('button',name='2026년 12월 7일',exact=True)).to_be_disabled()
+    page.locator('.ig-calendar [data-prev]').click()
+
     page.get_by_role('button',name='2026년 11월 20일',exact=True).click()
     page.get_by_role('combobox',name='시',exact=True).select_option('19')
     page.get_by_role('combobox',name='분',exact=True).select_option('00')

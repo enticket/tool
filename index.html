@@ -1205,12 +1205,13 @@ td.c { text-align: center; }
 @media(max-width:640px) { #igReview .ig-row { grid-template-columns:minmax(0,1fr); } }
 
 .ig-date-trigger { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:46px; padding:10px 12px; border:1px solid #ddd8e3; border-radius:8px; background:white; color:#31283c; font:inherit; cursor:pointer; }
-.ig-calendar { width:min(340px,calc(100vw - 48px)); padding:24px; border:1px solid #e9e5ed; border-radius:16px; box-shadow:0 16px 64px #23133426; color:#31283c; }
+.ig-calendar { position:fixed; inset:0; margin:auto; max-height:calc(100dvh - 32px); overflow:auto; width:min(340px,calc(100vw - 48px)); padding:24px; border:1px solid #e9e5ed; border-radius:16px; box-shadow:0 16px 64px #23133426; color:#31283c; }
 .ig-calendar::backdrop { background:#21192e55; }
 .ig-calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
 .ig-calendar button { font:inherit; cursor:pointer; }
 .ig-calendar-icon { border:0; background:transparent; color:#796886; width:32px; height:32px; border-radius:8px; }
-.ig-calendar-icon:hover { background:#f1edf5; }
+.ig-calendar-icon:disabled { opacity:.3; cursor:default; }
+.ig-calendar-icon:hover:not(:disabled) { background:#f1edf5; }
 .ig-calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
 .ig-calendar-grid span { font-size:12px; color:#92859d; padding:8px 0; }
 .ig-calendar-day { border:0; background:transparent; border-radius:50%; aspect-ratio:1; color:#40364a; }
@@ -5122,6 +5123,14 @@ window.OrigSeal = (function(){
   let target,selected,month;
   const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   function render(){
+    const minMonth=korea().slice(0,7);
+    const maxMonth=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,7);
+    const current=month.toISOString().slice(0,7);
+    if(current<minMonth)month=new Date(minMonth+'-01T00:00:00Z');
+    if(current>maxMonth)month=new Date(maxMonth+'-01T00:00:00Z');
+    const visible=month.toISOString().slice(0,7);
+    dialog.querySelector('[data-prev]').disabled=visible<=minMonth;
+    dialog.querySelector('[data-next]').disabled=visible>=maxMonth;
     const y=month.getUTCFullYear(),m=month.getUTCMonth();
     dialog.querySelector('strong').textContent=`${y}년 ${m+1}월`;grid.replaceChildren();
     for(const day of ['일','월','화','수','목','금','토']){const el=document.createElement('span');el.textContent=day;grid.append(el);}
