@@ -13,7 +13,7 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
 [hidden] { display: none !important; }
-.auth-loading { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#978a9f; padding:8px 0; }
+.auth-loading { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#978a9f; height:30px; padding:0; }
 .auth-loading:not(.is-error)::before { content:""; display:block; width:14px; height:14px; flex-shrink:0; box-sizing:border-box; border:2px solid #e5ddeb; border-top-color:#75469b; border-radius:50%; animation:auth-spin .8s linear infinite; }
 @keyframes auth-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .auth-loading::before { animation:none; } }
@@ -325,7 +325,7 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
 /* ── 계정 (GNB 하단) ── */
 .gauth {
   flex: none;
-  display: flex; align-items: center; align-content:flex-start; flex-wrap: wrap;
+  display: flex; align-items: center; align-content:flex-end; flex-wrap: wrap;
   height:69px;
   gap: var(--spacing-8);
   margin-top: var(--spacing-12);
