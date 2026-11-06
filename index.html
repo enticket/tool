@@ -1212,6 +1212,14 @@ td.c { text-align: center; }
 .ig-detail-arrow:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
 .ig-media-carousel { position:absolute; top:var(--spacing-12); right:var(--spacing-12); display:flex; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)); pointer-events:none; }
 .ig-management-tabs .btn[aria-pressed="false"] { background:transparent; color:var(--txt-black-darker); }
+.ig-channel-choice { display:flex; gap:8px; }
+.ig-channel-choice label { position:relative; flex:1; display:flex; align-items:center; justify-content:center; gap:10px; min-height:46px; border:1px solid #e6e1eb; border-radius:8px; background:white; color:#82758d; cursor:pointer; font-size:13px; }
+.ig-channel-choice input { position:absolute; opacity:0; width:1px; height:1px; }
+.ig-channel-choice label:has(input:checked) { border-color:#a185b7; background:#f7f3fb; color:#64348b; }
+.ig-channel-choice label:has(input:focus-visible) { outline:2px solid #966db3; outline-offset:2px; }
+.ig-channel-choice small { margin-left:4px; font-size:11px; opacity:.75; }
+.ig-channel-symbol { width:16px; height:20px; border:1.4px solid currentColor; border-radius:3px; }
+.ig-channel-symbol.story { width:12px; height:21px; }
 .ig-publish-choice { display:flex; align-items:center; gap:24px; min-height:36px; }
 .ig-publish-choice label { display:inline-flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--txt-black-dark); cursor:pointer; }
 .ig-publish-choice input[type="radio"] { appearance:auto; width:16px; height:16px; margin:0; padding:0; accent-color:var(--color-text-accent); cursor:pointer; }
@@ -1526,7 +1534,7 @@ window.ICO = {
                 <span id="igFileName" hidden></span>
                 <input id="igFile" type="file" accept="image/jpeg,image/png,image/webp">
               </label>
-              <label class="ig-field">게시 위치 <select id="igChannel"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></label>
+              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드 <small>4:5</small></span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
               <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
@@ -1926,6 +1934,7 @@ window.ICO = {
     $('igDrop').tabIndex=working || job?-1:0;
     const blur=$('igBackgroundMode').checked;
     $('igBackground').disabled=blur; $('igFit').disabled=blur;
+    for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.checked=choice.value===$('igChannel').value;
     const story=$('igChannel').value==='story';
     $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
     $('igPreviewChannel').textContent=story?'스토리':'피드';
@@ -2059,6 +2068,10 @@ window.ICO = {
   let draggedSlider=null;
   for(const id of Object.keys(sliderDefaults)) $(id).addEventListener('pointerdown',()=>{ draggedSlider=id; });
   for(const event of ['pointerup','pointercancel']) window.addEventListener(event,()=>{ draggedSlider=null; });
+  for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.addEventListener('change',()=>{
+    if(working || job)return;
+    $('igChannel').value=choice.value;$('igChannel').dispatchEvent(new Event('input',{bubbles:true}));
+  });
   for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{
       if(job) return;

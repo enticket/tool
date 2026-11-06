@@ -161,7 +161,7 @@ with sync_playwright() as p:
     expect_reset()
     expect(page.locator('#igRecover')).to_be_visible()
     page.locator('#igFile').set_input_files({'name': 'next.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
-    page.locator('#igChannel').select_option('story')
+    page.locator('[name=ig-channel-choice][value=story]').check()
     # Checking an older completed post must preserve the new image being edited.
     page.locator('#igRecover').click()
     expect(page.locator('#igPreview')).to_be_visible()
