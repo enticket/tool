@@ -1164,10 +1164,14 @@ td.c { text-align: center; }
 #igReviewImage { border-radius:5px; }
 #igReviewCaption { color:#554b5d; scrollbar-width:thin; }
 .ig-review-timing { padding-top:12px; }
-.ig-time-slot { height:98px; padding-top:10px; }
+.ig-time-slot { height:84px; padding-top:10px; }
 #igScheduleField { gap:6px; font-size:12px; }
 #igScheduleField .ig-date-trigger { min-height:38px; padding:8px 10px; font-size:13px; }
-#igImmediateNote { display:flex; align-items:center; height:76px; color:#978a9f; font-size:13px; }
+.ig-schedule-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.ig-schedule-heading .ig-hint { text-align:right; font-size:11px; }
+#igScheduleField .ig-date-trigger:disabled { background:#f4f3f6; border-color:#e8e5ed; color:#b2aab9; cursor:default; }
+#igScheduleField:has(input:disabled) .ig-schedule-heading { color:#a99faf; }
+@media(max-width:400px) { .ig-schedule-heading { font-size:11px; gap:4px; } .ig-schedule-heading .ig-hint { font-size:10px; } }
 #igReview .ig-confirm { padding:12px 0; margin:0; background:none; border-radius:0; color:#63576c; font-size:12px; border-top:1px solid #eeeaf2; }
 .ig-review-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:4px; }
 .ig-review-footer #igNew { background:transparent; color:#8b7d96; padding-left:0; }
@@ -1609,7 +1613,7 @@ window.ICO = {
         <div class="ig-card-body">
           <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
 
-          <div class="ig-review-timing"><div class="ig-field"><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><div class="ig-time-slot"><div id="igImmediateNote"><span>확인 후 바로 게시됩니다.</span></div><label class="ig-field" id="igScheduleField" hidden>예약 시각 · 한국 시간<input id="igScheduleTime" type="datetime-local"><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></label></div></div>
+          <div class="ig-review-timing"><div class="ig-field"><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><div class="ig-time-slot"><div class="ig-field" id="igScheduleField"><div class="ig-schedule-heading"><span>예약 시각 · 한국 시간</span><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></div><input id="igScheduleTime" type="datetime-local" aria-label="예약 시각 · 한국 시간" disabled></div></div></div>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">이미지와 캡션, 게시 시각을 확인했습니다.</label>
           <p id="igReviewStatus" role="status" class="ig-hint"></p>
           <div class="ig-review-footer"><button class="btn ghost" id="igNew">내용 수정</button><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
@@ -1944,7 +1948,7 @@ window.ICO = {
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.checked=button.dataset.publishMode===$('igPublishMode').value;}
-    $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working;
+    $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working || $('igPublishMode').value!=='schedule';
     $('igNew').disabled=working; $('igReviewClose').disabled=working;
     const extra=['age','duration','price','inquiry','tags'];
     const filled=extra.filter(key=>$('igField_'+key).value.trim()).length;
@@ -1996,7 +2000,7 @@ window.ICO = {
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
     closeReview(); $('igConfirm').checked=false;
-    $('igPublishMode').value='now'; $('igScheduleTime').value=''; $('igScheduleField').hidden=true; $('igImmediateNote').hidden=false;
+    $('igPublishMode').value='now'; $('igScheduleTime').value=''; 
     $('igPublish').textContent='게시하기';
     controls();
   }
@@ -2153,7 +2157,7 @@ window.ICO = {
   function koreaInput(value){return new Date(new Date(value).getTime()+9*3600000).toISOString().slice(0,16);}
   for(const button of document.querySelectorAll('[data-publish-mode]')) button.addEventListener('click',()=>{$('igPublishMode').value=button.dataset.publishMode;$('igPublishMode').dispatchEvent(new Event('change'));});
   $('igPublishMode').addEventListener('change',()=>{
-    const scheduled=$('igPublishMode').value==='schedule';$('igScheduleField').hidden=!scheduled; $('igImmediateNote').hidden=scheduled;
+    const scheduled=$('igPublishMode').value==='schedule';
     if(scheduled && !$('igScheduleTime').value)$('igScheduleTime').value=koreaInput(Date.now()+3600000);
     $('igPublish').textContent=scheduled?'예약하기':'게시하기';$('igConfirm').checked=false;controls();
   });
