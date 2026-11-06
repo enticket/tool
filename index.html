@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>엔티켓 업무 도구</title>
 <script>
+try { if(localStorage.getItem('enticket-nav-collapsed')==='true') document.documentElement.classList.add('nav-collapsed'); } catch {}
 // Keep old bookmarks working after the Cloudflare move.
 if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)?$/.test(location.pathname)) {
   location.replace("https://tools.enticket.kr/");
@@ -322,6 +323,34 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
 .tab:hover { background: var(--bg-grey-light); color: var(--txt-black-darkest); }
 .tab.active { background: var(--color-fill-accent); color: var(--color-text-accent); }
 .tab:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 1px; }
+.gnb-head { display:flex; align-items:center; justify-content:space-between; gap:4px; flex:none; margin-bottom:8px; }
+.gnb-head .gnb-brand { padding:8px 0 8px 12px; white-space:nowrap; font-size:15px; }
+#navToggle { display:flex; align-items:center; justify-content:center; width:30px; height:32px; flex:none; padding:0; border:0; border-radius:6px; background:transparent; color:var(--txt-black-dark); cursor:pointer; }
+#navToggle:hover { background:var(--color-fill-accent); color:var(--color-text-accent); }
+#navToggle:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.auth-icon { display:none; }
+@media(min-width:861px) {
+  body { transition:grid-template-columns .22s ease; }
+  .nav-collapsed body { grid-template-columns:72px minmax(0,1fr); }
+  .nav-collapsed .gnb-head { justify-content:center; }
+  .nav-collapsed .gnb-brand, .nav-collapsed .nav-label, .nav-collapsed .section-label { display:none; }
+  .nav-collapsed .tab { justify-content:center; padding:10px; }
+  .nav-collapsed .ig-subnav, .nav-collapsed .settlement-subnav { display:none; }
+  .nav-collapsed .gauth { justify-content:center; }
+  .nav-collapsed #gUser { display:none !important; }
+  .nav-collapsed .gauth .gbtn { width:34px; padding:0; justify-content:center; }
+  .nav-collapsed .gauth .gbtn span { display:none; }
+  .nav-collapsed .auth-icon { display:block; }
+  .nav-collapsed .auth-loading:not(.is-error) { font-size:0; gap:0; }
+  .nav-collapsed .auth-loading.is-error { font-size:10px; text-align:center; }
+  .nav-collapsed #gAuthRetry { width:auto; font-size:10px; padding:0 2px; }
+}
+@media(max-width:860px) {
+  .gnb-head { margin:0; }
+  .gnb-head .gnb-brand { padding:0; font-size:14px; }
+  .nav-mobile-collapsed #mainNav { display:none; }
+}
+@media(prefers-reduced-motion:reduce) { body { transition:none; } }
 /* ── 계정 (GNB 하단) ── */
 .gauth {
   flex: none;
@@ -1344,22 +1373,22 @@ window.ICO = {
 };
 </script>
 <aside class="gnb">
-  <div class="gnb-brand">엔티켓 업무 도구</div>
-  <nav class="tabs">
+  <div class="gnb-head"><div class="gnb-brand">엔티켓 업무 도구</div><button type="button" id="navToggle" aria-label="메뉴 접기" aria-expanded="true" aria-controls="mainNav" title="메뉴 접기"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path class="nav-toggle-arrow" d="M9 4v16m6-11-3 3 3 3"/></svg></button></div>
+  <nav class="tabs" id="mainNav">
     <div class="section-label">업무</div>
-    <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg>예매자 명단 정리</button>
-    <button class="tab" data-tab="sms"><svg class="ico"><use href="#i-nav-sms"/></svg>문자 발송 명단</button>
-    <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg>이미지 변환</button>
-    <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
+    <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg><span class="nav-label">예매자 명단 정리</span></button>
+    <button class="tab" data-tab="sms"><svg class="ico"><use href="#i-nav-sms"/></svg><span class="nav-label">문자 발송 명단</span></button>
+    <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg><span class="nav-label">이미지 변환</span></button>
+    <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg><span class="nav-label">공연 정산서</span></button>
     <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div></div>
-    <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg>인스타그램</button>
+    <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg><span class="nav-label">인스타그램</span></button>
     <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
     <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
-    <button class="gbtn" id="gLoginBtn" style="display:none" disabled>로그인</button>
+    <button class="gbtn" id="gLoginBtn" style="display:none" disabled><svg class="ico auth-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8l4 4-4 4m-9-4h13M10 4H5v16h5"/></svg><span>로그인</span></button>
     <span id="gUser" class="guser" style="display:none"></span>
-    <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
+    <button class="gbtn" id="gLogoutBtn" style="display:none"><svg class="ico auth-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8l4 4-4 4M8 12h10M10 4H5v16h5"/></svg><span>로그아웃</span></button>
   </div>
 </aside>
 <div class="wrap">
@@ -2377,6 +2406,26 @@ window.ICO = {
     console.error(msg);
   }
 })();
+/* Navigation width preference contains no account information. */
+const navToggle=document.getElementById('navToggle');
+const navViewport=matchMedia('(max-width:860px)');
+function syncNavToggle(){
+  const closed=document.documentElement.classList.contains(navViewport.matches?'nav-mobile-collapsed':'nav-collapsed');
+  navToggle.querySelector('.nav-toggle-arrow').setAttribute('d',closed?'M9 4v16m4-11 3 3-3 3':'M9 4v16m6-11-3 3 3 3');
+  navToggle.setAttribute('aria-expanded',String(!closed));navToggle.setAttribute('aria-label',closed?'메뉴 펼치기':'메뉴 접기');navToggle.title=closed?'메뉴 펼치기':'메뉴 접기';
+}
+function setNavCollapsed(closed){
+  document.documentElement.classList.toggle(navViewport.matches?'nav-mobile-collapsed':'nav-collapsed',closed);
+  if(!navViewport.matches)try{localStorage.setItem('enticket-nav-collapsed',String(closed));}catch{}
+  syncNavToggle();
+}
+navToggle.onclick=()=>setNavCollapsed(navToggle.getAttribute('aria-expanded')==='true');
+navViewport.addEventListener('change',syncNavToggle);syncNavToggle();
+for(const button of document.querySelectorAll('.tab')){
+  button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());
+  if(['settlement','instagram'].includes(button.dataset.tab))button.addEventListener('click',()=>{if(!navViewport.matches)setNavCollapsed(false);});
+}
+for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById(id);button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());}
 /* ===== 탭 전환 ===== */
 document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   t.addEventListener("click",()=>{
