@@ -1134,6 +1134,23 @@ td.c { text-align: center; }
   .ig-account > .btn { margin-left:44px; }
   #igEmpty { min-height:180px; }
 }
+
+#igDrop:has(#igFileName:not([hidden])) { padding:12px; min-height:0; }
+#igDrop:has(#igFileName:not([hidden])) .drop-ico, #igDrop:has(#igFileName:not([hidden])) .small { display:none; }
+#igDrop:has(#igFileName:not([hidden])) .big { font-size:13px; }
+#igReviewClose { font-size:22px; }
+.ig-compose-column { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.ig-grid > .ig-preview-card { position:sticky; top:20px; }
+.ig-compose-column .ig-caption-card { grid-column:auto; }
+.ig-adjust > .ig-fields { padding-top:12px; }
+#igDetailCount { font-size:12px; color:#8b769a; font-weight:400; }
+.ig-review { position:fixed; inset:0; margin:auto; width:min(780px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow:auto; padding:0; color:inherit; scrollbar-width:thin; scrollbar-color:#c7bdd0 transparent; }
+.ig-review::backdrop { background:#21192e66; }
+.ig-review > .ig-card-head { position:sticky; top:0; background:white; z-index:1; justify-content:space-between; }
+#igReviewImage { max-height:280px; object-fit:contain; }
+#igReviewCaption { max-height:280px; overflow:auto; }
+#igReviewStatus { margin-bottom:12px; }
+@media(max-width:640px) { .ig-grid > .ig-preview-card { position:static; } }
 .ig-subnav { display:none; flex-direction:column; gap:var(--spacing-4); margin:var(--spacing-4) 0 var(--spacing-8) 22px; padding-left:var(--spacing-12); border-left:1px solid var(--color-border-neutral-strong); }
 .tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) { display:flex; }
 .ig-subtab { position:relative; display:flex; align-items:center; min-height:34px; width:100%; border:0; border-radius:var(--radius-6); padding:var(--spacing-6) var(--spacing-12); text-align:left; font:inherit; font-size:var(--font-size-13); cursor:pointer; background:transparent; color:var(--txt-black-darker); }
@@ -1497,7 +1514,7 @@ window.ICO = {
         </div>
         <button class="btn ghost" id="igCheck">연결 확인</button>
       </div>
-      <div class="ig-grid">
+      <div class="ig-grid"><div class="ig-compose-column">
         <div class="ig-card">
           <div class="ig-card-head"><span class="ig-step">1</span><h3>이미지 준비</h3></div>
           <div class="ig-card-body">
@@ -1510,6 +1527,7 @@ window.ICO = {
                 <input id="igFile" type="file" accept="image/jpeg,image/png,image/webp">
               </label>
               <label class="ig-field">게시 위치 <select id="igChannel"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></label>
+              <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
@@ -1523,10 +1541,20 @@ window.ICO = {
               </div>
               </details>
               <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
+              </div></details>
             </fieldset>
           </div>
         </div>
-        <div class="ig-card ig-preview-card">
+        <div class="ig-card ig-caption-card">
+          <div class="ig-card-head"><span class="ig-step">2</span><h3>캡션</h3></div>
+          <div class="ig-card-body">
+            <fieldset class="ig-fields" id="igCaptionEditor" aria-label="게시 캡션 편집">
+<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="[공연명]"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="2" maxlength="220" id="igField_description" placeholder="[공연의 매력을 소개하는 한두 문장]"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="2" maxlength="600" id="igField_schedules" placeholder="0000.00.00.(요일) 오후 0시 · 여러 회차는 줄바꿈"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="[공연장명]"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><details class="ig-adjust" id="igCaptionDetails"><summary>상세 정보 <span id="igDetailCount"></span></summary><div class="ig-fields"><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="[관람 가능 연령]"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="[러닝타임]"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="2" maxlength="220" id="igField_price" placeholder="[좌석 등급·가격]"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="[문의 연락처]"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label></div></details><textarea id="igCaption" hidden></textarea></div>
+              <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
+            </fieldset>
+          </div>
+        </div>
+</div>        <div class="ig-card ig-preview-card">
           <div class="ig-card-head"><span class="ig-step">3</span><h3>게시 미리보기</h3></div>
           <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">1080 × 1350 px</span></div>
           <div class="ig-preview-stage">
@@ -1537,31 +1565,23 @@ window.ICO = {
             <p id="igCaptionPreview"></p><button class="btn ghost sm" id="igCaptionToggle" type="button" aria-expanded="false" aria-controls="igCaptionPreview" hidden>전체 보기</button>
             <div class="ig-preview-actions">
               <p class="ig-hint" id="igNextHint">계정을 연결하고 포스터 이미지를 선택해 주세요.</p>
-              <div class="btn-row"><button class="btn ghost" id="igDownload" disabled>이미지 다운로드</button><button class="btn" id="igPrepare" disabled>최종 확인하기</button></div>
+              <div class="btn-row"><button class="btn ghost" id="igDownload" disabled>이미지 다운로드</button><button class="btn" id="igPrepare" disabled>게시 준비</button></div>
             </div>
           </div>
         </div>
-        <div class="ig-card ig-caption-card">
-          <div class="ig-card-head"><span class="ig-step">2</span><h3>캡션</h3></div>
-          <div class="ig-card-body">
-            <fieldset class="ig-fields" id="igCaptionEditor" aria-label="게시 캡션 편집">
-<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="[공연명]"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="2" maxlength="220" id="igField_description" placeholder="[공연의 매력을 소개하는 한두 문장]"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="2" maxlength="600" id="igField_schedules" placeholder="0000.00.00.(요일) 오후 0시 · 여러 회차는 줄바꿈"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="[공연장명]"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="[관람 가능 연령]"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="[러닝타임]"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="2" maxlength="220" id="igField_price" placeholder="[좌석 등급·가격]"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="[문의 연락처]"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><textarea id="igCaption" hidden></textarea></div>
-              <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
-            </fieldset>
-          </div>
-        </div>
       </div>
-      <div class="ig-card ig-review" id="igReview" hidden>
-        <div class="ig-card-head"><span class="ig-step">4</span><h3>게시 전 최종 확인</h3></div>
+      <dialog class="ig-card ig-review" id="igReview" aria-labelledby="igReviewTitle" hidden>
+        <div class="ig-card-head"><h3 id="igReviewTitle">게시 전 최종 확인</h3><button type="button" class="ig-detail-close" id="igReviewClose" aria-label="최종 확인 닫기">×</button></div>
         <div class="ig-card-body">
           <p id="igReviewAccount"></p>
           <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
           <p class="ig-hint">위 이미지와 문구가 그대로 공개됩니다. 즉시 게시 이미지는 준비 후 24시간, 예약 이미지는 예약 시각 후 24시간까지 보관됩니다.</p>
           <div class="ig-row"><div class="ig-field"><span>게시 방식</span><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><label class="ig-field" id="igScheduleField" hidden>예약 시각 · 한국 시간<input id="igScheduleTime" type="datetime-local"><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></label></div>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">게시 계정, 게시 위치, 이미지·문구와 게시 시각을 확인했습니다.</label>
-          <div class="btn-row"><button class="btn" id="igPublish" disabled>확인한 내용 지금 게시</button><button class="btn ghost" id="igNew">새 이미지 준비</button></div>
+          <p id="igReviewStatus" role="status" class="ig-hint"></p>
+          <div class="btn-row"><button class="btn" id="igPublish" disabled>확인한 내용 지금 게시</button><button class="btn ghost" id="igNew">내용 수정</button></div>
         </div>
-      </div>
+      </dialog>
       <p id="igStatus" role="status" aria-live="polite"></p>
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
       </div>
@@ -1874,21 +1894,29 @@ window.ICO = {
   function receipt(){ try { const value=JSON.parse(localStorage.getItem(receiptKey)); return value && /^[0-9a-f-]{36}$/.test(value.id) ? value : null; } catch { return null; } }
   function remember(id){ try { localStorage.setItem(receiptKey,JSON.stringify({id})); } catch {} $('igRecover').hidden=false; }
   function describe(e){ return messages[e.code] || e.message || '연결하지 못했습니다. 상태를 다시 확인해 주세요.'; }
-  function status(message,tone=''){ $('igStatus').textContent=message; $('igStatus').dataset.tone=tone; }
+  function status(message,tone=''){ $('igStatus').textContent=message; $('igStatus').dataset.tone=tone; $('igReviewStatus').textContent=message; }
+  function openReview(){ $('igReview').hidden=false; if(!$('igReview').open) $('igReview').showModal(); }
+  function closeReview(){ $('igReview').close(); $('igReview').hidden=true; $('igConfirm').checked=false; }
+  $('igReviewClose').onclick=()=>{if(!working){closeReview();controls();}};
+  $('igReview').addEventListener('cancel',event=>{event.preventDefault();if(!working){closeReview();controls();}});
   function controls(){
     const allowed=window.gdrive?.isAllowed();
     $('igGate').hidden=allowed; $('igWork').hidden=!allowed;
     $('igCheck').disabled=working;
     $('igEditor').disabled=working || !!job;
     $('igCaptionEditor').disabled=working || !!job;
-    $('igPrepare').disabled=working || !rendered || !account || !!job;
+    $('igPrepare').disabled=working || !rendered || !account;
     $('igDownload').disabled=working || !rendered;
     $('igAutoCaption').disabled=working || !bitmap || !!job;
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
     $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
     for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.checked=button.dataset.publishMode===$('igPublishMode').value;}
     $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working;
-    $('igNew').disabled=working;
+    $('igNew').disabled=working; $('igReviewClose').disabled=working;
+    const extra=['age','duration','price','inquiry','tags'];
+    const filled=extra.filter(key=>$('igField_'+key).value.trim()).length;
+    const missing=extra.filter(key=>!$('igMissing_'+key).hidden).length;
+    $('igDetailCount').textContent=(filled?'· '+filled+'개 입력':'')+(missing?' · '+missing+'개 확인 필요':'');
     $('igReset').disabled=working;
     $('igRecover').disabled=working;
     $('igAccountCard').dataset.connected=!!account;
@@ -1904,7 +1932,7 @@ window.ICO = {
     $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
     $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
     for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
-    $('igNextHint').textContent=job?'아래에서 최종 확인해 주세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'준비되면 최종 확인으로 진행하세요.';
+    $('igNextHint').textContent=job?'게시 준비를 눌러 최종 확인을 이어가세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'준비되면 최종 확인으로 진행하세요.';
     $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
   }
   async function api(path, fields){
@@ -1934,7 +1962,7 @@ window.ICO = {
     $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
-    $('igReview').hidden=true; $('igConfirm').checked=false;
+    closeReview(); $('igConfirm').checked=false;
     $('igPublishMode').value='now'; $('igScheduleTime').value=''; $('igScheduleField').hidden=true;
     $('igPublish').textContent='확인한 내용 지금 게시';
     controls();
@@ -1943,13 +1971,13 @@ window.ICO = {
     return !job || !['unknown','creating','checking','posting'].includes(job.status) || confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
   }
   function showJob(data){
-    job=data; $('igReview').hidden=false;
+    job=data; openReview();
     $('igReviewAccount').textContent='게시 계정: @'+data.account.username+' · '+(data.channel==='story'?'스토리':'피드');
     $('igPublish').textContent=data.status==='processing'?'확인한 게시 처리 계속':'확인한 내용 지금 게시';
     const labels={scheduled:'예약이 완료되었습니다. '+new Date(data.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' · 관리의 예약 메뉴에서 확인하세요.',cancelled:'예약이 취소되었습니다.',prepared:'게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.',processing:'인스타그램에서 이미지를 처리하고 있습니다. 잠시 후 게시 처리 계속을 눌러 주세요.',creating:'이미지를 전송 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',checking:'게시 상태를 확인 중입니다. 잠시 후 다시 확인해 주세요.',posting:'게시 요청 중입니다. 잠시 후 마지막 게시 상태를 확인해 주세요.',published:'인스타그램 게시 완료'+(data.mediaId?' · 게시물 ID: '+data.mediaId:''),failed:'게시 전 처리에 실패했습니다. '+(messages[data.error]||'이미지와 계정 설정을 확인해 주세요.'),unknown:'게시 결과를 확정하지 못했습니다. 재게시하지 말고 마지막 게시 상태와 인스타그램을 확인해 주세요.'};
     status(labels[data.status]||'게시 상태를 확인해 주세요.',data.status==='published'?'success':['failed','unknown'].includes(data.status)?'error':''); controls();
     if(['published','scheduled'].includes(data.status)) resetEditor();
-    if(data.status==='prepared') $('igReview').scrollIntoView({behavior:'smooth',block:'nearest'});
+
   }
   async function run(action){
     if(working) return; working=true; const current=session; controls();
@@ -2006,7 +2034,7 @@ window.ICO = {
     } catch(e){ $('igConnection').textContent=describe(e); throw e; }
   }));
   function selectImage(file){ return run(async current=>{
-    clearImage(); job=null; $('igReview').hidden=true; status(''); controls();
+    clearImage(); job=null; closeReview(); status(''); controls();
     if(!file) return;
     if(!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>15*1024*1024) throw new Error('15MB 이하의 JPEG, PNG, WebP 이미지를 선택해 주세요.');
     const selected=await createImageBitmap(file);
@@ -2065,6 +2093,7 @@ window.ICO = {
     if(!rendered) return; const a=document.createElement('a'); a.href=imageUrl; a.download='enticket-'+$('igChannel').value+'.jpg'; a.click();
   });
   $('igPrepare').addEventListener('click',()=>run(async current=>{
+    if(job){openReview();return;}
     if(!rendered || !account) return;
     const fields=composeCaption();
     if($('igChannel').value==='feed'){
@@ -2113,7 +2142,7 @@ window.ICO = {
   }));
   $('igNew').addEventListener('click',()=>{
     if(!canStartNew()) return;
-    job=null; $('igReview').hidden=true; $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
+    job=null; closeReview(); $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
   });
   $('igReset').addEventListener('click',()=>{
     if(working || !canStartNew()) return;
@@ -2259,7 +2288,7 @@ window.ICO = {
   });
   document.addEventListener('enticket-auth',()=>{
     session++; account=null; job=null; clearImage(); $('igFile').value=''; resetCaption(); $('igText').value='';
-    $('igCaptionPreview').textContent=''; $('igReview').hidden=true; $('igConfirm').checked=false; status('');
+    $('igCaptionPreview').textContent=''; closeReview(); $('igConfirm').checked=false; status('');
     $('igConnection').textContent='계정을 연결해 주세요.';
     $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'로그인이 필요한 기능입니다';
     $('igRecover').hidden=!receipt(); controls();

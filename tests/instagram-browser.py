@@ -94,6 +94,8 @@ with sync_playwright() as p:
     fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=600;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,600,900);return c.toDataURL('image/png').split(',')[1];}''')
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
+    expect(page.locator('#igField_inquiry')).to_be_hidden()
+    page.locator('#igCaptionDetails summary').click()
     expect(page.locator('#igField_inquiry')).to_be_visible()
     page.locator('#igAutoCaption').click()
     expect(page.locator('#igField_title')).to_have_value('자동 공연')
@@ -113,7 +115,8 @@ with sync_playwright() as p:
     assert page.locator('#igCaption').input_value().count('#')==5
     expect(page.locator('#igMissing_tags')).to_be_visible()
     page.locator('#igField_title').fill('지울 문구')
-    page.locator('.ig-adjust summary').click()
+    page.get_by_text('이미지 조절',exact=True).click()
+    page.get_by_text('크기·위치 조절',exact=True).click()
     page.locator('#igZoom').fill('50')
     page.locator('#igReset').click()
     expect_reset()
@@ -144,6 +147,11 @@ with sync_playwright() as p:
     preview = page.locator('#igPreview').evaluate('async img=>Array.from(new Uint8Array(await (await fetch(img.src)).arrayBuffer()))')
     assert bytes(preview) == state['published_image']
     assert state['publish_count'] == 0
+    page.locator('#igConfirm').check()
+    page.locator('#igReviewClose').click()
+    expect(page.locator('#igReview')).to_be_hidden()
+    page.locator('#igPrepare').click()
+    expect(page.locator('#igConfirm')).not_to_be_checked()
     page.locator('#igConfirm').check()
     expect(page.locator('#igPublish')).to_be_enabled()
     page.locator('#igPublish').click()
@@ -185,6 +193,7 @@ with sync_playwright() as p:
     expect(page.locator('#igPublish')).to_be_disabled()
     expect(page.locator('#igReview')).to_be_visible()
     expect(page.locator('#igPreview')).to_be_visible()
+    page.locator('#igReviewClose').click()
     page.locator('#igRecover').click()
     expect(page.locator('#igStatus')).to_contain_text('게시 완료')
     expect_reset()
