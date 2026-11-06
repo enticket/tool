@@ -107,8 +107,10 @@ with sync_playwright() as p:
     page.locator('.ig-calendar [data-prev]').click()
 
     page.get_by_role('button',name='2026년 11월 20일',exact=True).click()
-    page.get_by_role('combobox',name='시',exact=True).select_option('19')
-    page.get_by_role('combobox',name='분',exact=True).select_option('00')
+    page.get_by_role('textbox',name='시',exact=True).fill('19')
+    page.get_by_role('textbox',name='분',exact=True).fill('00')
+    page.get_by_role('button',name='분 증가',exact=True).click()
+    page.get_by_role('button',name='분 감소',exact=True).click()
     page.get_by_role('button',name='선택 완료').click()
     state['expected_time']='2026-11-20T10:00:00.000Z'
     expect(page.locator('#igPublish')).to_be_disabled()
@@ -122,8 +124,8 @@ with sync_playwright() as p:
     expect(page.locator('#igScheduleList')).to_contain_text('예약 대기')
     page.locator('#igScheduleList .ig-date-trigger').click()
     page.get_by_role('button',name='2026년 11월 21일',exact=True).click()
-    page.get_by_role('combobox',name='시',exact=True).select_option('20')
-    page.get_by_role('combobox',name='분',exact=True).select_option('30')
+    page.get_by_role('textbox',name='시',exact=True).fill('20')
+    page.get_by_role('textbox',name='분',exact=True).fill('30')
     page.get_by_role('button',name='선택 완료').click()
     state['expected_time']='2026-11-21T11:30:00.000Z'
     page.get_by_role('button',name='시간 변경',exact=True).click()

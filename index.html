@@ -1233,7 +1233,12 @@ td.c { text-align: center; }
 .ig-calendar-day:disabled { color:#d1cbd7; cursor:default; }
 .ig-calendar-time { display:flex; align-items:center; gap:8px; margin:20px 0; padding-top:18px; border-top:1px solid #eeeaf2; }
 .ig-calendar-time label { white-space:nowrap; flex-shrink:0; margin-right:auto; font-size:13px; color:#84768e; }
-.ig-calendar-time select { width:72px; flex:0 0 72px; min-width:0; padding:8px; border:1px solid #e2dce8; border-radius:8px; background:#faf8fc; color:#40364a; font:inherit; }
+.ig-time-stepper { display:flex; flex-direction:column; align-items:center; width:64px; flex-shrink:0; border:1px solid #e6deed; border-radius:10px; background:#faf8fc; overflow:hidden; }
+.ig-time-stepper:focus-within { border-color:#956ab3; box-shadow:0 0 0 3px #ede5f5; }
+.ig-time-stepper button { width:100%; height:26px; border:0; background:transparent; color:#987eaa; line-height:1; }
+.ig-time-stepper button:hover { background:#eee6f5; color:#64348b; }
+.ig-time-stepper input { width:100%; min-width:0; padding:2px 0; border:0; outline:none; background:transparent; text-align:center; font-family:inherit; line-height:1.4; font-size:22px; font-weight:600; color:#563373; font-variant-numeric:tabular-nums; }
+
 .ig-calendar-apply { width:100%; border:0; border-radius:8px; background:#64348b; color:white; padding:11px; }
 </style>
 </head>
@@ -5130,12 +5135,19 @@ window.OrigSeal = (function(){
 <script>
 (function(){
   const dialog=document.createElement('dialog');dialog.className='ig-calendar';dialog.setAttribute('aria-label','예약 날짜와 시간 선택');
-  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><select aria-label="시"></select><span>:</span><select aria-label="분"></select></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
+  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="시 증가">⌃</button><input aria-label="시" inputmode="numeric" type="text" maxlength="2" value="00" data-max="23"><button type="button" data-step="-1" aria-label="시 감소">⌄</button></div><span>:</span><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="분 증가">⌃</button><input aria-label="분" inputmode="numeric" type="text" maxlength="2" value="00" data-max="59"><button type="button" data-step="-1" aria-label="분 감소">⌄</button></div></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
   document.body.append(dialog);
-  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('select');
+  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('.ig-time-stepper input');
   const pad=n=>String(n).padStart(2,'0');
-  for(let n=0;n<24;n++)hour.add(new Option(pad(n),pad(n)));
-  for(let n=0;n<60;n++)minute.add(new Option(pad(n),pad(n)));
+  function normalizeTime(input){input.value=pad(Math.min(Number(input.dataset.max),Math.max(0,Number(input.value)||0)));}
+  for(const input of [hour,minute]){
+    const step=delta=>{normalizeTime(input);input.value=pad((Number(input.value)+delta+Number(input.dataset.max)+1)%(Number(input.dataset.max)+1));};
+    input.parentElement.querySelectorAll('button').forEach(button=>button.onclick=()=>step(Number(button.dataset.step)));
+    input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,2);});
+    input.addEventListener('blur',()=>normalizeTime(input));
+    input.addEventListener('focus',()=>input.select());
+    input.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();step(event.key==='ArrowUp'?1:-1);}});
+  }
   let target,selected,month;
   const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   function render(){
@@ -5162,6 +5174,7 @@ window.OrigSeal = (function(){
   dialog.querySelector('[data-next]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()+1);render();};
   dialog.querySelector('[data-close]').onclick=()=>dialog.close();
   dialog.querySelector('.ig-calendar-apply').onclick=()=>{
+    normalizeTime(hour);normalizeTime(minute);
     target.value=selected+'T'+hour.value+':'+minute.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));dialog.close();
   };
   function attach(input){
