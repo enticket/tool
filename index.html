@@ -1191,9 +1191,17 @@ td.c { text-align: center; }
 .ig-retention summary { cursor:pointer; width:fit-content; }
 .ig-retention p { margin-top:8px; line-height:1.6; }
 @media(max-width:640px) { #igReview > .ig-card-head { padding:16px; } #igReview > .ig-card-body { padding:0 16px 14px; } #igReviewImage { max-height:220px; } #igReviewCaption { max-height:150px; } }
-.ig-subnav, .settlement-subnav { display:none; flex-direction:column; gap:var(--spacing-4); margin:var(--spacing-4) 0 var(--spacing-8) 22px; padding-left:var(--spacing-12); border-left:1px solid var(--color-border-neutral-strong); }
-.tabs:has([data-tab="settlement"].active) .settlement-subnav { display:flex; }
-.tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) { display:flex; }
+.ig-subnav, .settlement-subnav {
+  display:grid; grid-template-rows:0fr; flex-shrink:0; opacity:0; visibility:hidden;
+  margin:0 0 -2px 22px;
+  transition:grid-template-rows .22s ease, opacity .18s ease, margin .22s ease, visibility .22s;
+}
+.submenu-items { display:flex; flex-direction:column; gap:var(--spacing-4); min-height:0; overflow:hidden; padding-left:var(--spacing-12); border-left:1px solid var(--color-border-neutral-strong); }
+.tabs:has([data-tab="settlement"].active) .settlement-subnav,
+.tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) {
+  grid-template-rows:1fr; opacity:1; visibility:visible; margin-top:var(--spacing-4); margin-bottom:var(--spacing-8);
+}
+@media(prefers-reduced-motion:reduce) { .ig-subnav, .settlement-subnav { transition:none; } }
 .ig-subtab { position:relative; display:flex; align-items:center; min-height:34px; width:100%; border:0; border-radius:var(--radius-6); padding:var(--spacing-6) var(--spacing-12); text-align:left; font:inherit; font-size:var(--font-size-13); cursor:pointer; background:transparent; color:var(--txt-black-darker); }
 .ig-subtab:hover { background:var(--bg-grey-lighter); color:var(--txt-black-darkest); }
 .ig-subtab.active { background:var(--bg-grey-lighter); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
@@ -1342,10 +1350,10 @@ window.ICO = {
     <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg>예매자 명단 정리</button>
     <button class="tab" data-tab="sms"><svg class="ico"><use href="#i-nav-sms"/></svg>문자 발송 명단</button>
     <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg>이미지 변환</button>
-    <button class="tab" data-tab="settlement"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
-    <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div>
-    <button class="tab" data-tab="instagram" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg>인스타그램</button>
-    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div>
+    <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
+    <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div></div>
+    <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg>인스타그램</button>
+    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
     <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
@@ -2382,6 +2390,7 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
         button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
       });
     }else t.classList.add("active");
+    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
     t.scrollIntoView({block:"nearest",inline:"nearest"});
     document.getElementById("panel-"+target).classList.add("active");
   });
