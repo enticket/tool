@@ -93,6 +93,18 @@ with sync_playwright() as p:
     page.locator('#igFile').set_input_files({'name':'test.png','mimeType':'image/png','buffer':base64.b64decode(fixture)})
     page.locator('#igField_title').fill('확인한 문구 #엔티켓')
     page.locator('#igPrepare').click()
+    expect(page.locator('#igReview')).to_be_visible()
+    for width in [1280,390]:
+        page.set_viewport_size({'width':width,'height':900})
+        page.locator('[data-publish-mode="now"]').check()
+        before=page.locator('#igReview').bounding_box()
+        page.locator('[data-publish-mode="schedule"]').check()
+        after=page.locator('#igReview').bounding_box()
+        assert abs(before['height']-after['height'])<1
+        assert abs(before['width']-after['width'])<1
+        assert abs(before['y']-after['y'])<1
+        expect(page.locator('#igImmediateNote')).to_be_hidden()
+    page.set_viewport_size({'width':1280,'height':720})
     page.locator('[data-publish-mode="schedule"]').click()
     expect(page.locator('#igScheduleField')).to_be_visible()
     page.locator('#igScheduleField .ig-date-trigger').click()
