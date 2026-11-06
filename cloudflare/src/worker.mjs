@@ -4,8 +4,46 @@ import { instagramConnection, instagramMedia, InstagramError } from './instagram
 import { generateCaption } from './instagram-caption.mjs';
 import { validDraftId } from './instagram-job.mjs';
 export { InstagramJob } from './instagram-job.mjs';
-const ROUTES = new Set(['/verify', '/stamp', '/upload', '/instagram/connection',
+const ROUTES = new Set(['/session/login', '/session', '/session/logout', '/verify', '/stamp', '/upload', '/instagram/connection',
   '/instagram/schedule', '/instagram/cancel', '/instagram/schedules', '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
+const SESSION_TTL = 86400000;
+const SESSION_COOKIE = '__Host-enticket_session';
+function sessionCookie(id = '') {
+  return `${SESSION_COOKIE}=${id}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${id ? 86400 : 0}`;
+}
+export class LoginSession {
+  constructor(ctx) { this.ctx = ctx; }
+  async fetch(request) {
+    const input = await request.json();
+    return this.ctx.storage.transaction(async storage => {
+      if (input.action === 'delete') { await storage.delete('session'); return Response.json({ok:true}); }
+      let session = await storage.get('session');
+      if (input.action === 'create' && !session) session = {email:input.email, expiresAt:Date.now()+SESSION_TTL};
+      if (!session || session.expiresAt <= Date.now()) {
+        await storage.delete('session'); return Response.json({error:'invalid_token'}, {status:401});
+      }
+      session.expiresAt = Date.now()+SESSION_TTL;
+      await storage.put('session', session);
+      await storage.setAlarm(session.expiresAt);
+      return Response.json(session);
+    });
+  }
+  async alarm() {
+    const session = await this.ctx.storage.get('session');
+    if (!session || session.expiresAt <= Date.now()) await this.ctx.storage.deleteAll();
+    else await this.ctx.storage.setAlarm(session.expiresAt);
+  }
+}
+function sessionId(request) {
+  const value = request.headers.get('Cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(SESSION_COOKIE+'='))?.slice(SESSION_COOKIE.length+1);
+  return /^[0-9a-f]{64}$/.test(value || '') ? value : null;
+}
+async function sessionCall(env, id, action, email) {
+  if (!env.LOGIN_SESSIONS) throw new ApiError('server_not_configured',503);
+  return env.LOGIN_SESSIONS.get(env.LOGIN_SESSIONS.idFromName(id)).fetch('https://session/', {
+    method:'POST', body:JSON.stringify({action,email})
+  });
+}
 const MAX_FILE = 10 * 1024 * 1024;
 const MAX_BODY = MAX_FILE + 1024 * 1024;
 class ApiError extends Error {
@@ -157,10 +195,42 @@ export default {
       if (!env.GOOGLE_CLIENT_ID || !env.ALLOWED_EMAILS) throw new ApiError('server_not_configured', 503);
       const form = await parseForm(request);
       const token = form.get('access_token');
-      if (typeof token !== 'string' || !token || token.length > 8192) throw new ApiError('missing_fields', 400);
-      const email = await verifyGoogleAccessToken(token, env.GOOGLE_CLIENT_ID);
+      const id = sessionId(request);
+      const sessionRoute = route.startsWith('/session');
+      // Cookie credentials may only be used by our own origin, including logout/login.
+      if (sessionRoute || id) {
+        if (request.headers.get('Origin') !== url.origin)
+          throw new ApiError('origin_not_allowed',403);
+      }
+      if (route === '/session/logout') {
+        if (id) await sessionCall(env,id,'delete');
+        cors['Set-Cookie'] = sessionCookie();
+        return json({ok:true},200,cors);
+      }
+      let email;
+      if (route === '/session/login' || (!id && !sessionRoute)) {
+        if (typeof token !== 'string' || !token || token.length > 8192) throw new ApiError('missing_fields',400);
+        email = await verifyGoogleAccessToken(token,env.GOOGLE_CLIENT_ID);
+      } else {
+        if (!id) throw new ApiError('invalid_token',401);
+        const response = await sessionCall(env,id,'touch');
+        if (!response.ok) { cors['Set-Cookie']=sessionCookie(); throw new ApiError('invalid_token',401); }
+        email = (await response.json()).email;
+        cors['Set-Cookie']=sessionCookie(id);
+      }
       const allowed = env.ALLOWED_EMAILS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-      if (!allowed.includes(email)) throw new ApiError('not_allowed', 403);
+      if (!allowed.includes(email)) {
+        if(id) await sessionCall(env,id,'delete');
+        cors['Set-Cookie']=sessionCookie();
+        throw new ApiError('not_allowed',403);
+      }
+      if (route === '/session/login') {
+        if(id) await sessionCall(env,id,'delete');
+        const fresh = Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+        await sessionCall(env,fresh,'create',email);
+        cors['Set-Cookie']=sessionCookie(fresh);
+      }
+      if (sessionRoute) return json({ok:true,allowed:true,email},200,cors);
       if (route === '/verify') return json({ ok: true, allowed: true, email }, 200, cors);
       if (route === '/instagram/connection')
         return json({ ok: true, connected: true, account: await instagramConnection(env) }, 200, cors);

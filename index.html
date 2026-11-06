@@ -1203,6 +1203,24 @@ td.c { text-align: center; }
 #panel-instagram input[type="datetime-local"] { box-sizing:border-box; min-width:0; max-width:100%; width:100%; height:46px; padding:0 var(--spacing-12); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); background:var(--bg-white-normal); color:var(--txt-black-darkest); font:inherit; font-size:var(--font-size-14); }
 #igReview .ig-row { margin-top:var(--spacing-16); gap:var(--spacing-16); align-items:start; }
 @media(max-width:640px) { #igReview .ig-row { grid-template-columns:minmax(0,1fr); } }
+
+.ig-date-trigger { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:46px; padding:10px 12px; border:1px solid #ddd8e3; border-radius:8px; background:white; color:#31283c; font:inherit; cursor:pointer; }
+.ig-calendar { width:min(340px,calc(100vw - 48px)); padding:24px; border:1px solid #e9e5ed; border-radius:16px; box-shadow:0 16px 64px #23133426; color:#31283c; }
+.ig-calendar::backdrop { background:#21192e55; }
+.ig-calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.ig-calendar button { font:inherit; cursor:pointer; }
+.ig-calendar-icon { border:0; background:transparent; color:#796886; width:32px; height:32px; border-radius:8px; }
+.ig-calendar-icon:hover { background:#f1edf5; }
+.ig-calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+.ig-calendar-grid span { font-size:12px; color:#92859d; padding:8px 0; }
+.ig-calendar-day { border:0; background:transparent; border-radius:50%; aspect-ratio:1; color:#40364a; }
+.ig-calendar-day:hover { background:#eee8f4; }
+.ig-calendar-day[aria-pressed="true"] { background:#64348b; color:white; }
+.ig-calendar-day:disabled { color:#d1cbd7; cursor:default; }
+.ig-calendar-time { display:flex; align-items:center; gap:8px; margin:20px 0; padding-top:18px; border-top:1px solid #eeeaf2; }
+.ig-calendar-time label { white-space:nowrap; flex-shrink:0; margin-right:auto; font-size:13px; color:#84768e; }
+.ig-calendar-time select { width:72px; flex:0 0 72px; min-width:0; padding:8px; border:1px solid #e2dce8; border-radius:8px; background:#faf8fc; color:#40364a; font:inherit; }
+.ig-calendar-apply { width:100%; border:0; border-radius:8px; background:#64348b; color:white; padding:11px; }
 </style>
 </head>
 <body>
@@ -1610,28 +1628,31 @@ window.ICO = {
   }
   const WORKER_URL = config.apiBase;
   if(WORKER_URL !== "/api") throw new Error("통합 백엔드는 같은 사이트의 /api 경로를 사용해야 합니다.");
+  let authRevision = 0;
   let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null, isAllowedUser = false;
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
   function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
-  function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
+  function showLoggedOut(){ authRevision++; accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
+  function tokenValid(){ return isAllowedUser; }
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
-    if(!tokenValid()) throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+
     let r;
     try{
       const fd = new FormData();
       fd.append("access_token", accessToken);
-      r = await fetch(WORKER_URL + "/verify", { method:"POST", body: fd });
+      r = await fetch(WORKER_URL + "/session/login", { method:"POST", body: fd });
     }catch(e){ throw new Error("로그인 서버에 연결하지 못했습니다. 잠시 후 다시 로그인해 주세요."); }
     const d = await r.json().catch(()=>({}));
-    if(r.status === 403 && d.error === "not_allowed") return false;
+    if(r.status === 403 && d.error === "not_allowed") throw new Error("이 계정은 허용목록에 없습니다.");
     if(r.status === 401) throw new Error("Google 인증을 확인하지 못했습니다. 다시 로그인해 주세요.");
     if(r.status === 403 && d.error === "email_not_verified") throw new Error("Google 계정의 이메일 인증 상태를 확인해 주세요.");
     if(!r.ok || d.ok !== true || d.allowed !== true) throw new Error("로그인 서버에서 계정 확인에 실패했습니다. 잠시 후 다시 로그인해 주세요.");
+    userEmail = d.email || userEmail;
+    accessToken = null;
     return true;
   }
   function initGis(){
@@ -1641,6 +1662,7 @@ window.ICO = {
       scope: "openid email profile",
       callback: async (resp)=>{
         if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        authRevision++;
         accessToken = resp.access_token;
         tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
         isAllowedUser = false; stampCache = null;
@@ -1674,13 +1696,40 @@ window.ICO = {
     if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     tokenClient.requestAccessToken();
   });
-  logoutBtn.addEventListener("click", ()=>{
-    if(accessToken && window.google && google.accounts && google.accounts.oauth2){
-      try{ google.accounts.oauth2.revoke(accessToken); }catch(e){}
-    }
-    accessToken=null; tokenExp=0; userEmail="";
-    showLoggedOut();
+  logoutBtn.addEventListener("click", async ()=>{
+    authRevision++;
+    logoutBtn.disabled = true;
+    try {
+      const r = await fetch(WORKER_URL + '/session/logout', {method:'POST',body:new FormData()});
+      if(!r.ok) throw new Error();
+      showLoggedOut();
+      authChannel?.postMessage('logout');
+    } catch { alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
+    finally { logoutBtn.disabled = false; }
   });
+  const authChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('enticket-auth') : null;
+  if(authChannel) authChannel.onmessage = e=>{ if(e.data === 'logout') showLoggedOut(); };
+  let lastActivityCheck = 0, checkingSession = false;
+  async function restoreSession(){
+    if(checkingSession) return;
+    checkingSession = true;
+    const revision = authRevision;
+    try {
+      const r = await fetch(WORKER_URL + '/session', {method:'POST',body:new FormData()});
+      const d = await r.json();
+      if(revision !== authRevision) return;
+      if(r.ok && d.allowed){
+        const wasLoggedIn = isAllowedUser;
+        isAllowedUser = true; userEmail = d.email;
+        if(!wasLoggedIn) showLoggedIn(userEmail);
+      } else if(r.status === 401 || r.status === 403) showLoggedOut();
+    } catch {} finally { checkingSession=false; lastActivityCheck=Date.now(); }
+  }
+  // Only real interaction renews an idle session; an unattended tab has no heartbeat.
+  for(const event of ['pointerdown','keydown']) document.addEventListener(event, ()=>{
+    if(isAllowedUser && Date.now()-lastActivityCheck > 60000) restoreSession();
+  }, {passive:true});
+  restoreSession();
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {
     isLoggedIn: function(){ return tokenValid(); },
@@ -1689,7 +1738,6 @@ window.ICO = {
     api: async function(path, fields){
       if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       Object.entries(fields||{}).forEach(([k,v])=>fd.append(k,v));
       const r = await fetch(WORKER_URL + path, { method:"POST", body: fd });
       const d = await r.json().catch(()=>({}));
@@ -1707,7 +1755,6 @@ window.ICO = {
       const mt = mimeType || "application/octet-stream";
       const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       fd.append("folder", folder);
       fd.append("filename", filename);
       fd.append("mime", mt);
@@ -1726,7 +1773,6 @@ window.ICO = {
       if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       if(stampCache) return stampCache;
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       const r = await fetch(WORKER_URL + "/stamp", { method:"POST", body: fd });
       const d = await r.json().catch(()=>({}));
       if(!r.ok || !d.ok || !d.b64){
@@ -5062,6 +5108,48 @@ window.OrigSeal = (function(){
       btnPdf.disabled=false;
     }
   });
+})();
+</script>
+<script>
+(function(){
+  const dialog=document.createElement('dialog');dialog.className='ig-calendar';dialog.setAttribute('aria-label','예약 날짜와 시간 선택');
+  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><select aria-label="시"></select><span>:</span><select aria-label="분"></select></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
+  document.body.append(dialog);
+  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('select');
+  const pad=n=>String(n).padStart(2,'0');
+  for(let n=0;n<24;n++)hour.add(new Option(pad(n),pad(n)));
+  for(let n=0;n<60;n++)minute.add(new Option(pad(n),pad(n)));
+  let target,selected,month;
+  const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  function render(){
+    const y=month.getUTCFullYear(),m=month.getUTCMonth();
+    dialog.querySelector('strong').textContent=`${y}년 ${m+1}월`;grid.replaceChildren();
+    for(const day of ['일','월','화','수','목','금','토']){const el=document.createElement('span');el.textContent=day;grid.append(el);}
+    for(let n=0;n<new Date(Date.UTC(y,m,1)).getUTCDay();n++)grid.append(document.createElement('i'));
+    const max=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,10);
+    for(let n=1;n<=new Date(Date.UTC(y,m+1,0)).getUTCDate();n++){
+      const date=`${y}-${pad(m+1)}-${pad(n)}`,button=document.createElement('button');button.type='button';button.className='ig-calendar-day';button.textContent=n;
+      button.setAttribute('aria-label',`${y}년 ${m+1}월 ${n}일`);button.setAttribute('aria-pressed',String(date===selected));button.disabled=date<korea()||date>max;
+      button.onclick=()=>{selected=date;render();};grid.append(button);
+    }
+  }
+  dialog.querySelector('[data-prev]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()-1);render();};
+  dialog.querySelector('[data-next]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()+1);render();};
+  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+  dialog.querySelector('.ig-calendar-apply').onclick=()=>{
+    target.value=selected+'T'+hour.value+':'+minute.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));dialog.close();
+  };
+  function attach(input){
+    if(input.dataset.calendar)return;input.dataset.calendar='true';input.hidden=true;input.tabIndex=-1;
+    const button=document.createElement('button');button.type='button';button.className='ig-date-trigger';button.setAttribute('aria-label','예약 날짜와 시간 선택');input.after(button);
+    function sync(){button.disabled=input.disabled;button.textContent=(input.value?input.value.replace('T','  ').replaceAll('-','.'):'날짜와 시간 선택')+'  ▦';}
+    button.onclick=()=>{target=input;const value=input.value||new Date(Date.now()+10*3600000).toISOString().slice(0,16);selected=value.slice(0,10);month=new Date(selected.slice(0,7)+'-01T00:00:00Z');hour.value=value.slice(11,13);minute.value=value.slice(14,16);render();dialog.showModal();};
+    input.addEventListener('input',sync);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled']});sync();
+    // Mode changes may initialize the underlying value without an input event.
+    document.querySelectorAll('[data-publish-mode]').forEach(b=>b.addEventListener('click',sync));
+  }
+  function scan(){document.querySelectorAll('#panel-instagram input[type="datetime-local"]').forEach(attach);}
+  scan();new MutationObserver(scan).observe(document.getElementById('panel-instagram'),{childList:true,subtree:true});
 })();
 </script>
 </body>

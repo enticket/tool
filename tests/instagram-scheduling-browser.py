@@ -25,15 +25,19 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/oauth2/v3/userinfo', lambda route: route.fulfill(json={'email': 'staff@example.test'}))
     def api(route):
         path = route.request.url.split('/api/')[1]
+        if path == 'session':
+            route.fulfill(status=401,json={'error':'invalid_token'}); return
+        if path == 'session/logout':
+            route.fulfill(json={'ok':True}); return
         calls.append(path)
         assert route.request.method == 'POST'
         message = BytesParser(policy=policy.default).parsebytes(('Content-Type: '+route.request.headers['content-type']+'\r\n\r\n').encode()+route.request.post_data_buffer)
         fields = {part.get_param('name', header='content-disposition'): part.get_payload(decode=True) for part in message.iter_parts()}
-        assert fields.pop('access_token') == b'synthetic-google-token'
+        assert fields.pop('access_token',None) == (b'synthetic-google-token' if path == 'session/login' else None)
         if not state['allowed']:
             route.fulfill(status=403, json={'error': 'not_allowed'}); return
-        if path == 'verify':
-            route.fulfill(json={'ok': True, 'allowed': True}); return
+        if path == 'session/login':
+            route.fulfill(json={'ok': True, 'allowed': True,'email':'staff@example.test'}); return
         assert path.startswith('instagram/')
         if path == 'instagram/connection':
             if state['instagram_error']:
@@ -91,7 +95,11 @@ with sync_playwright() as p:
     page.locator('#igPrepare').click()
     page.locator('[data-publish-mode="schedule"]').click()
     expect(page.locator('#igScheduleField')).to_be_visible()
-    page.locator('#igScheduleTime').fill('2026-11-20T19:00')
+    page.locator('#igScheduleField .ig-date-trigger').click()
+    page.get_by_role('button',name='2026년 11월 20일',exact=True).click()
+    page.get_by_role('combobox',name='시',exact=True).select_option('19')
+    page.get_by_role('combobox',name='분',exact=True).select_option('00')
+    page.get_by_role('button',name='선택 완료').click()
     state['expected_time']='2026-11-20T10:00:00.000Z'
     expect(page.locator('#igPublish')).to_be_disabled()
     page.locator('#igConfirm').check()
@@ -102,7 +110,11 @@ with sync_playwright() as p:
     page.locator('[data-ig-view="manage"]').click()
     page.locator('#igShowScheduled').click()
     expect(page.locator('#igScheduleList')).to_contain_text('예약 대기')
-    page.locator('#igScheduleList input[type=datetime-local]').fill('2026-11-21T20:30')
+    page.locator('#igScheduleList .ig-date-trigger').click()
+    page.get_by_role('button',name='2026년 11월 21일',exact=True).click()
+    page.get_by_role('combobox',name='시',exact=True).select_option('20')
+    page.get_by_role('combobox',name='분',exact=True).select_option('30')
+    page.get_by_role('button',name='선택 완료').click()
     state['expected_time']='2026-11-21T11:30:00.000Z'
     page.get_by_role('button',name='시간 변경',exact=True).click()
     expect(page.locator('#igScheduleList input')).to_have_value('2026-11-21T20:30')

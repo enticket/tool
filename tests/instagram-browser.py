@@ -25,15 +25,19 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/oauth2/v3/userinfo', lambda route: route.fulfill(json={'email': 'staff@example.test'}))
     def api(route):
         path = route.request.url.split('/api/')[1]
+        if path == 'session':
+            route.fulfill(status=401,json={'error':'invalid_token'}); return
+        if path == 'session/logout':
+            route.fulfill(json={'ok':True}); return
         calls.append(path)
         assert route.request.method == 'POST'
         message = BytesParser(policy=policy.default).parsebytes(('Content-Type: '+route.request.headers['content-type']+'\r\n\r\n').encode()+route.request.post_data_buffer)
         fields = {part.get_param('name', header='content-disposition'): part.get_payload(decode=True) for part in message.iter_parts()}
-        assert fields.pop('access_token') == b'synthetic-google-token'
+        assert fields.pop('access_token',None) == (b'synthetic-google-token' if path == 'session/login' else None)
         if not state['allowed']:
             route.fulfill(status=403, json={'error': 'not_allowed'}); return
-        if path == 'verify':
-            route.fulfill(json={'ok': True, 'allowed': True}); return
+        if path == 'session/login':
+            route.fulfill(json={'ok': True, 'allowed': True,'email':'staff@example.test'}); return
         assert path.startswith('instagram/')
         if path == 'instagram/connection':
             if state['instagram_error']:
@@ -191,7 +195,7 @@ with sync_playwright() as p:
     assert page.locator('#igCaption').input_value() == page.locator('#igCaption').evaluate('(el)=>el.defaultValue')
     state['allowed'] = False
     page.locator('#gLoginBtn').click()
-    expect(page.locator('#igGate')).to_contain_text('허용목록에 없습니다')
+    expect(page.locator('#igGate')).to_contain_text('로그인이 필요한 기능입니다')
     expect(page.locator('#igWork')).to_be_hidden()
     page.set_viewport_size({'width': 390, 'height': 844})
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
