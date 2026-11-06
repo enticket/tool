@@ -61,11 +61,12 @@ function safeMediaUrl(value, permalink=false){
 export async function instagramMedia(env, after=''){
   if(typeof after!=='string' || after.length>2048 || (after && !/^[a-zA-Z0-9_+=\/-]+$/.test(after))) throw new InstagramError('instagram_invalid_cursor',400);
   const account=await instagramConnection(env);
-  const result=await instagramRequest(env,account.id+'/media',{fields:'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp',limit:12,after});
+  const result=await instagramRequest(env,account.id+'/media',{fields:'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,children{id,media_type,media_url,thumbnail_url}',limit:12,after});
   if(!Array.isArray(result.data)) throw new InstagramError('instagram_unavailable');
   const items=result.data.filter(x=>/^\d+$/.test(x.id)).map(x=>({
     id:x.id,caption:typeof x.caption==='string'?x.caption.slice(0,10000):'',
     type:x.media_type==='CAROUSEL_ALBUM'?'여러 장':x.media_product_type==='REELS'?'릴스':x.media_type==='VIDEO'?'동영상':'사진',
+    assets:(x.media_type==='CAROUSEL_ALBUM' && Array.isArray(x.children?.data)?x.children.data:[x]).slice(0,20).map(a=>({type:a.media_type==='VIDEO'?'video':'image',url:safeMediaUrl(a.media_url),poster:safeMediaUrl(a.thumbnail_url)})).filter(a=>a.url),
     thumbnail:safeMediaUrl(x.media_type==='VIDEO'?x.thumbnail_url:x.media_url),
     permalink:safeMediaUrl(x.permalink,true),timestamp:Number.isFinite(Date.parse(x.timestamp))?new Date(x.timestamp).toISOString():null,
   })).sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));

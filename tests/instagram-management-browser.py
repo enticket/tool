@@ -43,7 +43,7 @@ with sync_playwright() as p:
             if state.get('media_error'):
                 route.fulfill(status=503,json={'error':'instagram_permission_denied'}); return
             more=fields.get('after')==b'next_page'
-            items=[] if state.get('empty') else [{'id':'2' if more else '1','caption':'<img src=x onerror=alert(1)> 포스터','type':'사진','thumbnail':None,'timestamp':'2026-11-06T00:00:00Z','permalink':'https://www.instagram.com/p/test/'}]
+            items=[] if state.get('empty') else [{'id':'2' if more else '1','caption':'<img src=x onerror=alert(1)> 포스터','type':'사진','thumbnail':None,'assets':[{'type':'image','url':'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'},{'type':'image','url':'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}],'timestamp':'2026-11-06T00:00:00Z','permalink':'https://www.instagram.com/p/test/'}]
             route.fulfill(json={'ok':True,'account':{'username':'en__ticket'},'items':items,'nextCursor':None if more or state.get('empty') else 'next_page'}); return
         if path == 'instagram/caption':
             assert fields['file'].startswith(b'\xff\xd8')
@@ -84,6 +84,17 @@ with sync_playwright() as p:
     expect(page.locator('#igMediaList article')).to_have_count(1)
     expect(page.locator('#igMediaList')).to_contain_text('<img src=x onerror=alert(1)>')
     assert page.locator('#igMediaList img').count()==0
+    page.locator('#igMediaList button').first.click()
+    expect(page.locator('#igDetail')).to_be_visible()
+    expect(page.locator('#igDetailCaption')).to_have_text('<img src=x onerror=alert(1)> 포스터')
+    expect(page.locator('#igDetailCaption img')).to_have_count(0)
+    expect(page.locator('#igDetailPage')).to_have_text('1 / 2')
+    page.locator('#igDetailNext').click()
+    expect(page.locator('#igDetailPage')).to_have_text('2 / 2')
+    expect(page.locator('#igDetailNext')).to_be_disabled()
+    page.keyboard.press('Escape')
+    expect(page.locator('#igDetail')).not_to_be_visible()
+    expect(page.locator('#igMediaList button').first).to_be_focused()
     page.locator('#igLoadMore').click()
     expect(page.locator('#igMediaList article')).to_have_count(2)
     expect(page.locator('#igLoadMore')).to_be_hidden()
