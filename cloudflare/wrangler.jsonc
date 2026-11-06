@@ -8,6 +8,7 @@
     "run_worker_first": [
       "/api",
       "/api/*",
+      "/instagram-media/*",
       "/verify",
       "/upload",
       "/stamp",
@@ -16,6 +17,10 @@
   },
   "main": "src/worker.mjs",
   "keep_vars": true,
+  "durable_objects": {
+    "bindings": [{ "name": "LOGIN_SESSIONS", "class_name": "LoginSession" }, { "name": "INSTAGRAM_JOBS", "class_name": "InstagramJob" }]
+  },
+  "migrations": [{ "tag": "instagram-v1", "new_sqlite_classes": ["InstagramJob"] }, { "tag": "login-v1", "new_sqlite_classes": ["LoginSession"] }],
   "workers_dev": true,
   "routes": [
     {

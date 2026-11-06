@@ -1,0 +1,37 @@
+"""Navigation state, persistence, grouped menu access and mobile collapse."""
+import urllib.request
+from playwright.sync_api import sync_playwright,expect
+with sync_playwright() as p:
+    browser=p.chromium.launch(executable_path='/usr/bin/chromium')
+    page=browser.new_page(viewport={'width':1280,'height':900})
+    def cdn(route):
+        request=urllib.request.Request(route.request.url,headers={'User-Agent':'Mozilla/5.0'})
+        with urllib.request.urlopen(request,timeout=30) as response:
+            route.fulfill(content_type='application/javascript',body=response.read())
+    page.route('https://cdn.jsdelivr.net/**',cdn)
+    page.route('https://accounts.google.com/gsi/client',lambda r:r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient(){return {requestAccessToken(){}}}}}}"))
+    page.route('**/api/session',lambda r:r.fulfill(status=401,json={'error':'invalid_token'}))
+    page.goto('http://127.0.0.1:8787',wait_until='networkidle')
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','true')
+    page.locator('#navToggle').click()
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
+    page.wait_for_function("Math.abs(document.querySelector('.gnb').getBoundingClientRect().width-72)<1")
+    expect(page.locator('[data-tab=sms] .nav-label')).to_be_hidden()
+    page.locator('[data-tab=sms]').click()
+    expect(page.locator('#panel-sms')).to_be_visible()
+    page.reload(wait_until='networkidle')
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
+    page.screenshot(path='/tmp/nav-collapsed.png')
+    page.locator('[data-tab=settlement]').click()
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','true')
+    page.locator('[data-tab=oseal]').click()
+    expect(page.locator('#panel-oseal')).to_be_visible()
+    page.set_viewport_size({'width':390,'height':844})
+    page.locator('#navToggle').click()
+    expect(page.locator('#mainNav')).to_be_hidden()
+    page.locator('#navToggle').click()
+    expect(page.locator('#mainNav')).to_be_visible()
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    page.screenshot(path='/tmp/nav-mobile.png')
+    browser.close()
+print('PASS: navigation collapse, icon actions, saved preference, grouped menus and mobile')

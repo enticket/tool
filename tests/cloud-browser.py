@@ -29,9 +29,13 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/oauth2/v3/userinfo', lambda r: r.fulfill(json={'email':'staff@example.test'}))
     def api(route):
         path = route.request.url.split('/api/')[1]
+        if path == 'session':
+            route.fulfill(status=401,json={'error':'invalid_token'}); return
+        if path == 'session/logout':
+            route.fulfill(json={'ok':True}); return
         calls.append(path)
         assert route.request.method == 'POST'
-        assert b'synthetic-token' in route.request.post_data_buffer
+        assert (b'synthetic-token' in route.request.post_data_buffer) == (path == 'session/login')
         if state['network_error']:
             route.abort()
         elif state['server_error']:
@@ -40,8 +44,8 @@ with sync_playwright() as p:
             route.fulfill(status=401, json={'error':'invalid_token'})
         elif not state['allowed']:
             route.fulfill(status=403, json={'error':'not_allowed'})
-        elif path == 'verify':
-            route.fulfill(json={'ok':True, 'allowed':True})
+        elif path == 'session/login':
+            route.fulfill(json={'ok':True, 'allowed':True,'email':'staff@example.test'})
         elif path == 'stamp':
             route.fulfill(json={'ok':True, 'b64':state['stamp']})
         elif path == 'upload':
@@ -54,6 +58,7 @@ with sync_playwright() as p:
     page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8787'), wait_until='networkidle')
     expect(page.locator('#localStampControls')).to_be_hidden()
     expect(page.locator('#gLoginBtn')).to_be_enabled()
+    page.locator('[data-tab="settlement"]').click()
     page.locator('[data-tab="oseal"]').click()
     expect(page.locator('#osealWork')).to_be_hidden()
     page.locator('#gLoginBtn').click()
@@ -90,17 +95,18 @@ with sync_playwright() as p:
     assert not page.evaluate('gdrive.isLoggedIn()')
     state.update(expired=False, allowed=False)
     page.locator('#gLoginBtn').click()
-    expect(page.locator('#gUser')).to_be_visible()
+    expect(page.locator('#gUser')).to_be_hidden()
+    page.locator('[data-tab="settlement"]').click()
     page.locator('[data-tab="oseal"]').click()
     expect(page.locator('#osealWork')).to_be_hidden()
-    expect(page.locator('#osealGate')).to_contain_text('허용되지 않은 계정')
+    expect(page.locator('#osealGate')).to_contain_text('로그인이 필요한 기능입니다')
     assert '허용목록에 없습니다' in dialogs[-1]
-    page.locator('#gLogoutBtn').click()
     state['allowed'] = True
     for failure, message in [('server_error', '계정 확인에 실패'), ('network_error', '연결하지 못했습니다'), ('expired', 'Google 인증을 확인하지 못했습니다')]:
         state[failure] = True
         count = len(dialogs)
-        page.locator('#gLoginBtn').click()
+        with page.expect_event('dialog'):
+            page.locator('#gLoginBtn').click()
         page.wait_for_function('gdrive.isLoggedIn() === false')
         expect(page.locator('#gLoginBtn')).to_be_visible()
         assert len(dialogs) == count + 1, dialogs

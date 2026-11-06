@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>엔티켓 업무 도구</title>
 <script>
+try { if(localStorage.getItem('enticket-nav-collapsed')==='true') document.documentElement.classList.add('nav-collapsed'); } catch {}
 // Keep old bookmarks working after the Cloudflare move.
 if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)?$/.test(location.pathname)) {
   location.replace("https://tools.enticket.kr/");
@@ -13,6 +14,10 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
 [hidden] { display: none !important; }
+.auth-loading { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#978a9f; height:30px; padding:0; }
+.auth-loading:not(.is-error)::before { content:""; display:block; width:14px; height:14px; flex-shrink:0; box-sizing:border-box; border:2px solid #e5ddeb; border-top-color:#75469b; border-radius:50%; animation:auth-spin .8s linear infinite; }
+@keyframes auth-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .auth-loading::before { animation:none; } }
 /* ============================================================
    엔티켓 업무 도구 — 디자인 토큰
    Bezier Design System 구조를 따른다:
@@ -238,6 +243,8 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
    값은 모두 토큰 참조. 색을 hex/rgba로 하드코딩하지 않는다.
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Keep content aligned when switching between short and scrollable tools. */
+html { scrollbar-gutter: stable; }
 /* 앱 셸: 좌측 GNB + 콘텐츠 2열.
    (display:none인 스프라이트·스크립트는 그리드 아이템이 되지 않는다) */
 body {
@@ -316,16 +323,49 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
 .tab:hover { background: var(--bg-grey-light); color: var(--txt-black-darkest); }
 .tab.active { background: var(--color-fill-accent); color: var(--color-text-accent); }
 .tab:focus-visible { outline: 2px solid var(--color-text-accent); outline-offset: 1px; }
+.gnb-head { display:flex; align-items:center; justify-content:space-between; gap:4px; flex:none; margin-bottom:8px; }
+.gnb-head .gnb-brand { padding:8px 0 8px 12px; white-space:nowrap; font-size:15px; }
+#navToggle { display:flex; align-items:center; justify-content:center; width:30px; height:32px; flex:none; padding:0; border:0; border-radius:6px; background:transparent; color:var(--txt-black-dark); cursor:pointer; }
+#navToggle:hover { background:var(--color-fill-accent); color:var(--color-text-accent); }
+#navToggle:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.auth-icon { display:none; }
+@media(min-width:861px) {
+  body { transition:grid-template-columns .22s ease; }
+  .nav-collapsed body { grid-template-columns:72px minmax(0,1fr); }
+  .nav-collapsed .gnb-head { justify-content:center; }
+  .nav-collapsed .gnb-brand, .nav-collapsed .nav-label, .nav-collapsed .section-label { display:none; }
+  .nav-collapsed .tab { justify-content:center; padding:10px; }
+  .nav-collapsed .ig-subnav, .nav-collapsed .settlement-subnav { display:none; }
+  .nav-collapsed .gauth { justify-content:center; }
+  .nav-collapsed #gUser { display:none !important; }
+  .nav-collapsed .gauth .gbtn { width:34px; padding:0; justify-content:center; }
+  .nav-collapsed .gauth .gbtn span { display:none; }
+  .nav-collapsed .auth-icon { display:block; }
+  .nav-collapsed .auth-loading:not(.is-error) { font-size:0; gap:0; }
+  .nav-collapsed .auth-loading.is-error { font-size:10px; text-align:center; }
+  .nav-collapsed #gAuthRetry { width:auto; font-size:10px; padding:0 2px; }
+}
+@media(max-width:860px) {
+  .gnb-head { margin:0; }
+  .gnb-head .gnb-brand { padding:0; font-size:14px; }
+  .nav-mobile-collapsed #mainNav { display:none; }
+}
+@media(prefers-reduced-motion:reduce) { body { transition:none; } }
 /* ── 계정 (GNB 하단) ── */
 .gauth {
   flex: none;
-  display: flex; align-items: center; flex-wrap: wrap;
+  display: flex; align-items: center; align-content:flex-end; flex-wrap: wrap;
+  height:69px;
   gap: var(--spacing-8);
   margin-top: var(--spacing-12);
   padding-top: var(--spacing-12);
   border-top: 1px solid var(--color-border-neutral);
 }
+@media (min-width:861px) {
+  .gauth:has(#gAuthLoading:not([hidden])) { align-content:center; justify-content:center; padding-top:0; }
+}
 .gauth .gbtn {
+  flex-shrink:0;
   display: inline-flex; align-items: center;
   height: 30px;
   background: var(--color-fill-accent); color: var(--color-text-accent);
@@ -340,7 +380,7 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
 .gauth .gbtn:hover { background: var(--color-fill-accent-hover); }
 .gauth .gbtn:disabled { opacity: var(--opacity-disabled); cursor: default; }
 .gauth .guser {
-  flex: 1 0 100%;
+  flex: 1 0 100%; min-width:0; line-height:18px;
   font-size: var(--font-size-12);
   color: var(--txt-black-darker);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -369,7 +409,15 @@ h2 {
   color: var(--txt-black-darker);
   margin-bottom: var(--spacing-20);
 }
-h2 + .drop, h2 + .node, h2 + #sessions, h2 + .gate, h2 + .bar,
+/* 제목과 첫 카드 간격은 로그인 상태나 숨겨진 요소와 관계없이 동일하게 유지한다. */
+.panel-view > h2, .feature-heading h2 { min-height: var(--b-form-field-size); display:flex; align-items:center; }
+.panel-view > h2 { margin: 0 0 var(--spacing-20); }
+.feature-heading {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--spacing-12); margin-bottom: var(--spacing-20);
+}
+.feature-heading h2 { margin: 0; flex-shrink: 0; }
+.feature-heading .bar { margin: 0; justify-content: flex-end; }
 .sub + .gate, .sub + .panel { margin-top: var(--spacing-20); }
 /* ── 흐름 커넥터: 문자 대신 선 ── */
 .connector { display: flex; justify-content: center; padding: var(--spacing-10) 0; font-size: 0; }
@@ -465,7 +513,7 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   border: 1.5px dashed var(--color-border-neutral-strong);
   border-radius: var(--radius-12);
   background: var(--bg-white-normal);
-  padding: var(--spacing-24) var(--spacing-20);
+  padding: var(--spacing-24) var(--spacing-16);
   text-align: center; cursor: pointer;
   transition: border-color var(--motion-transition-fast), background var(--motion-transition-fast);
 }
@@ -499,7 +547,8 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   gap: var(--spacing-8); margin-bottom: var(--spacing-12);
 }
 .node-title {
-  font-size: var(--font-size-14);
+  font-size: var(--font-size-15);
+  line-height: var(--line-height-22);
   font-weight: var(--font-weight-700);
   color: var(--txt-black-darkest);
 }
@@ -566,7 +615,7 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   background: var(--bg-white-normal);
   border: 1px solid var(--color-border-neutral); border-bottom: none;
   border-radius: var(--radius-12) var(--radius-12) 0 0;
-  padding: var(--spacing-16) var(--spacing-16) var(--spacing-12);
+  padding: var(--spacing-16);
   font-size: var(--font-size-15);
   line-height: var(--line-height-22);
   letter-spacing: var(--letter-spacing-1);
@@ -586,6 +635,7 @@ input:disabled, select:disabled { opacity: var(--opacity-disabled); }
   padding: var(--spacing-16);
   box-shadow: var(--elevation-1);
 }
+#xlWarn:empty, #osealStatus:empty { display:none; }
 .out-controls, .controls {
   display: flex; flex-wrap: wrap; align-items: center;
   gap: var(--spacing-16); margin-bottom: var(--spacing-12);
@@ -820,7 +870,7 @@ td.c { text-align: center; }
   background: var(--bg-white-normal);
   border: 1px solid var(--color-border-neutral);
   border-radius: 0 0 var(--radius-12) var(--radius-12);
-  padding: var(--spacing-8) var(--spacing-10);
+  padding: var(--spacing-16);
   min-height: 80px;
   box-shadow: var(--elevation-1);
 }
@@ -1020,7 +1070,7 @@ td.c { text-align: center; }
 /* ── 반응형 (앱 레이어 몫 — 시스템은 브레이크포인트를 발행하지 않는다) ── */
 /* 좁은 화면에서는 GNB가 상단 가로 바로 접힌다 */
 @media (max-width: 860px) {
-  body { grid-template-columns: minmax(0, 1fr); }
+  body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .gnb {
     height: auto; flex-direction: row; align-items: center; flex-wrap: wrap;
     gap: var(--spacing-12);
@@ -1033,13 +1083,13 @@ td.c { text-align: center; }
   /* flex-basis 100%로 줄을 넘긴다 (flex:1만으로는 wrap되지 않음) */
   .tabs {
     order: 3; flex: 1 0 100%; min-height: 0;
-    flex-direction: row; gap: var(--spacing-4);
-    overflow-x: auto; overflow-y: visible;
+    flex-direction: row; flex-wrap: wrap; gap: var(--spacing-4);
+    overflow: visible;
     padding-bottom: var(--spacing-4);
   }
   .tab { width: auto; }
   .gauth {
-    margin: 0 0 0 auto; padding-top: 0;
+    margin: 0 0 0 auto; padding-top: 0; height:30px;
     border-top: none; flex-wrap: nowrap;
   }
   .gauth .guser { flex: none; max-width: 180px; }
@@ -1050,6 +1100,250 @@ td.c { text-align: center; }
   .supp-grid2 { grid-template-columns: 1fr; }
   .etc-row2 { grid-template-columns: 1fr 1fr; }
 }
+/* 인스타그램 — 기존 카드·입력 필드·상태 색상 토큰 공유 */
+.ig-account { padding:var(--spacing-12) var(--spacing-16); display:flex; align-items:center; gap:var(--spacing-12); }
+.ig-account-icon { display:grid; place-items:center; width:32px; height:32px; flex:none; border-radius:var(--radius-12); color:var(--color-text-accent); background:var(--color-fill-accent); }
+.ig-account-info { flex:1; min-width:0; display:flex; align-items:center; gap:var(--spacing-12); flex-wrap:wrap; }
+.ig-account-title { display:flex; gap:var(--spacing-8); align-items:center; flex-wrap:wrap; font-weight:var(--font-weight-700); }
+.ig-badge { display:inline-flex; padding:2px var(--spacing-8); border-radius:var(--radius-6); background:var(--bg-grey-lightest); color:var(--txt-black-darker); font-size:var(--font-size-12); font-weight:var(--font-weight-400); white-space:nowrap; }
+.ig-account[data-connected=true] .ig-badge { background:var(--color-fill-success); color:var(--color-text-success); }
+#igConnection { font-size:var(--font-size-12); color:var(--txt-black-darker); white-space:pre-wrap; overflow-wrap:anywhere; margin:0; }
+.ig-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-16); align-items:start; margin-top:var(--spacing-20); }
+.ig-card { border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); background:var(--bg-white-normal); box-shadow:var(--elevation-1); overflow:hidden; min-width:0; }
+.ig-card-head { display:flex; align-items:center; gap:var(--spacing-8); padding:var(--spacing-16); border-bottom:1px solid var(--color-border-neutral); }
+.ig-card-head h3 { line-height:var(--line-height-22); font-size:var(--font-size-15); font-weight:var(--font-weight-700); }
+.ig-step { display:grid; place-items:center; width:24px; height:24px; border-radius:var(--radius-6); background:var(--color-fill-accent); color:var(--color-text-accent); font-size:var(--font-size-12); font-weight:var(--font-weight-700); flex:none; }
+.ig-card-body { padding:var(--spacing-16); }
+.ig-fields { display:flex; flex-direction:column; gap:var(--spacing-16); min-width:0; border:0; padding:0; margin:0; }
+.ig-field { display:flex; flex-direction:column; gap:var(--spacing-6); min-width:0; font-size:var(--font-size-13); color:var(--txt-black-darker); }
+.ig-field-title { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-8); }
+.ig-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-12); }
+#igCaptionLabel textarea:not([hidden]) { min-height:36px; height:36px; padding:6px 10px; line-height:22px; }
+#igCaptionLabel [id^="igMissing_"] { color:var(--color-text-critical); }
+#panel-instagram textarea { width:100%; min-height:124px; resize:vertical; font:inherit; line-height:var(--line-height-22); padding:var(--spacing-10); color:var(--txt-black-darkest); background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); }
+#panel-instagram textarea:focus-visible, #igDrop:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+#panel-instagram input[type=color] { width:100%; height:36px; padding:4px; background:var(--bg-white-normal); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); cursor:pointer; }
+#panel-instagram input[type=range] { width:100%; accent-color:var(--color-bg-accent); box-shadow:none; }
+#panel-instagram fieldset:disabled { opacity:0.65; }
+#igDrop { background:var(--bg-grey-lighter); }
+#igDrop:hover, #igDrop.hover { background:var(--color-fill-accent); }
+#igFileName { display:block; overflow-wrap:anywhere; margin-top:var(--spacing-8); color:var(--color-text-accent); font-size:var(--font-size-12); }
+.ig-background-controls { display:flex; align-items:center; gap:var(--spacing-8); min-height:36px; }
+#panel-instagram .ig-background-controls input[type=color] { width:40px; flex:none; }
+.ig-blur-toggle { display:flex; align-items:center; gap:var(--spacing-4); cursor:pointer; font-size:var(--font-size-12); white-space:nowrap; }
+.ig-blur-toggle input { accent-color:var(--color-bg-accent); }
+.ig-adjust { border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); padding:var(--spacing-12) 0; }
+.ig-adjust summary { cursor:pointer; font-size:var(--font-size-13); font-weight:var(--font-weight-700); color:var(--txt-black-darker); }
+.ig-adjust .ig-sliders { padding-top:var(--spacing-16); }
+.ig-sliders { display:flex; flex-direction:column; gap:var(--spacing-12); }
+.ig-sliders output { color:var(--color-text-accent); font-variant-numeric:tabular-nums; }
+.ig-preview-meta { display:flex; justify-content:space-between; align-items:center; gap:var(--spacing-8); padding:var(--spacing-12) var(--spacing-16); font-size:var(--font-size-12); color:var(--txt-black-darker); }
+.ig-preview-stage { display:grid; place-items:center; padding:var(--spacing-16); background:var(--bg-grey-lightest); border-top:1px solid var(--color-border-neutral); border-bottom:1px solid var(--color-border-neutral); }
+.ig-preview { display:block; width:100%; max-height:300px; object-fit:contain; }
+#igEmpty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--spacing-8); min-height:200px; max-width:230px; color:var(--txt-black-dark); text-align:center; font-size:var(--font-size-13); }
+#igEmpty .ico { width:40px; height:40px; margin-bottom:var(--spacing-4); color:var(--color-icon-neutral); }
+#igEmpty strong { color:var(--txt-black-darker); }
+#igCaptionPreview { white-space:pre-wrap; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; margin-bottom:var(--spacing-8); font-size:var(--font-size-13); line-height:var(--line-height-22); }
+#igCaptionPreview:empty { display:none; }
+#igCaptionPreview.is-expanded { display:block; overflow:visible; -webkit-line-clamp:unset; }
+#igCaptionToggle { margin-bottom:var(--spacing-12); }
+.ig-review-content { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-16); margin:var(--spacing-16) 0; }
+#igReviewImage { width:100%; height:auto; }
+#igReviewCaption { white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--font-size-13); line-height:var(--line-height-22); }
+@media(max-width:640px) { .ig-review-content { grid-template-columns:minmax(0,1fr); } }
+#igNextHint:empty { display:none; }
+.ig-preview-actions { display:flex; flex-direction:column; gap:var(--spacing-12); }
+.ig-preview-actions .btn-row { display:grid; grid-template-columns:1fr 1fr; }
+.ig-hint { font-size:var(--font-size-12); color:var(--txt-black-darker); line-height:var(--line-height-18); }
+.ig-review { margin-top:var(--spacing-20); border-color:var(--color-border-neutral-strong); }
+#igReviewAccount { font-weight:var(--font-weight-700); margin-bottom:var(--spacing-8); }
+.ig-confirm { display:flex; align-items:flex-start; gap:var(--spacing-8); padding:var(--spacing-12); margin:var(--spacing-16) 0; background:var(--color-fill-accent); border-radius:var(--radius-8); font-size:var(--font-size-13); cursor:pointer; }
+.ig-confirm input { margin-top:3px; accent-color:var(--color-bg-accent); }
+#igStatus { white-space:pre-wrap; overflow-wrap:anywhere; padding:var(--spacing-12) var(--spacing-16); margin-top:var(--spacing-16); border-radius:var(--radius-8); background:var(--bg-grey-light); font-size:var(--font-size-13); }
+#igStatus:empty { display:none; }
+#igStatus[data-tone=error] { color:var(--color-text-critical); background:var(--color-fill-critical); }
+#igStatus[data-tone=success] { color:var(--color-text-success); background:var(--color-fill-success); }
+.ig-footer { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:var(--spacing-12); margin-top:var(--spacing-16); }
+.ig-caption-card { grid-column:1 / -1; }
+@media(max-width:640px) {
+  .ig-grid { grid-template-columns:minmax(0,1fr); }
+  .ig-caption-card { order:1; }
+  .ig-preview-card { order:2; }
+  .ig-account { flex-wrap:wrap; }
+  .ig-account-info { flex-basis:calc(100% - 44px); }
+  .ig-account > .btn { margin-left:44px; }
+  #igEmpty { min-height:180px; }
+}
+
+#igDrop:has(#igFileName:not([hidden])) { padding:12px; min-height:0; }
+#igDrop:has(#igFileName:not([hidden])) .drop-ico, #igDrop:has(#igFileName:not([hidden])) .small { display:none; }
+#igDrop:has(#igFileName:not([hidden])) .big { font-size:13px; }
+#igReviewClose { font-size:22px; }
+.ig-compose-column { display:flex; flex-direction:column; gap:16px; min-width:0; }
+.ig-grid > .ig-preview-card { position:sticky; top:20px; }
+.ig-compose-column .ig-caption-card { grid-column:auto; }
+.ig-adjust > .ig-fields { padding-top:12px; }
+#igDetailCount { font-size:12px; color:#8b769a; font-weight:400; }
+.ig-review { position:fixed; inset:0; margin:auto; width:min(780px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow:auto; padding:0; color:inherit; scrollbar-width:thin; scrollbar-color:#c7bdd0 transparent; }
+.ig-review::backdrop { background:#21192e66; }
+.ig-review > .ig-card-head { position:sticky; top:0; background:white; z-index:1; justify-content:space-between; }
+#igReviewImage { max-height:280px; object-fit:contain; }
+#igReviewCaption { max-height:280px; overflow:auto; }
+#igReviewStatus { margin-bottom:12px; }
+@media(max-width:640px) { .ig-grid > .ig-preview-card { position:static; } }
+
+#igReview { border:1px solid #e6e1eb; border-radius:14px; box-shadow:0 20px 80px #22152d33; }
+#igReview > .ig-card-head { padding:18px 22px; align-items:flex-start; }
+#igReviewAccount { font-size:12px; font-weight:400; color:#897b94; margin:6px 0 0; }
+#igReview > .ig-card-body { padding:0 22px 16px; }
+#igReview .ig-review-content { align-items:start; gap:24px; padding:20px 0; margin:0; border-bottom:1px solid #eeeaf2; }
+#igReview:has(#igReviewCaption:empty) { width:min(520px,calc(100vw - 32px)); }
+#igReview:has(#igReviewCaption:empty) .ig-review-content { grid-template-columns:1fr; justify-items:center; }
+#igReviewCaption:empty { display:none; }
+#igReviewImage { border-radius:5px; }
+#igReviewCaption { color:#554b5d; scrollbar-width:thin; }
+.ig-review-timing { padding-top:12px; }
+.ig-time-slot { height:84px; padding-top:10px; }
+#igScheduleField { gap:6px; font-size:12px; }
+#igScheduleField .ig-date-trigger { min-height:38px; padding:8px 10px; font-size:13px; }
+.ig-schedule-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.ig-schedule-heading .ig-hint { text-align:right; font-size:11px; }
+#igScheduleField .ig-date-trigger:disabled { background:#f4f3f6; border-color:#e8e5ed; color:#b2aab9; cursor:default; }
+#igScheduleField:has(input:disabled) .ig-schedule-heading { color:#a99faf; }
+@media(max-width:400px) { .ig-schedule-heading { font-size:11px; gap:4px; } .ig-schedule-heading .ig-hint { font-size:10px; } }
+#igReview .ig-confirm { padding:12px 0; margin:0; background:none; border-radius:0; color:#63576c; font-size:12px; border-top:1px solid #eeeaf2; }
+.ig-review-footer { display:flex; align-items:center; justify-content:flex-end; gap:16px; padding-top:4px; }
+
+.ig-review-footer #igPublish { min-width:120px; }
+#igReviewStatus:empty { display:none; }
+.ig-retention { color:#a195a8; font-size:11px; margin-top:14px; }
+.ig-retention summary { cursor:pointer; width:fit-content; }
+.ig-retention p { margin-top:8px; line-height:1.6; }
+@media(max-width:640px) { #igReview > .ig-card-head { padding:16px; } #igReview > .ig-card-body { padding:0 16px 14px; } #igReviewImage { max-height:220px; } #igReviewCaption { max-height:150px; } }
+.ig-subnav, .settlement-subnav {
+  display:grid; grid-template-rows:0fr; flex-shrink:0; opacity:0; visibility:hidden;
+  margin:0 0 -2px 22px;
+  transition:grid-template-rows .22s ease, opacity .18s ease, margin .22s ease, visibility .22s;
+}
+.submenu-items { display:flex; flex-direction:column; gap:var(--spacing-4); min-height:0; overflow:hidden; padding-left:var(--spacing-12); border-left:1px solid var(--color-border-neutral-strong); }
+.tabs:has([data-tab="settlement"].active) .settlement-subnav,
+.tabs:has([data-tab="instagram"].active) .ig-subnav:not([hidden]) {
+  grid-template-rows:1fr; opacity:1; visibility:visible; margin-top:var(--spacing-4); margin-bottom:var(--spacing-8);
+}
+@media(prefers-reduced-motion:reduce) { .ig-subnav, .settlement-subnav { transition:none; } }
+.ig-subtab { position:relative; display:flex; align-items:center; min-height:34px; width:100%; border:0; border-radius:var(--radius-6); padding:var(--spacing-6) var(--spacing-12); text-align:left; font:inherit; font-size:var(--font-size-13); cursor:pointer; background:transparent; color:var(--txt-black-darker); }
+.ig-subtab:hover { background:var(--bg-grey-lighter); color:var(--txt-black-darkest); }
+.ig-subtab.active { background:var(--bg-grey-lighter); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
+.ig-subtab.active::before { content:""; position:absolute; left:-14px; top:9px; bottom:9px; width:3px; border-radius:var(--radius-2); background:var(--color-bg-accent); }
+.ig-subtab:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-manage-toolbar { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-12); margin-bottom:var(--spacing-8); }
+.ig-manage-toolbar strong { font-size:var(--font-size-15); }
+.ig-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-20); margin:var(--spacing-16) 0; }
+.ig-media-card { min-width:0; border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); overflow:hidden; background:var(--bg-white-normal); transition:border-color .15s,box-shadow .15s; }
+.ig-media-card:hover { border-color:var(--color-text-accent); box-shadow:var(--elevation-2); }
+.ig-media-link { display:block; width:100%; height:100%; padding:0; border:0; background:transparent; text-align:left; font:inherit; cursor:pointer; color:inherit; }
+.ig-media-link:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:-3px; }
+.ig-media-art { position:relative; background:var(--bg-grey-lighter); border-bottom:1px solid var(--color-border-neutral); }
+.ig-media-cover { width:100%; aspect-ratio:4 / 5; object-fit:contain; padding:var(--spacing-8); display:block; }
+.ig-media-cover.empty { display:grid; place-items:center; }
+.ig-media-type { position:absolute; left:var(--spacing-12); top:var(--spacing-12); border-radius:var(--radius-6); padding:var(--spacing-4) var(--spacing-8); background:var(--bg-white-normal); color:var(--txt-black-darker); font-size:var(--font-size-12); box-shadow:var(--elevation-1); }
+.ig-media-body { padding:var(--spacing-12); }
+.ig-media-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; min-height:40px; margin-bottom:var(--spacing-12); font-size:var(--font-size-13); line-height:var(--line-height-20); color:var(--txt-black-darkest); }
+.ig-media-meta { display:flex; align-items:center; justify-content:space-between; color:var(--txt-black-dark); font-size:var(--font-size-12); }
+.ig-media-open { font-size:var(--font-size-15); color:var(--color-text-accent); }
+#igManageStatus { font-size:var(--font-size-12); color:var(--txt-black-dark); }
+#igManageStatus[data-error=true] { color:var(--color-text-critical); }
+#igManageAccount { flex:1; }
+@media(max-width:860px) { .ig-subnav, .settlement-subnav { flex-basis:100%; margin-left:var(--spacing-12); } }
+@media(max-width:640px) { .ig-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:360px) { .ig-media-grid { grid-template-columns:minmax(0,1fr); } }
+.ig-detail { width:min(900px,calc(100vw - 32px)); max-height:90dvh; margin:auto; padding:0; border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); background:var(--bg-white-normal); color:var(--txt-black-darkest); box-shadow:var(--elevation-2); }
+.ig-detail-link { display:inline-flex; align-items:center; justify-content:center; gap:var(--spacing-8); min-height:40px; padding:var(--spacing-8) var(--spacing-16); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); background:var(--bg-white-normal); color:var(--txt-black-darker); font-size:var(--font-size-13); font-weight:var(--font-weight-700); line-height:var(--line-height-20); text-decoration:none; transition:background .15s,border-color .15s,color .15s; }
+.ig-detail-link:hover { background:var(--bg-grey-lighter); border-color:var(--color-text-accent); color:var(--color-text-accent); }
+.ig-detail-link:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:3px; }
+.ig-detail-link svg { flex:none; }
+.ig-detail::backdrop { background:rgba(0,0,0,.55); }
+.ig-detail-head { display:flex; align-items:center; justify-content:space-between; padding:var(--spacing-16); border-bottom:1px solid var(--color-border-neutral); }
+.ig-detail-body { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--spacing-20); padding:var(--spacing-20); }
+#igDetailMedia img,#igDetailMedia video { display:block; width:100%; max-height:60dvh; object-fit:contain; }
+#igDetailCaption { white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--font-size-14); line-height:var(--line-height-22); margin:var(--spacing-16) 0; }
+.ig-detail-nav { display:flex; align-items:center; justify-content:space-between; margin-top:var(--spacing-12); }
+@media(max-width:640px) { .ig-detail-body { grid-template-columns:minmax(0,1fr); padding:var(--spacing-16); } }
+.ig-load-more-row { display:flex; justify-content:center; margin:var(--spacing-16) 0; }
+.ig-load-more { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; padding:0; border:0; border-radius:50%; color:var(--txt-black-darker); background:transparent; cursor:pointer; transition:background .15s,color .15s; }
+.ig-load-more:hover { background:var(--bg-grey-lighter); color:var(--color-text-accent); }
+.ig-load-more:disabled { opacity:var(--opacity-disabled); cursor:wait; }
+.ig-load-more:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-detail { scrollbar-width:thin; scrollbar-color:var(--color-border-neutral-strong) transparent; overscroll-behavior:contain; }
+.ig-detail::-webkit-scrollbar { width:6px; height:6px; }
+.ig-detail::-webkit-scrollbar-track { background:transparent; margin:12px 0; }
+.ig-detail::-webkit-scrollbar-thumb { background:var(--color-border-neutral-strong); border-radius:999px; }
+.ig-detail::-webkit-scrollbar-thumb:hover { background:var(--txt-black-dark); }
+.ig-detail::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.ig-detail-head { position:sticky; top:0; z-index:1; background:var(--bg-white-normal); }
+.ig-detail-close { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; border:0; border-radius:var(--radius-8); background:transparent; color:var(--txt-black-darker); cursor:pointer; }
+.ig-detail-close:hover { background:var(--bg-grey-lighter); color:var(--txt-black-darkest); }
+.ig-detail-close:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-detail-arrow { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; padding:0; border:0; border-radius:var(--radius-8); background:transparent; color:var(--txt-black-darker); cursor:pointer; }
+.ig-detail-arrow:hover:not(:disabled) { background:var(--bg-grey-lighter); color:var(--color-text-accent); }
+.ig-detail-arrow:disabled { opacity:var(--opacity-disabled); cursor:default; }
+.ig-detail-arrow:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-media-carousel { position:absolute; top:var(--spacing-12); right:var(--spacing-12); display:flex; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)); pointer-events:none; }
+.ig-management-tabs .btn[aria-pressed="false"] { background:transparent; color:var(--txt-black-darker); }
+.ig-channel-choice { display:flex; gap:8px; }
+.ig-channel-choice label { position:relative; flex:1; display:flex; align-items:center; justify-content:center; gap:8px; min-height:34px; padding:4px 8px; border:1px solid #e6e1eb; border-radius:8px; background:white; color:#82758d; cursor:pointer; font-size:13px; }
+.ig-channel-choice input { position:absolute; opacity:0; width:1px; height:1px; }
+.ig-channel-choice label:has(input:checked) { border-color:#a185b7; background:#f7f3fb; color:#64348b; }
+.ig-channel-choice label:has(input:focus-visible) { outline:2px solid #966db3; outline-offset:2px; }
+.ig-channel-choice small { margin-left:4px; font-size:11px; opacity:.75; }
+.ig-channel-symbol { width:13px; height:16px; border:1.4px solid currentColor; border-radius:3px; }
+.ig-channel-symbol.story { width:10px; height:17px; }
+.ig-publish-choice { display:flex; align-items:center; gap:24px; min-height:36px; }
+.ig-publish-choice label { display:inline-flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--txt-black-dark); cursor:pointer; }
+.ig-publish-choice input[type="radio"] { appearance:auto; width:16px; height:16px; margin:0; padding:0; accent-color:var(--color-text-accent); cursor:pointer; }
+.ig-publish-choice label:has(input:checked) { color:var(--color-text-accent); }
+.ig-publish-choice label:has(input:disabled) { opacity:var(--opacity-disabled); cursor:default; }
+
+#panel-instagram input[type="datetime-local"] { box-sizing:border-box; min-width:0; max-width:100%; width:100%; height:46px; padding:0 var(--spacing-12); border:1px solid var(--color-border-neutral-strong); border-radius:var(--radius-8); background:var(--bg-white-normal); color:var(--txt-black-darkest); font:inherit; font-size:var(--font-size-14); }
+#igReview .ig-row { margin-top:var(--spacing-16); gap:var(--spacing-16); align-items:start; }
+@media(max-width:640px) { #igReview .ig-row { grid-template-columns:minmax(0,1fr); } }
+
+.ig-date-trigger { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:46px; padding:10px 12px; border:1px solid #ddd8e3; border-radius:8px; background:white; color:#31283c; font:inherit; cursor:pointer; }
+.ig-reservation { display:grid; grid-template-columns:100px minmax(0,1fr); gap:18px; padding:20px; background:white; border:1px solid #e8e4ed; border-radius:12px; }
+.ig-reservation-image { width:100px; height:132px; object-fit:contain; background:#f7f6f9; border-radius:6px; grid-row:1; }
+.ig-reservation-summary { grid-column:2; min-width:0; align-self:center; }
+.ig-reservation-meta { display:flex; align-items:center; gap:10px; font-size:12px; color:#918699; margin-bottom:10px; }
+.ig-reservation-badge { background:#f1ebf7; color:#653b84; border-radius:5px; padding:4px 7px; }
+.ig-reservation-date { display:block; font-size:17px; color:#352a40; margin-bottom:10px; }
+.ig-reservation .ig-media-caption { margin:0; color:#81758b; font-size:13px; line-height:1.6; -webkit-line-clamp:2; }
+.ig-reservation-actions { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:14px; border-top:1px solid #f0ecf3; }
+.ig-reservation-actions .ig-date-trigger { width:auto; margin-left:auto; min-height:34px; padding:6px 10px; font-size:12px; background:#faf9fc; }
+.ig-reservation-actions .btn { background:white; border:1px solid #e7e1ed; color:#786586; font-size:12px; border-radius:6px; }
+.ig-reservation-actions .btn:hover { background:#f5f1f9; }
+.ig-reservation-actions .ig-reservation-cancel { color:#9d7a81; border-color:transparent; }
+@media(max-width:600px) { .ig-reservation { padding:16px; grid-template-columns:76px minmax(0,1fr); gap:12px; } .ig-reservation-image { width:76px; height:105px; } .ig-reservation-date { font-size:15px; } .ig-reservation-actions .ig-date-trigger { margin-left:0; } }
+.ig-calendar { position:fixed; inset:auto; left:50vw; top:50dvh; transform:translate(-50%,-50%); margin:0; max-height:calc(100dvh - 32px); overflow:auto; width:min(340px,calc(100vw - 48px)); padding:24px; border:1px solid #e9e5ed; border-radius:16px; box-shadow:0 16px 64px #23133426; color:#31283c; }
+.ig-calendar::backdrop { background:#21192e55; }
+.ig-calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.ig-calendar button { font:inherit; cursor:pointer; }
+.ig-calendar-icon { border:0; background:transparent; color:#796886; width:32px; height:32px; border-radius:8px; }
+.ig-calendar-icon:disabled { opacity:.3; cursor:default; }
+.ig-calendar-icon:hover:not(:disabled) { background:#f1edf5; }
+.ig-calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+.ig-calendar-grid span { font-size:12px; color:#92859d; padding:8px 0; }
+.ig-calendar-day { border:0; background:transparent; border-radius:50%; aspect-ratio:1; color:#40364a; }
+.ig-calendar-day:hover { background:#eee8f4; }
+.ig-calendar-day[aria-pressed="true"] { background:#64348b; color:white; }
+.ig-calendar-day:disabled { color:#d1cbd7; cursor:default; }
+.ig-calendar-time { display:flex; align-items:center; gap:8px; margin:20px 0; padding-top:18px; border-top:1px solid #eeeaf2; }
+.ig-calendar-time label { white-space:nowrap; flex-shrink:0; margin-right:auto; font-size:13px; color:#84768e; }
+.ig-time-stepper { display:flex; flex-direction:column; align-items:center; width:64px; flex-shrink:0; border:1px solid #e6deed; border-radius:10px; background:#faf8fc; overflow:hidden; }
+.ig-time-stepper:focus-within { border-color:#956ab3; box-shadow:0 0 0 3px #ede5f5; }
+.ig-time-stepper button { display:flex; align-items:center; justify-content:center; width:100%; height:18px; padding:0; border:0; background:transparent; color:#987eaa; line-height:1; }
+.ig-time-stepper button:hover { background:#eee6f5; color:#64348b; }
+.ig-time-stepper input { width:100%; min-width:0; padding:0; height:28px; border:0; outline:none; background:transparent; text-align:center; font-family:inherit; line-height:28px; font-size:20px; font-weight:600; color:#563373; font-variant-numeric:tabular-nums; }
+
+.ig-calendar-apply { width:100%; border:0; border-radius:8px; background:#64348b; color:white; padding:11px; }
 </style>
 </head>
 <body>
@@ -1064,6 +1358,7 @@ td.c { text-align: center; }
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-nav-excel" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
   <symbol id="i-nav-sms" viewBox="0 0 24 24"><path d="M20.5 12a7.5 7.5 0 0 1-7.5 7.5H8l-4.5 3v-6.2A7.5 7.5 0 0 1 11 4.5h2a7.5 7.5 0 0 1 7.5 7.5Z"/></symbol>
+  <symbol id="i-nav-instagram" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></symbol>
   <symbol id="i-nav-poster" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.4"/><path d="m4 17.5 5-4 3.5 2.6 3-2.1 4.5 3.5"/></symbol>
   <symbol id="i-nav-settlement" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9.5 8h5M9.5 12h5"/></symbol>
   <symbol id="i-nav-oseal" viewBox="0 0 24 24"><rect x="4" y="13.5" width="16" height="4" rx="1"/><path d="M8.5 13.5v-3a3.5 3.5 0 0 1 7 0v3"/><path d="M4 21h16"/></symbol>
@@ -1078,19 +1373,22 @@ window.ICO = {
 };
 </script>
 <aside class="gnb">
-  <div class="gnb-brand">엔티켓 업무 도구</div>
-  <nav class="tabs">
+  <div class="gnb-head"><div class="gnb-brand">엔티켓 업무 도구</div><button type="button" id="navToggle" aria-label="메뉴 접기" aria-expanded="true" aria-controls="mainNav" title="메뉴 접기"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path class="nav-toggle-arrow" d="M9 4v16m6-11-3 3 3 3"/></svg></button></div>
+  <nav class="tabs" id="mainNav">
     <div class="section-label">업무</div>
-    <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg>예매자 명단 정리</button>
-    <button class="tab" data-tab="sms"><svg class="ico"><use href="#i-nav-sms"/></svg>문자 발송 명단</button>
-    <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg>이미지 변환</button>
-    <button class="tab" data-tab="settlement"><svg class="ico"><use href="#i-nav-settlement"/></svg>공연 정산서</button>
-    <button class="tab" data-tab="oseal"><svg class="ico"><use href="#i-nav-oseal"/></svg>원본대조필</button>
+    <button class="tab active" data-tab="excel"><svg class="ico"><use href="#i-nav-excel"/></svg><span class="nav-label">예매자 명단 정리</span></button>
+    <button class="tab" data-tab="sms"><svg class="ico"><use href="#i-nav-sms"/></svg><span class="nav-label">문자 발송 명단</span></button>
+    <button class="tab" data-tab="poster"><svg class="ico"><use href="#i-nav-poster"/></svg><span class="nav-label">이미지 변환</span></button>
+    <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg><span class="nav-label">공연 정산서</span></button>
+    <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div></div>
+    <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg><span class="nav-label">인스타그램</span></button>
+    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
-    <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
+    <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
+    <button class="gbtn" id="gLoginBtn" style="display:none" disabled><svg class="ico auth-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8l4 4-4 4m-9-4h13M10 4H5v16h5"/></svg><span>로그인</span></button>
     <span id="gUser" class="guser" style="display:none"></span>
-    <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
+    <button class="gbtn" id="gLogoutBtn" style="display:none"><svg class="ico auth-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8l4 4-4 4M8 12h10M10 4H5v16h5"/></svg><span>로그아웃</span></button>
   </div>
 </aside>
 <div class="wrap">
@@ -1101,7 +1399,7 @@ window.ICO = {
     <label class="drop" id="xlDrop">
       <div class="drop-ico"><svg class="ico ico--lg"><use href="#i-folder"/></svg></div>
         <div class="big">예매자 명단 파일 넣기</div>
-      <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
+
       <input type="file" id="xlFileInput" accept=".xls,.xlsx" multiple />
     </label>
     <!-- 추가된 파일 목록 -->
@@ -1113,7 +1411,7 @@ window.ICO = {
       <div class="controls" id="xlControls" style="display:none">
         <label class="toggle"><input type="checkbox" id="xlMask"> 연락처 가운데 가리기</label>
       </div>
-      <div id="xlOutput"><div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div></div>
+      <div id="xlOutput"></div>
       <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
         <button class="btn ghost" id="xlDriveSave" data-cloud-only hidden>드라이브 저장</button>
@@ -1125,10 +1423,12 @@ window.ICO = {
   </section>
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
   <section class="panel-view" id="panel-poster">
-    <h2>이미지 변환</h2>
-    <div class="bar">
-      <button class="btn ghost" id="imClear" disabled>초기화</button>
-      <span class="count" id="imCount"></span>
+    <div class="feature-heading">
+      <h2>이미지 변환</h2>
+      <div class="bar">
+        <button class="btn ghost" id="imClear" disabled>초기화</button>
+        <span class="count" id="imCount"></span>
+      </div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">포스터</div>
@@ -1138,7 +1438,7 @@ window.ICO = {
         <div class="small">238px · 650px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="poster"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="poster"></div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">롤배너</div>
@@ -1148,7 +1448,7 @@ window.ICO = {
         <div class="small">가로 2000px · 720px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="roll"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="roll"></div>
     </div>
     <div class="imgbox">
       <div class="imgbox-title">띠배너</div>
@@ -1158,7 +1458,7 @@ window.ICO = {
         <div class="small">가로 1000px · 412px 생성 (비율 유지)</div>
         <input type="file" accept="image/*" multiple />
       </label>
-      <div class="imgbox-results" data-box="strip"><div class="empty">변환 결과가 여기 표시됩니다</div></div>
+      <div class="imgbox-results" data-box="strip"></div>
     </div>
     <div class="privacy"></div>
   </section>
@@ -1206,7 +1506,7 @@ window.ICO = {
     <!-- 집계 결과 -->
     <div class="out-head">집계 결과</div>
     <div class="out-body">
-      <div id="output"><div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div></div>
+      <div id="output"></div>
       <div id="merge"></div>
     </div>
     <!-- 정산서 생성 -->
@@ -1225,7 +1525,7 @@ window.ICO = {
     <label class="drop" id="smsDrop">
       <div class="drop-ico"><svg class="ico ico--lg"><use href="#i-folder"/></svg></div>
         <div class="big">예매자 명단 파일 넣기</div>
-      <div class="small">여러 개를 한꺼번에 끌어다 놓거나 클릭해서 선택 · 넣을 때마다 추가됩니다</div>
+
       <input type="file" id="smsFileInput" accept=".xls,.xlsx" multiple />
     </label>
     <!-- 추가된 파일 목록 -->
@@ -1234,7 +1534,7 @@ window.ICO = {
     <!-- 결과 -->
     <div class="out-head">추출 결과 <span id="smsCount"></span></div>
     <div class="out-body">
-      <div id="smsOutput"><div class="empty">파일을 넣으면 관람자 이름·연락처가 자동으로 추출됩니다.</div></div>
+      <div id="smsOutput"></div>
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
@@ -1268,14 +1568,14 @@ window.ICO = {
       <label class="drop" id="osealDrop">
         <div class="drop-ico"><svg class="ico ico--lg"><use href="#i-folder"/></svg></div>
         <div class="big">정산서 엑셀 파일 넣기</div>
-        <div class="small">정산서 xlsx 한 개를 끌어다 놓거나 클릭해서 선택 · 맨 위에 원본대조필 2행과 도장이 추가됩니다</div>
+
         <input type="file" id="osealFileInput" accept=".xlsx" />
       </label>
       <div class="status" id="osealStatus"></div>
       <div class="connector"></div>
       <div class="out-head">원본대조필 미리보기</div>
       <div class="out-body">
-        <div id="osealPreview"><div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div></div>
+        <div id="osealPreview"></div>
         <div class="btn-row" id="osealBtnRow" style="margin-top:14px;display:none">
           <button class="btn" id="osealDlXlsx">엑셀 다운로드</button>
           <button class="btn ghost" id="osealDlPdf">PDF 다운로드</button>
@@ -1284,6 +1584,112 @@ window.ICO = {
       </div>
     </div>
     <div class="privacy"></div>
+  </section>
+  <section class="panel-view" id="panel-instagram" data-cloud-only hidden>
+    <h2>인스타그램</h2>
+    <div class="gate" id="igGate">
+      <div class="g-ico"><svg class="ico ico--lg"><use href="#i-lock"/></svg></div>
+      <div class="g-t" id="igGateMessage" role="status">로그인이 필요한 기능입니다</div>
+    </div>
+    <div id="igWork" hidden>
+      <div id="igPostView">
+      <div class="panel ig-account" id="igAccountCard">
+        <div class="ig-account-icon"><svg class="ico"><use href="#i-nav-instagram"/></svg></div>
+        <div class="ig-account-info">
+          <div class="ig-account-title">게시 계정 <span class="ig-badge" id="igConnectionBadge">연결 확인 전</span></div>
+          <p id="igConnection" role="status">계정을 연결해 주세요.</p>
+        </div>
+        <button class="btn ghost" id="igCheck">연결 확인</button>
+      </div>
+      <div class="ig-grid"><div class="ig-compose-column">
+        <div class="ig-card">
+          <div class="ig-card-head"><span class="ig-step">1</span><h3>이미지 준비</h3></div>
+          <div class="ig-card-body">
+            <fieldset class="ig-fields" id="igEditor" aria-label="게시 이미지 편집">
+              <label class="drop" id="igDrop" tabindex="0" role="button" aria-label="포스터 이미지 선택">
+                <div class="drop-ico"><svg class="ico ico--lg"><use href="#i-folder"/></svg></div>
+                <div class="big">포스터 이미지 넣기</div>
+
+                <span id="igFileName" hidden></span>
+                <input id="igFile" type="file" accept="image/jpeg,image/png,image/webp">
+              </label>
+              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드 <small>4:5</small></span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
+              <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
+              <div class="ig-row">
+                <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
+                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
+              </div>
+              <details class="ig-adjust">
+                <summary>크기·위치 조절</summary>
+                <div class="ig-sliders">
+                <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="0" max="200" value="100"></label>
+                <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
+                <label class="ig-field"><span class="ig-field-title">상하 위치 <output id="igYValue" for="igY">0</output></span><input id="igY" type="range" min="-100" max="100" value="0"></label>
+              </div>
+              </details>
+              <label class="ig-field">이미지에 넣을 문구 <input type="text" id="igText" maxlength="60" placeholder="선택 사항 · 이미지 하단에 표시됩니다"></label>
+              </div></details>
+            </fieldset>
+          </div>
+        </div>
+        <div class="ig-card ig-caption-card">
+          <div class="ig-card-head"><span class="ig-step">2</span><h3>캡션</h3></div>
+          <div class="ig-card-body">
+            <fieldset class="ig-fields" id="igCaptionEditor" aria-label="게시 캡션 편집">
+<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="[공연명]"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="1" maxlength="220" id="igField_description" placeholder="[공연의 매력을 소개하는 한두 문장]"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="1" maxlength="600" id="igField_schedules" placeholder="0000.00.00.(요일) 오후 0시 · 여러 회차는 줄바꿈"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="[공연장명]"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><details class="ig-adjust" id="igCaptionDetails"><summary>상세 정보 <span id="igDetailCount"></span></summary><div class="ig-fields"><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="[관람 가능 연령]"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="[러닝타임]"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="1" maxlength="220" id="igField_price" placeholder="[좌석 등급·가격]"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="[문의 연락처]"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label></div></details><textarea id="igCaption" hidden></textarea></div>
+              <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
+            </fieldset>
+          </div>
+        </div>
+</div>        <div class="ig-card ig-preview-card">
+          <div class="ig-card-head"><span class="ig-step">3</span><h3>게시 미리보기</h3></div>
+          <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">1080 × 1350 px</span></div>
+          <div class="ig-preview-stage">
+            <div id="igEmpty"><svg class="ico"><use href="#i-nav-poster"/></svg><strong>게시할 이미지가 여기에 표시됩니다</strong></div>
+            <img id="igPreview" class="ig-preview" alt="인스타그램에 게시할 최종 이미지" hidden>
+          </div>
+          <div class="ig-card-body">
+            <p id="igCaptionPreview"></p><button class="btn ghost sm" id="igCaptionToggle" type="button" aria-expanded="false" aria-controls="igCaptionPreview" hidden>전체 보기</button>
+            <div class="ig-preview-actions">
+              <p class="ig-hint" id="igNextHint">계정을 연결하고 포스터 이미지를 선택해 주세요.</p>
+              <div class="btn-row"><button class="btn ghost" id="igDownload" disabled>이미지 다운로드</button><button class="btn" id="igPrepare" disabled>게시 준비</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <dialog class="ig-card ig-review" id="igReview" aria-labelledby="igReviewTitle" hidden>
+        <div class="ig-card-head"><div><h3 id="igReviewTitle">게시 확인</h3><p id="igReviewAccount"></p></div><button type="button" class="ig-detail-close" id="igReviewClose" aria-label="최종 확인 닫기">×</button></div>
+        <div class="ig-card-body">
+          <div class="ig-review-content"><img id="igReviewImage" alt="최종 게시 이미지" hidden><p id="igReviewCaption"></p></div>
+
+          <div class="ig-review-timing"><div class="ig-field"><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><div class="ig-time-slot"><div class="ig-field" id="igScheduleField"><div class="ig-schedule-heading"><span>예약 시각 · 한국 시간</span><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></div><input id="igScheduleTime" type="datetime-local" aria-label="예약 시각 · 한국 시간" disabled></div></div></div>
+          <label class="ig-confirm"><input id="igConfirm" type="checkbox">이미지와 캡션, 게시 시각을 확인했습니다.</label>
+          <p id="igReviewStatus" role="status" class="ig-hint"></p>
+          <div class="ig-review-footer"><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
+        </div>
+      </dialog>
+      <p id="igStatus" role="status" aria-live="polite"></p>
+      <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button></div></div>
+      </div>
+      <dialog class="ig-detail" id="igDetail" aria-labelledby="igDetailTitle">
+        <div class="ig-detail-head"><strong id="igDetailTitle">게시물 상세</strong><button class="ig-detail-close" type="button" id="igDetailClose" aria-label="게시물 상세 닫기" title="닫기" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+        <div class="ig-detail-body"><div><div id="igDetailMedia"></div><div class="ig-detail-nav" id="igDetailNav" hidden><button class="ig-detail-arrow" id="igDetailPrev" type="button" aria-label="이전 이미지" title="이전 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><span id="igDetailPage"></span><button class="ig-detail-arrow" id="igDetailNext" type="button" aria-label="다음 이미지" title="다음 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div><div><p class="fname" id="igDetailDate"></p><p id="igDetailCaption"></p><a class="ig-detail-link" id="igDetailLink" target="_blank" rel="noopener noreferrer"><span>인스타그램에서 보기</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M10 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4"/></svg></a></div></div>
+      </dialog>
+      <div id="igManageView" hidden>
+        <div class="btn-row ig-management-tabs" style="margin-bottom:16px"><button class="btn ghost sm" id="igShowPublished" aria-pressed="true">게시물</button><button class="btn ghost sm" id="igShowScheduled" aria-pressed="false">예약</button></div>
+        <div id="igPublishedPane">
+        <div class="ig-manage-toolbar"><strong id="igManageAccount">게시물 관리</strong><button class="btn ghost sm" id="igRefresh" type="button">새로고침</button></div>
+        <p id="igManageStatus" role="status" aria-live="polite"></p>
+        <div class="ig-media-grid" id="igMediaList"></div>
+        <div class="ig-load-more-row"><button class="ig-load-more" type="button" id="igLoadMore" aria-label="게시물 더 보기" title="게시물 더 보기" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+        </div>
+        <div id="igScheduledPane" hidden>
+          <div class="ig-manage-toolbar"><strong>예약 게시</strong><button class="btn ghost sm" id="igScheduleRefresh">새로고침</button></div>
+          <p class="ig-hint">한국 시간 기준 · 예약 시각에 게시를 요청하며 처리에 따라 공개가 늦어질 수 있습니다.</p>
+          <p id="igScheduleStatus" role="status"></p><div id="igScheduleList" class="ig-fields" style="margin-top:16px"></div><button class="btn ghost sm" id="igScheduleMore" hidden>예약 더 보기</button>
+        </div>
+      </div>
+    </div>
   </section>
 </div>
 <!-- 로컬 모드는 외부 로그인/백엔드를 호출하지 않습니다. -->
@@ -1348,28 +1754,33 @@ window.ICO = {
   }
   const WORKER_URL = config.apiBase;
   if(WORKER_URL !== "/api") throw new Error("통합 백엔드는 같은 사이트의 /api 경로를 사용해야 합니다.");
+  let authRevision = 0;
   let tokenClient = null, accessToken = null, tokenExp = 0, userEmail = "", stampCache = null, isAllowedUser = false;
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
+  const authLoading=document.getElementById('gAuthLoading'), authRetry=document.getElementById('gAuthRetry');
+  function finishAuthLoading(){authLoading.hidden=true;authRetry.hidden=true;}
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
-  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
-  function tokenValid(){ return !!accessToken && Date.now() < tokenExp; }
+  function showLoggedIn(email){ finishAuthLoading(); loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
+  function showLoggedOut(){ finishAuthLoading(); authRevision++; accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
+  function tokenValid(){ return isAllowedUser; }
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
-    if(!tokenValid()) throw new Error("로그인이 만료되었습니다. 다시 로그인해 주세요.");
+
     let r;
     try{
       const fd = new FormData();
       fd.append("access_token", accessToken);
-      r = await fetch(WORKER_URL + "/verify", { method:"POST", body: fd });
+      r = await fetch(WORKER_URL + "/session/login", { method:"POST", body: fd });
     }catch(e){ throw new Error("로그인 서버에 연결하지 못했습니다. 잠시 후 다시 로그인해 주세요."); }
     const d = await r.json().catch(()=>({}));
-    if(r.status === 403 && d.error === "not_allowed") return false;
+    if(r.status === 403 && d.error === "not_allowed") throw new Error("이 계정은 허용목록에 없습니다.");
     if(r.status === 401) throw new Error("Google 인증을 확인하지 못했습니다. 다시 로그인해 주세요.");
     if(r.status === 403 && d.error === "email_not_verified") throw new Error("Google 계정의 이메일 인증 상태를 확인해 주세요.");
     if(!r.ok || d.ok !== true || d.allowed !== true) throw new Error("로그인 서버에서 계정 확인에 실패했습니다. 잠시 후 다시 로그인해 주세요.");
+    userEmail = d.email || userEmail;
+    accessToken = null;
     return true;
   }
   function initGis(){
@@ -1379,6 +1790,7 @@ window.ICO = {
       scope: "openid email profile",
       callback: async (resp)=>{
         if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        authRevision++;
         accessToken = resp.access_token;
         tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
         isAllowedUser = false; stampCache = null;
@@ -1412,22 +1824,53 @@ window.ICO = {
     if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     tokenClient.requestAccessToken();
   });
-  logoutBtn.addEventListener("click", ()=>{
-    if(accessToken && window.google && google.accounts && google.accounts.oauth2){
-      try{ google.accounts.oauth2.revoke(accessToken); }catch(e){}
-    }
-    accessToken=null; tokenExp=0; userEmail="";
-    showLoggedOut();
+  logoutBtn.addEventListener("click", async ()=>{
+    authRevision++;
+    logoutBtn.disabled = true;
+    try {
+      const r = await fetch(WORKER_URL + '/session/logout', {method:'POST',body:new FormData()});
+      if(!r.ok) throw new Error();
+      showLoggedOut();
+      authChannel?.postMessage('logout');
+    } catch { alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
+    finally { logoutBtn.disabled = false; }
   });
+  const authChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('enticket-auth') : null;
+  if(authChannel) authChannel.onmessage = e=>{ if(e.data === 'logout') showLoggedOut(); };
+  let lastActivityCheck = 0, checkingSession = false;
+  async function restoreSession(){
+    if(checkingSession) return;
+    checkingSession = true;
+    const revision = authRevision;
+    if(!authLoading.hidden){authLoading.classList.remove('is-error');authLoading.textContent='로그인 확인 중…';authRetry.hidden=true;}
+    try {
+      const r = await fetch(WORKER_URL + '/session', {method:'POST',body:new FormData(),signal:AbortSignal.timeout(15000)});
+      const d = await r.json();
+      if(revision !== authRevision) return;
+      if(r.ok && d.allowed){
+        const wasLoggedIn = isAllowedUser;
+        isAllowedUser = true; userEmail = d.email;
+        if(!wasLoggedIn) showLoggedIn(userEmail);
+      } else if(r.status === 401 || r.status === 403) showLoggedOut();
+    } catch {} finally {
+      checkingSession=false; lastActivityCheck=Date.now();
+      if(revision===authRevision && !authLoading.hidden){authLoading.classList.add('is-error');authLoading.textContent='로그인 상태 확인 실패';authRetry.hidden=false;}
+    }
+  }
+  // Only real interaction renews an idle session; an unattended tab has no heartbeat.
+  for(const event of ['pointerdown','keydown']) document.addEventListener(event, ()=>{
+    if(isAllowedUser && Date.now()-lastActivityCheck > 60000) restoreSession();
+  }, {passive:true});
+  authRetry.addEventListener('click',restoreSession);
+  restoreSession();
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {
     isLoggedIn: function(){ return tokenValid(); },
     isAllowed: function(){ return tokenValid() && isAllowedUser; },
     // 공용 Worker 호출: FormData(access_token + fields) POST → JSON 응답
     api: async function(path, fields){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       Object.entries(fields||{}).forEach(([k,v])=>fd.append(k,v));
       const r = await fetch(WORKER_URL + path, { method:"POST", body: fd });
       const d = await r.json().catch(()=>({}));
@@ -1436,16 +1879,15 @@ window.ICO = {
         if(err === "invalid_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
         if(err === "not_allowed"){ throw new Error("이 계정은 허용목록에 없습니다: "+(d.email||"")); }
         if(r.status === 404){ throw new Error("백엔드에 이 기능이 아직 배포되지 않았습니다. Worker를 최신 코드로 재배포해 주세요."); }
-        throw new Error("요청 실패: "+err);
+        const error = new Error("요청 실패: "+err); error.code = err; throw error;
       }
       return d;
     },
     saveFile: async function(segments, filename, bytes, mimeType){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       const mt = mimeType || "application/octet-stream";
       const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       fd.append("folder", folder);
       fd.append("filename", filename);
       fd.append("mime", mt);
@@ -1461,10 +1903,9 @@ window.ICO = {
       return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
     },
     fetchStamp: async function(){
-      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 우측 상단에서 로그인해 주세요."); }
+      if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
       if(stampCache) return stampCache;
       const fd = new FormData();
-      fd.append("access_token", accessToken);
       const r = await fetch(WORKER_URL + "/stamp", { method:"POST", body: fd });
       const d = await r.json().catch(()=>({}));
       if(!r.ok || !d.ok || !d.b64){
@@ -1482,6 +1923,468 @@ window.ICO = {
     }
   };
 })();
+</script>
+<script>
+/* 인스타그램: browser rendering and an immutable, explicitly confirmed server draft. */
+(function(){
+  if (window.gdrive?.isLocal) return;
+  const $ = id => document.getElementById(id);
+  const messages = {
+    instagram_invalid_schedule:'예약은 현재부터 2분 이후, 30일 이내의 한국 시간으로 입력해 주세요.',
+    instagram_schedule_locked:'이미 게시를 시작했거나 취소된 예약입니다. 목록을 새로고침해 주세요.',
+    caption_not_configured:'Gemini API 키 설정이 필요합니다. 템플릿은 직접 작성할 수 있습니다.',
+    caption_invalid_image:'포스터 이미지를 다시 선택해 주세요.',
+    caption_rate_limited:'Gemini 사용 한도에 도달했습니다. 잠시 후 시도하거나 직접 작성해 주세요.',
+    caption_unavailable:'Gemini에 연결하지 못했습니다. 기존 캡션은 유지됩니다. 잠시 후 다시 시도해 주세요.',
+    caption_invalid_response:'포스터 정보를 읽지 못했습니다. 더 선명한 이미지를 사용하거나 직접 작성해 주세요.',
+
+    instagram_not_configured:'인스타그램 연결 설정이 없습니다. 운영 설정을 확인해 주세요.',
+    instagram_token_invalid:'인스타그램 토큰이 만료되었거나 취소되었습니다. Meta에서 재발급한 뒤 Worker 비밀 설정을 갱신해 주세요.',
+    instagram_access_blocked:'Meta에서 API 접근을 차단했습니다. Meta 앱 대시보드의 알림과 계정 연결 상태를 확인해 주세요.',
+    instagram_permission_denied:'인스타그램 권한이 부족합니다. Meta 앱의 계정 연결과 권한을 확인해 주세요.',
+    instagram_account_mismatch:'설정된 인스타그램 계정과 조회한 계정이 일치하지 않습니다.',
+    instagram_rate_limited:'인스타그램 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.',
+    instagram_unavailable:'인스타그램 응답을 확인하지 못했습니다. 잠시 후 상태를 다시 확인해 주세요.',
+    instagram_storage_not_configured:'게시 저장소 설정이 필요합니다.',
+    instagram_invalid_image:'1080px 너비의 올바른 JPEG가 필요합니다. 이미지를 다시 준비해 주세요.',
+    instagram_invalid_draft:'이미지, 게시 위치 또는 캡션을 확인해 주세요.',
+    instagram_draft_conflict:'이미 저장된 내용과 다릅니다. 새 이미지 준비를 눌러 다시 확인해 주세요.',
+    instagram_draft_expired:'게시 준비 후 24시간이 지났습니다. 새 이미지 준비를 눌러 주세요.',
+    instagram_draft_not_found:'보관된 게시 정보를 찾지 못했습니다. 인스타그램에서 실제 게시 여부를 확인해 주세요.',
+    instagram_confirmation_required:'게시할 내용을 먼저 확인해 주세요.',
+    instagram_media_failed:'인스타그램이 이미지를 처리하지 못했습니다. 이미지와 계정의 게시 권한을 확인해 주세요.',
+  };
+  let account=null, bitmap=null, rendered=null, imageUrl='', job=null, working=false, revision=0, session=0;
+  let captionAnalyzing=false;
+  const captionTemplate='';
+  const captionKeys=['title', 'description', 'schedules', 'venue', 'age', 'duration', 'price', 'inquiry', 'tags'];
+  function resetCaption(){
+    for(const key of captionKeys){ $('igField_'+key).value=''; $('igMissing_'+key).hidden=true; }
+    $('igCaption').value='';
+  }
+  function composeCaption(){
+    const f=Object.fromEntries(captionKeys.map(key=>[key,$('igField_'+key).value.trim()]));
+    const tags=[...new Set(f.tags.split(/[\s,]+/).filter(Boolean).map(t=>'#'+t.replace(/^#+/,'').replace(/[^\p{L}\p{N}_]/gu,'')))].filter(t=>t!=='#');
+    const lines=[];
+    if(f.title) lines.push('🎭 '+f.title);
+    if(f.description) lines.push(f.description);
+    const details=[['schedules','📅 일시'],['venue','📍 장소'],['age','👥 관람 연령'],['duration','⏱ 공연 시간'],['price','🎟 티켓'],['inquiry','📞 문의']].filter(([key])=>f[key]).map(([key,label])=>label+' | '+f[key]);
+    if(details.length) lines.push(details.join('\n'));
+    if(lines.length) lines.push('예매는 프로필 링크에서 확인해 주세요.');
+    if(tags.length) lines.push(tags.slice(0,5).join(' '));
+    $('igCaption').value=lines.join('\n\n');
+    $('igMissing_tags').hidden=tags.length<=5;
+    $('igMissing_tags').textContent='해시태그는 처음 5개까지만 반영됩니다.';
+    $('igCaptionPreview').textContent=$('igChannel').value==='feed'?$('igCaption').value:'';
+    return f;
+  }
+  resetCaption();
+  for(const key of captionKeys) $('igField_'+key).addEventListener('input',()=>{
+    $('igMissing_'+key).hidden=true; composeCaption(); render().catch(e=>status(describe(e),'error'));
+  });
+
+  const receiptKey='enticket-instagram-last-draft';
+  function receipt(){ try { const value=JSON.parse(localStorage.getItem(receiptKey)); return value && /^[0-9a-f-]{36}$/.test(value.id) ? value : null; } catch { return null; } }
+  function remember(id){ try { localStorage.setItem(receiptKey,JSON.stringify({id})); } catch {} }
+  function describe(e){ return messages[e.code] || e.message || '연결하지 못했습니다. 상태를 다시 확인해 주세요.'; }
+  function status(message,tone=''){ $('igStatus').textContent=message; $('igStatus').dataset.tone=tone; $('igReviewStatus').textContent=message==='게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.'?'':message; }
+  function openReview(){ $('igReview').hidden=false; if(!$('igReview').open) $('igReview').showModal(); }
+  function closeReview(){ $('igReview').close(); $('igReview').hidden=true; $('igConfirm').checked=false; }
+  $('igReviewClose').onclick=editReview;
+  $('igReview').addEventListener('cancel',event=>{event.preventDefault();editReview();});
+  function controls(){
+    const allowed=window.gdrive?.isAllowed();
+    $('igGate').hidden=allowed; $('igWork').hidden=!allowed;
+    $('igCheck').disabled=working;
+    $('igEditor').disabled=working || !!job;
+    $('igCaptionEditor').disabled=working || !!job;
+    $('igPrepare').disabled=working || !rendered || !account;
+    $('igDownload').disabled=working || !rendered;
+    $('igAutoCaption').disabled=working || !bitmap || !!job;
+    $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
+    $('igPublish').disabled=working || !job || !['prepared','processing'].includes(job.status) || !$('igConfirm').checked;
+    for(const button of document.querySelectorAll('[data-publish-mode]')){button.disabled=working;button.checked=button.dataset.publishMode===$('igPublishMode').value;}
+    $('igPublishMode').disabled=working; $('igScheduleTime').disabled=working || $('igPublishMode').value!=='schedule';
+    $('igReviewClose').disabled=working;
+    const extra=['age','duration','price','inquiry','tags'];
+    const filled=extra.filter(key=>$('igField_'+key).value.trim()).length;
+    const missing=extra.filter(key=>!$('igMissing_'+key).hidden).length;
+    $('igDetailCount').textContent=(filled?'· '+filled+'개 입력':'')+(missing?' · '+missing+'개 확인 필요':'');
+    $('igReset').disabled=working;
+    $('igAccountCard').dataset.connected=!!account;
+    $('igConnectionBadge').textContent=account?'연결 확인 완료':'연결 확인 전';
+    $('igCheck').textContent=account?'다시 확인':'연결 확인';
+    $('igDrop').setAttribute('aria-disabled',String(working || !!job));
+    $('igDrop').tabIndex=working || job?-1:0;
+    const blur=$('igBackgroundMode').checked;
+    $('igBackground').disabled=blur; $('igFit').disabled=blur;
+    for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.checked=choice.value===$('igChannel').value;
+    const story=$('igChannel').value==='story';
+    $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
+    $('igPreviewChannel').textContent=story?'스토리':'피드';
+    $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
+    $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
+    for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
+    $('igNextHint').textContent=job?'':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
+    $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
+  }
+  async function api(path, fields){
+    if (!window.gdrive?.isAllowed()) throw new Error('허용된 Google 계정으로 다시 로그인해 주세요.');
+    return await window.gdrive.api('/instagram/'+path,fields);
+  }
+  $('igCaptionToggle').addEventListener('click',()=>{
+    const expanded=$('igCaptionToggle').getAttribute('aria-expanded')!=='true';
+    $('igCaptionToggle').setAttribute('aria-expanded',String(expanded));
+    $('igCaptionToggle').textContent=expanded?'접기':'전체 보기';
+    $('igCaptionPreview').classList.toggle('is-expanded',expanded);
+  });
+  function clearImage(){
+    $('igCaptionPreview').classList.remove('is-expanded');
+    $('igCaptionToggle').setAttribute('aria-expanded','false'); $('igCaptionToggle').textContent='전체 보기';
+    $('igReviewImage').removeAttribute('src'); $('igReviewImage').hidden=true; $('igReviewCaption').textContent='';
+    revision++; bitmap?.close(); bitmap=null; rendered=null;
+    if(imageUrl) URL.revokeObjectURL(imageUrl); imageUrl='';
+    $('igPreview').removeAttribute('src'); $('igPreview').hidden=true; $('igEmpty').hidden=false;
+    $('igFileName').textContent=''; $('igFileName').hidden=true;
+  }
+  function resetEditor(){
+    job=null; clearImage();
+    for(const id of ['igFile','igText']) $(id).value='';
+    resetCaption();
+    $('igChannel').value='feed'; $('igFit').value='contain';
+    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
+    $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
+    $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
+    closeReview(); $('igConfirm').checked=false;
+    $('igPublishMode').value='now'; $('igScheduleTime').value='';
+    $('igPublish').textContent='게시하기';
+    controls();
+  }
+  function canStartNew(){
+    return !job || !['unknown','creating','checking','posting'].includes(job.status) || confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
+  }
+  function showJob(data){
+    job=data; openReview();
+    $('igReviewAccount').textContent='@'+data.account.username+' · '+(data.channel==='story'?'스토리':'피드');
+    $('igPublish').textContent=data.status==='processing'?'확인한 게시 처리 계속':'게시하기';
+    const labels={scheduled:'예약이 완료되었습니다. '+new Date(data.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' · 관리의 예약 메뉴에서 확인하세요.',cancelled:'예약이 취소되었습니다.',prepared:'게시할 내용을 확인한 뒤 게시 버튼을 눌러 주세요.',processing:'인스타그램에서 이미지를 처리하고 있습니다. 잠시 후 게시 처리 계속을 눌러 주세요.',creating:'이미지를 전송 중입니다. 인스타그램에서 게시 여부를 확인해 주세요.',checking:'게시 상태를 확인 중입니다. 잠시 후 다시 확인해 주세요.',posting:'게시 요청 중입니다. 인스타그램에서 게시 여부를 확인해 주세요.',published:'인스타그램 게시 완료'+(data.mediaId?' · 게시물 ID: '+data.mediaId:''),failed:'게시 전 처리에 실패했습니다. '+(messages[data.error]||'이미지와 계정 설정을 확인해 주세요.'),unknown:'게시 결과를 확정하지 못했습니다. 재게시하지 말고 인스타그램에서 게시 여부를 확인해 주세요.'};
+    status(labels[data.status]||'게시 상태를 확인해 주세요.',data.status==='published'?'success':['failed','unknown'].includes(data.status)?'error':''); controls();
+    if(['published','scheduled'].includes(data.status)) resetEditor();
+
+  }
+  async function run(action){
+    if(working) return; working=true; const current=session; controls();
+    try { await action(current); } catch(e){ if(current===session) status(describe(e),'error'); }
+    finally { working=false; controls(); }
+  }
+  async function render(){
+    const current=++revision;
+    controls();
+    if(!bitmap) return;
+    rendered=null; controls();
+    const channel=$('igChannel').value;
+    $('igCaptionLabel').hidden=channel==='story'; $('igStoryNote').hidden=channel!=='story';
+    const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=channel==='story'?1920:1350;
+    const ctx=canvas.getContext('2d'); ctx.fillStyle=$('igBackground').value; ctx.fillRect(0,0,canvas.width,canvas.height);
+    const blur=$('igBackgroundMode').checked;
+    if(blur){
+      // Overscan the blurred copy so the canvas edges stay fully covered.
+      const pad=96, backgroundScale=Math.max((canvas.width+2*pad)/bitmap.width,(canvas.height+2*pad)/bitmap.height);
+      ctx.save(); ctx.filter='blur(32px)';
+      ctx.drawImage(bitmap,(canvas.width-bitmap.width*backgroundScale)/2,(canvas.height-bitmap.height*backgroundScale)/2,bitmap.width*backgroundScale,bitmap.height*backgroundScale);
+      ctx.restore();
+    }
+    const base=blur?(channel==='story'?canvas.width/bitmap.width:canvas.height/bitmap.height):($('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height));
+    const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
+    const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
+    const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
+    ctx.drawImage(bitmap,x,y,w,h);
+    const text=$('igText').value.trim();
+    if(text){
+      ctx.font='bold 48px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      const lines=[]; let line='';
+      for(const ch of text){ if(ctx.measureText(line+ch).width>960){lines.push(line);line='';} line+=ch; } if(line) lines.push(line);
+      const height=lines.length*64+48;
+      ctx.fillStyle='rgba(0,0,0,.75)'; ctx.fillRect(0,canvas.height-height,canvas.width,height);
+      ctx.fillStyle='#fff'; lines.forEach((line,i)=>ctx.fillText(line,540,canvas.height-height+56+i*64));
+    }
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.92));
+    if(current!==revision) return;
+    if(!blob) throw new Error('이미지를 만들지 못했습니다. 다시 선택해 주세요.');
+    rendered=blob; if(imageUrl) URL.revokeObjectURL(imageUrl); imageUrl=URL.createObjectURL(blob);
+    $('igPreview').src=imageUrl; $('igPreview').hidden=false; $('igEmpty').hidden=true;
+    $('igCaptionPreview').textContent=channel==='feed'?$('igCaption').value:'';
+    controls();
+  }
+  $('igCheck').addEventListener('click',()=>run(async current=>{
+    account=null; status(''); controls();
+    $('igConnectionBadge').textContent='확인 중';
+    $('igConnection').textContent='인스타그램 계정 확인 중…';
+    try {
+      const data=await api('connection'); if(current!==session) return;
+      account=data.account;
+      $('igConnection').textContent='@'+account.username;
+    } catch(e){ $('igConnection').textContent=describe(e); throw e; }
+  }));
+  function selectImage(file){ return run(async current=>{
+    clearImage(); job=null; closeReview(); status(''); controls();
+    if(!file) return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>15*1024*1024) throw new Error('15MB 이하의 JPEG, PNG, WebP 이미지를 선택해 주세요.');
+    const selected=await createImageBitmap(file);
+    if(current!==session){selected.close();return;}
+    if(selected.width*selected.height>40000000){selected.close();throw new Error('4천만 픽셀 이하의 이미지를 선택해 주세요.');}
+    bitmap=selected; $('igFileName').textContent=file.name; $('igFileName').hidden=false; await render();
+  }); }
+  $('igFile').addEventListener('change',()=>selectImage($('igFile').files[0]));
+  $('igDrop').addEventListener('keydown',event=>{
+    if(!working && !job && ['Enter',' '].includes(event.key)){event.preventDefault();$('igFile').click();}
+  });
+  for(const type of ['dragenter','dragover']) $('igDrop').addEventListener(type,event=>{
+    event.preventDefault(); if(!working && !job) $('igDrop').classList.add('hover');
+  });
+  $('igDrop').addEventListener('dragleave',()=>$('igDrop').classList.remove('hover'));
+  $('igDrop').addEventListener('drop',event=>{
+    event.preventDefault(); $('igDrop').classList.remove('hover');
+    if(!working && !job) selectImage(event.dataTransfer.files[0]);
+  });
+  // Snap pointer/touch dragging near each default; keep keyboard steps unrestricted.
+  const sliderDefaults={igZoom:100,igX:0,igY:0};
+  let draggedSlider=null;
+  for(const id of Object.keys(sliderDefaults)) $(id).addEventListener('pointerdown',()=>{ draggedSlider=id; });
+  for(const event of ['pointerup','pointercancel']) window.addEventListener(event,()=>{ draggedSlider=null; });
+  for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.addEventListener('change',()=>{
+    if(working || job)return;
+    $('igChannel').value=choice.value;$('igChannel').dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
+    $(id).addEventListener('input',()=>{
+      if(job) return;
+      if(id===draggedSlider && Math.abs(Number($(id).value)-sliderDefaults[id])<=3) $(id).value=sliderDefaults[id];
+      if(id==='igChannel'){ $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
+      render().catch(e=>status(describe(e)));
+    });
+  }
+  $('igAutoCaption').addEventListener('click',()=>{
+    if(working || job || !bitmap) return;
+    const existing=captionKeys.some(key=>key!=='tags' && $('igField_'+key).value.trim())?$('igCaption').value:'';
+    if(existing.trim() && existing!==captionTemplate && !confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
+    run(async current=>{
+      captionAnalyzing=true; controls(); status('포스터에서 공연 정보를 읽고 있습니다.');
+      try {
+        // Analyze the uncropped original, not the feed/story preview.
+        const canvas=document.createElement('canvas'), scale=Math.min(1,2048/Math.max(bitmap.width,bitmap.height));
+        canvas.width=Math.max(1,Math.round(bitmap.width*scale)); canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+        const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.9));
+        if(current!==session) return;
+        if(!blob) throw new Error('분석할 이미지를 준비하지 못했습니다.');
+        const data=await api('caption',{file:new File([blob],'poster.jpg',{type:'image/jpeg'})});
+        if(current!==session) return;
+        for(const key of captionKeys){ $('igField_'+key).value=data.fields?.[key]||''; $('igMissing_'+key).hidden=!data.missing?.includes(key); }
+        composeCaption(); await render();
+        status(data.missing?.length?'캡션을 작성했습니다. 포스터에서 확인되지 않은 항목과 일시·가격·문의처를 확인해 주세요.':'캡션을 작성했습니다. 일시·가격·문의처를 확인한 뒤 게시해 주세요.','success');
+      } finally { captionAnalyzing=false; }
+    });
+  });
+  $('igDownload').addEventListener('click',()=>{
+    if(!rendered) return; const a=document.createElement('a'); a.href=imageUrl; a.download='enticket-'+$('igChannel').value+'.jpg'; a.click();
+  });
+  $('igPrepare').addEventListener('click',()=>run(async current=>{
+    if(job){openReview();return;}
+    if(!rendered || !account) return;
+    const fields=composeCaption();
+    if($('igChannel').value==='feed'){
+      if($('igCaption').value.length>2200){status('캡션을 2,200자 이내로 줄여 주세요.','error');return;}
+      if(['title','schedules','venue'].some(key=>!fields[key]) && !confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
+    }
+    const id=crypto.randomUUID(); remember(id); status('확인할 이미지 보관 중…');
+    const data=await api('prepare',{draft_id:id,channel:$('igChannel').value,caption:$('igChannel').value==='feed'?$('igCaption').value:'',file:new File([rendered],'instagram.jpg',{type:'image/jpeg'})});
+    if(current!==session) return; $('igConfirm').checked=false;
+    $('igReviewImage').src=imageUrl; $('igReviewImage').hidden=false;
+    $('igReviewCaption').textContent=$('igChannel').value==='feed'?$('igCaption').value:'';
+    showJob(data);
+  }));
+  $('igConfirm').addEventListener('change',controls);
+  function scheduleISO(value){
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw new Error('예약 시각을 입력해 주세요.');
+    const time=new Date(value+':00+09:00');if(!Number.isFinite(time.getTime()))throw new Error('예약 시각을 확인해 주세요.');
+    return time.toISOString();
+  }
+  function koreaInput(value){return new Date(new Date(value).getTime()+9*3600000).toISOString().slice(0,16);}
+  for(const button of document.querySelectorAll('[data-publish-mode]')) button.addEventListener('click',()=>{$('igPublishMode').value=button.dataset.publishMode;$('igPublishMode').dispatchEvent(new Event('change'));});
+  $('igPublishMode').addEventListener('change',()=>{
+    const scheduled=$('igPublishMode').value==='schedule';
+    if(scheduled && !$('igScheduleTime').value)$('igScheduleTime').value=koreaInput(Date.now()+3600000);
+    $('igPublish').textContent=scheduled?'예약하기':'게시하기';$('igConfirm').checked=false;controls();
+  });
+  $('igScheduleTime').addEventListener('input',()=>{$('igConfirm').checked=false;controls();});
+  $('igPublish').addEventListener('click',()=>run(async current=>{
+    if(!job || !$('igConfirm').checked || !['prepared','processing'].includes(job.status)) return;
+    if($('igPublishMode').value==='schedule'){
+      if(job.status!=='prepared')throw new Error('새 게시 내용을 준비한 뒤 예약해 주세요.');
+      const scheduled_at=scheduleISO($('igScheduleTime').value);
+      const data=await api('schedule',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'schedule',scheduled_at});
+      if(current===session)showJob(data);return;
+    }
+    status('인스타그램 게시 요청 중…');
+    try {
+      const data=await api('publish',{draft_id:job.draftId,fingerprint:job.fingerprint,confirm:'publish'});
+      if(current===session) showJob(data);
+    } catch(e) {
+      if(current===session){
+        showJob({...job,status:'unknown'});
+        status('게시 결과를 확정하지 못했습니다. 인스타그램에서 게시 여부를 확인해 주세요. '+describe(e),'error');
+      }
+    }
+  }));
+  function editReview(){
+    if(working || !canStartNew()) return;
+    job=null; closeReview(); $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
+  }
+  $('igReset').addEventListener('click',()=>{
+    if(working || !canStartNew()) return;
+    resetEditor(); status('');
+  });
+  let scheduleBusy=false,scheduleCursor=null;
+  const scheduleNames={scheduled:'예약 대기',processing:'처리 중',creating:'처리 중',checking:'처리 중',posting:'게시 중',published:'게시 완료',failed:'실패',unknown:'결과 확인 필요',cancelled:'취소됨'};
+  async function loadSchedules(more=false){
+    if(scheduleBusy || !window.gdrive?.isAllowed())return;
+    const current=session;scheduleBusy=true;$('igScheduleRefresh').disabled=true;
+    $('igScheduleStatus').textContent='예약을 불러오는 중…';
+    try{
+      const data=await api('schedules',more?{after:scheduleCursor}:{});if(current!==session)return;
+      if(!more)$('igScheduleList').replaceChildren();
+      scheduleCursor=data.nextCursor||null;$('igScheduleMore').hidden=!scheduleCursor;
+      for(const item of data.items){
+        const card=document.createElement('div');card.className='ig-reservation';
+        const row=document.createElement('div');row.className='ig-reservation-summary';
+        if(item.previewUrl){const image=document.createElement('img');image.src=item.previewUrl;image.alt='예약 이미지';image.className='ig-reservation-image';card.append(image);}
+        const meta=document.createElement('div');meta.className='ig-reservation-meta';
+        const badge=document.createElement('span');badge.className='ig-reservation-badge';badge.textContent=scheduleNames[item.status]||item.status;
+        const channel=document.createElement('span');channel.textContent=item.channel==='story'?'스토리':'피드';meta.append(badge,channel);row.append(meta);
+        const title=document.createElement('strong');title.className='ig-reservation-date';title.textContent=new Date(item.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'});row.append(title);card.append(row);
+        const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'스토리 이미지';row.append(caption);
+        if(item.error){const error=document.createElement('p');error.className='ig-hint';error.style.color='var(--color-text-critical)';error.textContent=describe({code:item.error});card.append(error);}
+        const actions=document.createElement('div');actions.className='ig-reservation-actions';
+        if(item.previewUrl){const view=document.createElement('button');view.className='btn ghost sm';view.textContent='내용 보기';view.onclick=()=>openMedia({caption:item.caption,type:'예약 '+(item.channel==='story'?'스토리':'피드'),timestamp:item.scheduledAt,assets:[{type:'image',url:item.previewUrl}]});actions.append(view);}
+        if(item.status==='unknown'){
+          const check=document.createElement('button');check.className='btn ghost sm';check.textContent='게시 상태 확인';
+          check.onclick=async()=>{if(scheduleBusy)return;scheduleBusy=true;check.disabled=true;try{await api('status',{draft_id:item.draftId});if(current!==session)return;scheduleBusy=false;await loadSchedules();}catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}finally{if(current===session){scheduleBusy=false;check.disabled=false;}}};actions.append(check);
+        }
+        if(item.status==='scheduled'){
+          const time=document.createElement('input');time.type='datetime-local';time.value=koreaInput(item.scheduledAt);time.setAttribute('aria-label','변경할 예약 시각 · 한국 시간');time.style.width='auto';
+          const change=document.createElement('button');change.className='btn ghost sm';change.textContent='시간 변경';
+          const cancel=document.createElement('button');cancel.className='btn ghost sm ig-reservation-cancel';cancel.textContent='예약 취소';
+          async function mutate(action){
+            if(scheduleBusy)return;
+            let scheduled_at;try{if(action==='schedule')scheduled_at=scheduleISO(time.value);}catch(e){$('igScheduleStatus').textContent=e.message;return;}
+            if(!confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
+            scheduleBusy=true;change.disabled=true;cancel.disabled=true;
+            try{await api(action,{draft_id:item.draftId,fingerprint:item.fingerprint,confirm:action,...(scheduled_at?{scheduled_at}:{})});if(current!==session)return;scheduleBusy=false;await loadSchedules();}
+            catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
+            finally{if(current===session){scheduleBusy=false;change.disabled=false;cancel.disabled=false;}}
+          }
+          change.onclick=()=>mutate('schedule');cancel.onclick=()=>mutate('cancel');actions.append(time,change,cancel);
+        }
+        card.append(actions);$('igScheduleList').append(card);
+      }
+      $('igScheduleStatus').textContent=$('igScheduleList').children.length?$('igScheduleList').children.length+'개 예약 기록':'예약된 게시물이 없습니다.';
+    }catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
+    finally{if(current===session){scheduleBusy=false;$('igScheduleRefresh').disabled=false;}}
+  }
+  $('igShowPublished').onclick=()=>{$('igPublishedPane').hidden=false;$('igScheduledPane').hidden=true;$('igShowPublished').setAttribute('aria-pressed','true');$('igShowScheduled').setAttribute('aria-pressed','false');if(!mediaLoaded)loadMedia();};
+  $('igShowScheduled').onclick=()=>{$('igPublishedPane').hidden=true;$('igScheduledPane').hidden=false;$('igShowPublished').setAttribute('aria-pressed','false');$('igShowScheduled').setAttribute('aria-pressed','true');loadSchedules();};
+  $('igScheduleRefresh').onclick=()=>loadSchedules();
+  $('igScheduleMore').onclick=()=>loadSchedules(true);
+  let manageView=false, mediaLoaded=false, mediaBusy=false, mediaCursor=null, mediaGeneration=0;
+  const mediaSeen=new Set();
+  function mediaControls(){ $('igRefresh').disabled=mediaBusy; $('igLoadMore').disabled=mediaBusy; $('igLoadMore').hidden=!mediaCursor; }
+  let detailAssets=[],detailIndex=0;
+  function renderDetailMedia(){
+    $('igDetailMedia').replaceChildren();const asset=detailAssets[detailIndex];
+    if(asset){const el=document.createElement(asset.type==='video'?'video':'img');el.src=asset.url;
+      if(asset.type==='video'){el.controls=true;el.preload='metadata';if(asset.poster)el.poster=asset.poster;}else{el.alt='게시물 이미지 '+(detailIndex+1);el.referrerPolicy='no-referrer';}
+      el.addEventListener('error',()=>{el.replaceWith(document.createTextNode('미디어를 불러오지 못했습니다. 인스타그램에서 확인해 주세요.'));},{once:true});$('igDetailMedia').append(el);
+    }else $('igDetailMedia').textContent='미리보기를 제공하지 않는 게시물입니다.';
+    $('igDetailNav').hidden=detailAssets.length<2;$('igDetailPage').textContent=(detailIndex+1)+' / '+detailAssets.length;
+    $('igDetailPrev').disabled=detailIndex===0;$('igDetailNext').disabled=detailIndex>=detailAssets.length-1;
+  }
+  function openMedia(item){
+    detailAssets=item.assets?.length?item.assets:item.thumbnail?[{type:'image',url:item.thumbnail}]:[];detailIndex=0;
+    $('igDetailCaption').textContent=item.caption||'캡션 없음';
+    $('igDetailDate').textContent=item.type+' · '+(item.timestamp?new Date(item.timestamp).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 없음');
+    $('igDetailLink').hidden=!item.permalink;if(item.permalink)$('igDetailLink').href=item.permalink;else $('igDetailLink').removeAttribute('href');
+    renderDetailMedia();$('igDetail').showModal();
+  }
+  $('igDetailPrev').addEventListener('click',()=>{if(detailIndex>0){detailIndex--;renderDetailMedia();}});
+  $('igDetailNext').addEventListener('click',()=>{if(detailIndex<detailAssets.length-1){detailIndex++;renderDetailMedia();}});
+  $('igDetailClose').addEventListener('click',()=>$('igDetail').close());
+  $('igDetail').addEventListener('close',()=>{ $('igDetailMedia').replaceChildren();$('igDetailCaption').textContent='';$('igDetailLink').removeAttribute('href');detailAssets=[]; });
+  function mediaCard(item){
+    const card=document.createElement('article');card.className='ig-media-card';
+    const content=document.createElement('button');content.type='button';content.className='ig-media-link';content.addEventListener('click',()=>openMedia(item));
+    content.setAttribute('aria-label','게시물 자세히 보기: '+(item.caption||item.type).slice(0,100));
+    const art=document.createElement('div');art.className='ig-media-art';
+    const placeholder=document.createElement('div');placeholder.className='ig-media-cover empty';placeholder.textContent='미리보기 없음';
+    if(item.thumbnail){
+      const img=document.createElement('img');img.className='ig-media-cover';img.src=item.thumbnail;img.alt='게시물 이미지';img.loading='lazy';img.referrerPolicy='no-referrer';
+      img.addEventListener('error',()=>img.replaceWith(placeholder),{once:true});art.append(img);
+    } else art.append(placeholder);
+    if(item.type!=='사진'){
+      const badge=document.createElement('span');
+      if(item.type==='여러 장'){
+        badge.className='ig-media-carousel';badge.setAttribute('role','img');badge.setAttribute('aria-label','여러 장 게시물');badge.title='여러 장 게시물';
+        badge.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h10a2 2 0 0 1 2 2v10"/><rect x="3" y="7" width="14" height="14" rx="3" fill="currentColor" stroke="none"/></svg>';
+      }else{badge.className='ig-media-type';badge.textContent=item.type;}
+      art.append(badge);
+    }
+    const body=document.createElement('div');body.className='ig-media-body';
+    const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption?.replace(/\s+/g,' ').trim()||'캡션 없음';
+    const meta=document.createElement('div');meta.className='ig-media-meta';
+    const date=document.createElement('span');date.textContent=item.timestamp?new Date(item.timestamp).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 없음';meta.append(date);
+    if(item.permalink){const arrow=document.createElement('span');arrow.className='ig-media-open';arrow.textContent='＋';arrow.setAttribute('aria-hidden','true');meta.append(arrow);}
+    body.append(caption,meta);content.append(art,body);card.append(content);return card;
+  }
+  async function loadMedia(more=false){
+    if(mediaBusy || !window.gdrive?.isAllowed()) return;
+    mediaBusy=true;const generation=mediaGeneration;mediaControls();
+    $('igManageStatus').textContent='게시물을 불러오고 있습니다…';$('igManageStatus').dataset.error='false';
+    try{
+      const data=await api('media',more?{after:mediaCursor}:{});
+      if(generation!==mediaGeneration) return;
+      if(!more){$('igMediaList').replaceChildren();mediaSeen.clear();}
+      $('igManageAccount').textContent='@'+data.account.username+' · 게시물 관리';
+      for(const item of data.items) if(!mediaSeen.has(item.id)){mediaSeen.add(item.id);$('igMediaList').append(mediaCard(item));}
+      mediaCursor=data.nextCursor||null;mediaLoaded=true;
+      $('igManageStatus').textContent=mediaSeen.size?mediaSeen.size+'개 게시물 표시 중':'아직 조회할 게시물이 없습니다.';
+    } catch(e){if(generation===mediaGeneration){$('igManageStatus').textContent=describe(e);$('igManageStatus').dataset.error='true';}}
+    finally{if(generation===mediaGeneration){mediaBusy=false;mediaControls();}}
+  }
+  for(const button of document.querySelectorAll('[data-ig-view]')) button.addEventListener('click',()=>{
+    manageView=button.dataset.igView==='manage';
+    $('igPostView').hidden=manageView;$('igManageView').hidden=!manageView;
+    for(const tab of document.querySelectorAll('[data-ig-view]')){const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));}
+    if(manageView){if(!$('igScheduledPane').hidden)loadSchedules();else if(!mediaLoaded)loadMedia();}
+  });
+  $('igRefresh').addEventListener('click',()=>loadMedia());
+  $('igLoadMore').addEventListener('click',()=>loadMedia(true));
+  document.addEventListener('enticket-auth',()=>{
+    $('igDetail').close();
+    scheduleBusy=false;scheduleCursor=null;$('igScheduleMore').hidden=true;$('igScheduleRefresh').disabled=false;$('igScheduleList').replaceChildren();$('igScheduleStatus').textContent='';
+    mediaGeneration++;mediaBusy=false;mediaLoaded=false;mediaCursor=null;mediaSeen.clear();
+    $('igMediaList').replaceChildren();$('igManageAccount').textContent='게시물 관리';$('igManageStatus').textContent='';mediaControls();
+    if(manageView && window.gdrive?.isAllowed()) loadMedia();
+  });
+  document.addEventListener('enticket-auth',()=>{
+    session++; account=null; job=null; clearImage(); $('igFile').value=''; resetCaption(); $('igText').value='';
+    $('igCaptionPreview').textContent=''; closeReview(); $('igConfirm').checked=false; status('');
+    $('igConnection').textContent='계정을 연결해 주세요.';
+    $('igGateMessage').textContent=window.gdrive?.isLoggedIn()?'이 Google 계정은 허용목록에 없습니다.':'로그인이 필요한 기능입니다';
+    controls();
+  });
+  controls();
+})();
+
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
@@ -1503,14 +2406,42 @@ window.ICO = {
     console.error(msg);
   }
 })();
+/* Navigation width preference contains no account information. */
+const navToggle=document.getElementById('navToggle');
+const navViewport=matchMedia('(max-width:860px)');
+function syncNavToggle(){
+  const closed=document.documentElement.classList.contains(navViewport.matches?'nav-mobile-collapsed':'nav-collapsed');
+  navToggle.querySelector('.nav-toggle-arrow').setAttribute('d',closed?'M9 4v16m4-11 3 3-3 3':'M9 4v16m6-11-3 3 3 3');
+  navToggle.setAttribute('aria-expanded',String(!closed));navToggle.setAttribute('aria-label',closed?'메뉴 펼치기':'메뉴 접기');navToggle.title=closed?'메뉴 펼치기':'메뉴 접기';
+}
+function setNavCollapsed(closed){
+  document.documentElement.classList.toggle(navViewport.matches?'nav-mobile-collapsed':'nav-collapsed',closed);
+  if(!navViewport.matches)try{localStorage.setItem('enticket-nav-collapsed',String(closed));}catch{}
+  syncNavToggle();
+}
+navToggle.onclick=()=>setNavCollapsed(navToggle.getAttribute('aria-expanded')==='true');
+navViewport.addEventListener('change',syncNavToggle);syncNavToggle();
+for(const button of document.querySelectorAll('.tab')){
+  button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());
+  if(['settlement','instagram'].includes(button.dataset.tab))button.addEventListener('click',()=>{if(!navViewport.matches)setNavCollapsed(false);});
+}
+for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById(id);button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());}
 /* ===== 탭 전환 ===== */
-document.querySelectorAll(".tab").forEach(t=>{
+document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   t.addEventListener("click",()=>{
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
     document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
-    t.classList.add("active");
+    const target=t.dataset.tab || t.dataset.subtab;
+    if(target==='settlement' || target==='oseal'){
+      document.querySelector('.tab[data-tab="settlement"]').classList.add('active');
+      document.querySelectorAll('.settlement-tab').forEach(button=>{
+        const selected=(button.dataset.tab || button.dataset.subtab)===target;
+        button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
+      });
+    }else t.classList.add("active");
+    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
     t.scrollIntoView({block:"nearest",inline:"nearest"});
-    document.getElementById("panel-"+t.dataset.tab).classList.add("active");
+    document.getElementById("panel-"+target).classList.add("active");
   });
 });
 /* ===== 공용: 암호 걸린 Office 파일 복호화 (도구1·도구4 공유) ===== */
@@ -1970,7 +2901,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   }
   function renderOutput(){
     if(!nodes.length){
-      outputEl.innerHTML='<div class="empty">파일을 넣으면 예매자 명단이 자동으로 정리됩니다.</div>';
+      outputEl.innerHTML='';
       countEl.textContent=""; controlsEl.style.display="none"; dlRow.style.display="none"; warnBox.innerHTML=""; return;
     }
     const rows=getViewRows();
@@ -2004,7 +2935,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
   async function saveToDrive(){
     if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
@@ -2114,7 +3045,7 @@ document.querySelectorAll(".tab").forEach(t=>{
       results=results.filter(x=>x!==r);
       usedNames.delete(r.filename);
       card.remove();
-      if(!resultsEl.querySelector(".card")) resultsEl.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>';
+      if(!resultsEl.querySelector(".card")) resultsEl.innerHTML='';
       updateBar();
     });
     resultsEl.appendChild(card);
@@ -2131,7 +3062,7 @@ document.querySelectorAll(".tab").forEach(t=>{
   function clearAll(){
     results.forEach(r=>URL.revokeObjectURL(r.url));
     results=[]; usedNames.clear();
-    boxEls.forEach(b=>{ b.resultsEl.innerHTML='<div class="empty">변환 결과가 여기 표시됩니다</div>'; });
+    boxEls.forEach(b=>{ b.resultsEl.innerHTML=''; });
     updateBar();
   }
   const boxEls=BOXES.map(b=>{
@@ -2976,7 +3907,7 @@ function renderValidationCard(result) {
   }
   function renderOutput(){
     const withData=sessions.filter(sessionHasData);
-    if(!withData.length){ outputEl.innerHTML='<div class="empty">파일을 넣으면 정산표가 자동으로 만들어집니다.</div>'; return; }
+    if(!withData.length){ outputEl.innerHTML=''; return; }
     const money=n=>`₩${won(n)}`;
     const dash=v=>v?won(v):"-";
     let thead=`<thead>
@@ -3234,7 +4165,7 @@ function renderValidationCard(result) {
   }
   // 정산서 드라이브 저장
   async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     let built;
     try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
     if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
@@ -3672,7 +4603,7 @@ function renderValidationCard(result) {
   }
   function renderOutput(){
     const anyLoaded=nodes.length>0;
-    if(!anyLoaded){ outputEl.innerHTML='<div class="empty">파일을 넣으면 관람자 이름·연락처가 자동으로 추출됩니다.</div>'; countEl.textContent=""; dlRow.style.display="none"; return; }
+    if(!anyLoaded){ outputEl.innerHTML=''; countEl.textContent=""; dlRow.style.display="none"; return; }
     if(!lastResult.length){
       outputEl.innerHTML='<div class="warn">추출된 전화번호가 없습니다. 각 파일에서 전화 컬럼이 올바르게 지정됐는지 확인해 주세요.</div>';
       countEl.textContent=""; dlRow.style.display="none"; return;
@@ -3713,7 +4644,7 @@ function renderValidationCard(result) {
   // 드라이브 저장 (엑셀)
   async function smsSaveToDrive(){
     if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 우측 상단에서 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
@@ -4221,7 +5152,7 @@ window.OrigSeal = (function(){
   }
   function invalidate(){
     conversion++; out=null; btnRow.style.display="none"; fnameEl.textContent="";
-    preview.innerHTML='<div class="empty">정산서 파일을 넣으면 변환 결과가 여기 표시됩니다.</div>';
+    preview.innerHTML='';
     setStatus(""); updateGate();
   }
   document.addEventListener("enticket-auth", invalidate);
@@ -4346,6 +5277,64 @@ window.OrigSeal = (function(){
       btnPdf.disabled=false;
     }
   });
+})();
+</script>
+<script>
+(function(){
+  const dialog=document.createElement('dialog');dialog.className='ig-calendar';dialog.setAttribute('aria-label','예약 날짜와 시간 선택');
+  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="시 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="시" inputmode="numeric" type="text" maxlength="2" value="00" data-max="23"><button type="button" data-step="-1" aria-label="시 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><span>:</span><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="분 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="분" inputmode="numeric" type="text" maxlength="2" value="00" data-max="59"><button type="button" data-step="-1" aria-label="분 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
+  document.body.append(dialog);
+  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('.ig-time-stepper input');
+  const pad=n=>String(n).padStart(2,'0');
+  function normalizeTime(input){input.value=pad(Math.min(Number(input.dataset.max),Math.max(0,Number(input.value)||0)));}
+  for(const input of [hour,minute]){
+    const step=delta=>{normalizeTime(input);input.value=pad((Number(input.value)+delta+Number(input.dataset.max)+1)%(Number(input.dataset.max)+1));};
+    input.parentElement.querySelectorAll('button').forEach(button=>button.onclick=()=>step(Number(button.dataset.step)));
+    input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,2);});
+    input.addEventListener('blur',()=>normalizeTime(input));
+    input.addEventListener('focus',()=>input.select());
+    input.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();step(event.key==='ArrowUp'?1:-1);}});
+  }
+  let target,selected,month;
+  const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  function render(){
+    const minMonth=korea().slice(0,7);
+    const maxMonth=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,7);
+    const current=month.toISOString().slice(0,7);
+    if(current<minMonth)month=new Date(minMonth+'-01T00:00:00Z');
+    if(current>maxMonth)month=new Date(maxMonth+'-01T00:00:00Z');
+    const visible=month.toISOString().slice(0,7);
+    dialog.querySelector('[data-prev]').disabled=visible<=minMonth;
+    dialog.querySelector('[data-next]').disabled=visible>=maxMonth;
+    const y=month.getUTCFullYear(),m=month.getUTCMonth();
+    dialog.querySelector('strong').textContent=`${y}년 ${m+1}월`;grid.replaceChildren();
+    for(const day of ['일','월','화','수','목','금','토']){const el=document.createElement('span');el.textContent=day;grid.append(el);}
+    for(let n=0;n<new Date(Date.UTC(y,m,1)).getUTCDay();n++)grid.append(document.createElement('i'));
+    const max=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,10);
+    for(let n=1;n<=new Date(Date.UTC(y,m+1,0)).getUTCDate();n++){
+      const date=`${y}-${pad(m+1)}-${pad(n)}`,button=document.createElement('button');button.type='button';button.className='ig-calendar-day';button.textContent=n;
+      button.setAttribute('aria-label',`${y}년 ${m+1}월 ${n}일`);button.setAttribute('aria-pressed',String(date===selected));button.disabled=date<korea()||date>max;
+      button.onclick=()=>{selected=date;render();};grid.append(button);
+    }
+  }
+  dialog.querySelector('[data-prev]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()-1);render();};
+  dialog.querySelector('[data-next]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()+1);render();};
+  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+  dialog.querySelector('.ig-calendar-apply').onclick=()=>{
+    normalizeTime(hour);normalizeTime(minute);
+    target.value=selected+'T'+hour.value+':'+minute.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));dialog.close();
+  };
+  function attach(input){
+    if(input.dataset.calendar)return;input.dataset.calendar='true';input.hidden=true;input.tabIndex=-1;
+    const button=document.createElement('button');button.type='button';button.className='ig-date-trigger';button.setAttribute('aria-label','예약 날짜와 시간 선택');input.after(button);
+    function sync(){button.disabled=input.disabled;button.textContent=(input.value?input.value.replace('T','  ').replaceAll('-','.'):'날짜와 시간 선택')+'  ▦';}
+    button.onclick=()=>{target=input;const value=input.value||new Date(Date.now()+10*3600000).toISOString().slice(0,16);selected=value.slice(0,10);month=new Date(selected.slice(0,7)+'-01T00:00:00Z');hour.value=value.slice(11,13);minute.value=value.slice(14,16);render();dialog.showModal();};
+    input.addEventListener('input',sync);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled']});sync();
+    // Mode changes may initialize the underlying value without an input event.
+    document.querySelectorAll('[data-publish-mode]').forEach(b=>b.addEventListener('click',sync));
+  }
+  function scan(){document.querySelectorAll('#panel-instagram input[type="datetime-local"]').forEach(attach);}
+  scan();new MutationObserver(scan).observe(document.getElementById('panel-instagram'),{childList:true,subtree:true});
 })();
 </script>
 </body>
