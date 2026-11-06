@@ -13,6 +13,7 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
 [hidden] { display: none !important; }
+.auth-loading { font-size:12px; color:#978a9f; padding:8px 0; }
 /* ============================================================
    엔티켓 업무 도구 — 디자인 토큰
    Bezier Design System 구조를 따른다:
@@ -1337,7 +1338,8 @@ window.ICO = {
     <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
-    <button class="gbtn" id="gLoginBtn" disabled>로그인</button>
+    <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
+    <button class="gbtn" id="gLoginBtn" style="display:none" disabled>로그인</button>
     <span id="gUser" class="guser" style="display:none"></span>
     <button class="gbtn" id="gLogoutBtn" style="display:none">로그아웃</button>
   </div>
@@ -1710,9 +1712,11 @@ window.ICO = {
   const loginBtn  = document.getElementById("gLoginBtn");
   const userInfo  = document.getElementById("gUser");
   const logoutBtn = document.getElementById("gLogoutBtn");
+  const authLoading=document.getElementById('gAuthLoading'), authRetry=document.getElementById('gAuthRetry');
+  function finishAuthLoading(){authLoading.hidden=true;authRetry.hidden=true;}
   function notifyAuth(loggedIn){ try{ document.dispatchEvent(new CustomEvent("enticket-auth",{ detail:{ loggedIn, allowed: isAllowedUser } })); }catch(e){} }
-  function showLoggedIn(email){ loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
-  function showLoggedOut(){ authRevision++; accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
+  function showLoggedIn(email){ finishAuthLoading(); loginBtn.style.display="none"; userInfo.style.display=""; userInfo.textContent=email; logoutBtn.style.display=""; notifyAuth(true); }
+  function showLoggedOut(){ finishAuthLoading(); authRevision++; accessToken=null; tokenExp=0; userEmail=""; loginBtn.style.display=""; userInfo.style.display="none"; userInfo.textContent=""; logoutBtn.style.display="none"; stampCache=null; isAllowedUser=false; notifyAuth(false); }
   function tokenValid(){ return isAllowedUser; }
   // 로그인한 계정이 허용목록에 있는지 백엔드에 확인 (도장 없이 판정만)
   async function verifyAllowed(){
@@ -1791,8 +1795,9 @@ window.ICO = {
     if(checkingSession) return;
     checkingSession = true;
     const revision = authRevision;
+    if(!authLoading.hidden){authLoading.textContent='로그인 확인 중…';authRetry.hidden=true;}
     try {
-      const r = await fetch(WORKER_URL + '/session', {method:'POST',body:new FormData()});
+      const r = await fetch(WORKER_URL + '/session', {method:'POST',body:new FormData(),signal:AbortSignal.timeout(15000)});
       const d = await r.json();
       if(revision !== authRevision) return;
       if(r.ok && d.allowed){
@@ -1800,12 +1805,16 @@ window.ICO = {
         isAllowedUser = true; userEmail = d.email;
         if(!wasLoggedIn) showLoggedIn(userEmail);
       } else if(r.status === 401 || r.status === 403) showLoggedOut();
-    } catch {} finally { checkingSession=false; lastActivityCheck=Date.now(); }
+    } catch {} finally {
+      checkingSession=false; lastActivityCheck=Date.now();
+      if(revision===authRevision && !authLoading.hidden){authLoading.textContent='로그인 상태 확인 실패';authRetry.hidden=false;}
+    }
   }
   // Only real interaction renews an idle session; an unattended tab has no heartbeat.
   for(const event of ['pointerdown','keydown']) document.addEventListener(event, ()=>{
     if(isAllowedUser && Date.now()-lastActivityCheck > 60000) restoreSession();
   }, {passive:true});
+  authRetry.addEventListener('click',restoreSession);
   restoreSession();
   // ---- 공용 저장 API: 내부만 Worker 전송 (탭 코드 변경 없음) ----
   window.gdrive = {

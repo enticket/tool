@@ -8,9 +8,12 @@ with sync_playwright() as p:
     page.route('https://cdn.jsdelivr.net/**',lambda r:r.abort())
     page.route('https://accounts.google.com/gsi/client',lambda r:r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient(o){return {requestAccessToken(){o.callback({access_token:'test',expires_in:300})}}}}}};"))
     page.route('https://www.googleapis.com/**',lambda r:r.fulfill(json={'email':'staff@example.test'}))
-    state={'valid':False,'logins':0}
+    pending=[]
+    state={'valid':False,'logins':0,'hold':False}
     def api(route):
         path=route.request.url.split('/api/')[1]
+        if path=='session' and state['hold']:
+            pending.append(route);return
         if path=='session/login':
             state['valid']=True;state['logins']+=1
             route.fulfill(headers={'Set-Cookie':'__Host-enticket_session=test; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=86400'},json={'ok':True,'allowed':True,'email':'staff@example.test'});return
@@ -25,8 +28,17 @@ with sync_playwright() as p:
     expect(page.locator('#gUser')).to_have_text('staff@example.test')
     assert context.cookies()[0]['httpOnly']
     assert page.evaluate('document.cookie')==''
-    page.reload(wait_until='networkidle')
+    state['hold']=True
+    page.reload(wait_until='domcontentloaded')
+    expect(page.locator('#gAuthLoading')).to_be_visible()
+    expect(page.locator('#gLoginBtn')).to_be_hidden()
+    expect(page.locator('#gLogoutBtn')).to_be_hidden()
+    page.wait_for_timeout(100)
+    assert pending
+    state['hold']=False
+    pending.pop().fulfill(json={'ok':True,'allowed':True,'email':'staff@example.test'})
     expect(page.locator('#gUser')).to_have_text('staff@example.test')
+    expect(page.locator('#gAuthLoading')).to_be_hidden()
     cdp=context.new_cdp_session(page)
     cdp.send('Network.setCacheDisabled',{'cacheDisabled':True})
     cdp.send('Page.reload',{'ignoreCache':True})
