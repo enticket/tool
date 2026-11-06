@@ -1193,6 +1193,7 @@ td.c { text-align: center; }
 .ig-detail-arrow:hover:not(:disabled) { background:var(--bg-grey-lighter); color:var(--color-text-accent); }
 .ig-detail-arrow:disabled { opacity:var(--opacity-disabled); cursor:default; }
 .ig-detail-arrow:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
+.ig-media-carousel { position:absolute; top:var(--spacing-12); right:var(--spacing-12); display:flex; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,.6)); pointer-events:none; }
 </style>
 </head>
 <body>
@@ -2052,7 +2053,14 @@ window.ICO = {
       const img=document.createElement('img');img.className='ig-media-cover';img.src=item.thumbnail;img.alt='게시물 이미지';img.loading='lazy';img.referrerPolicy='no-referrer';
       img.addEventListener('error',()=>img.replaceWith(placeholder),{once:true});art.append(img);
     } else art.append(placeholder);
-    if(item.type!=='사진'){const badge=document.createElement('span');badge.className='ig-media-type';badge.textContent=item.type;art.append(badge);}
+    if(item.type!=='사진'){
+      const badge=document.createElement('span');
+      if(item.type==='여러 장'){
+        badge.className='ig-media-carousel';badge.setAttribute('role','img');badge.setAttribute('aria-label','여러 장 게시물');badge.title='여러 장 게시물';
+        badge.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h10a2 2 0 0 1 2 2v10"/><rect x="3" y="7" width="14" height="14" rx="3" fill="currentColor" stroke="none"/></svg>';
+      }else{badge.className='ig-media-type';badge.textContent=item.type;}
+      art.append(badge);
+    }
     const body=document.createElement('div');body.className='ig-media-body';
     const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption?.replace(/\s+/g,' ').trim()||'캡션 없음';
     const meta=document.createElement('div');meta.className='ig-media-meta';
