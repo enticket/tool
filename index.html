@@ -1205,6 +1205,19 @@ td.c { text-align: center; }
 @media(max-width:640px) { #igReview .ig-row { grid-template-columns:minmax(0,1fr); } }
 
 .ig-date-trigger { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:46px; padding:10px 12px; border:1px solid #ddd8e3; border-radius:8px; background:white; color:#31283c; font:inherit; cursor:pointer; }
+.ig-reservation { display:grid; grid-template-columns:100px minmax(0,1fr); gap:18px; padding:20px; background:white; border:1px solid #e8e4ed; border-radius:12px; }
+.ig-reservation-image { width:100px; height:132px; object-fit:contain; background:#f7f6f9; border-radius:6px; grid-row:1; }
+.ig-reservation-summary { grid-column:2; min-width:0; align-self:center; }
+.ig-reservation-meta { display:flex; align-items:center; gap:10px; font-size:12px; color:#918699; margin-bottom:10px; }
+.ig-reservation-badge { background:#f1ebf7; color:#653b84; border-radius:5px; padding:4px 7px; }
+.ig-reservation-date { display:block; font-size:17px; color:#352a40; margin-bottom:10px; }
+.ig-reservation .ig-media-caption { margin:0; color:#81758b; font-size:13px; line-height:1.6; -webkit-line-clamp:2; }
+.ig-reservation-actions { grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:14px; border-top:1px solid #f0ecf3; }
+.ig-reservation-actions .ig-date-trigger { width:auto; margin-left:auto; min-height:34px; padding:6px 10px; font-size:12px; background:#faf9fc; }
+.ig-reservation-actions .btn { background:white; border:1px solid #e7e1ed; color:#786586; font-size:12px; border-radius:6px; }
+.ig-reservation-actions .btn:hover { background:#f5f1f9; }
+.ig-reservation-actions .ig-reservation-cancel { color:#9d7a81; border-color:transparent; }
+@media(max-width:600px) { .ig-reservation { padding:16px; grid-template-columns:76px minmax(0,1fr); gap:12px; } .ig-reservation-image { width:76px; height:105px; } .ig-reservation-date { font-size:15px; } .ig-reservation-actions .ig-date-trigger { margin-left:0; } }
 .ig-calendar { position:fixed; inset:auto; left:50vw; top:50dvh; transform:translate(-50%,-50%); margin:0; max-height:calc(100dvh - 32px); overflow:auto; width:min(340px,calc(100vw - 48px)); padding:24px; border:1px solid #e9e5ed; border-radius:16px; box-shadow:0 16px 64px #23133426; color:#31283c; }
 .ig-calendar::backdrop { background:#21192e55; }
 .ig-calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
@@ -2119,13 +2132,16 @@ window.ICO = {
       if(!more)$('igScheduleList').replaceChildren();
       scheduleCursor=data.nextCursor||null;$('igScheduleMore').hidden=!scheduleCursor;
       for(const item of data.items){
-        const card=document.createElement('div');card.className='panel';
-        const row=document.createElement('div');row.className='btn-row';
-        if(item.previewUrl){const image=document.createElement('img');image.src=item.previewUrl;image.alt='예약 이미지';image.style.cssText='width:72px;height:90px;object-fit:contain';row.append(image);}
-        const title=document.createElement('strong');title.textContent=(scheduleNames[item.status]||item.status)+' · '+(item.channel==='story'?'스토리':'피드')+' · '+new Date(item.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});row.append(title);card.append(row);
-        const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'스토리 이미지';card.append(caption);
+        const card=document.createElement('div');card.className='ig-reservation';
+        const row=document.createElement('div');row.className='ig-reservation-summary';
+        if(item.previewUrl){const image=document.createElement('img');image.src=item.previewUrl;image.alt='예약 이미지';image.className='ig-reservation-image';card.append(image);}
+        const meta=document.createElement('div');meta.className='ig-reservation-meta';
+        const badge=document.createElement('span');badge.className='ig-reservation-badge';badge.textContent=scheduleNames[item.status]||item.status;
+        const channel=document.createElement('span');channel.textContent=item.channel==='story'?'스토리':'피드';meta.append(badge,channel);row.append(meta);
+        const title=document.createElement('strong');title.className='ig-reservation-date';title.textContent=new Date(item.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'});row.append(title);card.append(row);
+        const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'스토리 이미지';row.append(caption);
         if(item.error){const error=document.createElement('p');error.className='ig-hint';error.style.color='var(--color-text-critical)';error.textContent=describe({code:item.error});card.append(error);}
-        const actions=document.createElement('div');actions.className='btn-row';
+        const actions=document.createElement('div');actions.className='ig-reservation-actions';
         if(item.previewUrl){const view=document.createElement('button');view.className='btn ghost sm';view.textContent='내용 보기';view.onclick=()=>openMedia({caption:item.caption,type:'예약 '+(item.channel==='story'?'스토리':'피드'),timestamp:item.scheduledAt,assets:[{type:'image',url:item.previewUrl}]});actions.append(view);}
         if(item.status==='unknown'){
           const check=document.createElement('button');check.className='btn ghost sm';check.textContent='게시 상태 확인';
@@ -2134,7 +2150,7 @@ window.ICO = {
         if(item.status==='scheduled'){
           const time=document.createElement('input');time.type='datetime-local';time.value=koreaInput(item.scheduledAt);time.setAttribute('aria-label','변경할 예약 시각 · 한국 시간');time.style.width='auto';
           const change=document.createElement('button');change.className='btn ghost sm';change.textContent='시간 변경';
-          const cancel=document.createElement('button');cancel.className='btn ghost sm';cancel.textContent='예약 취소';
+          const cancel=document.createElement('button');cancel.className='btn ghost sm ig-reservation-cancel';cancel.textContent='예약 취소';
           async function mutate(action){
             if(scheduleBusy)return;
             let scheduled_at;try{if(action==='schedule')scheduled_at=scheduleISO(time.value);}catch(e){$('igScheduleStatus').textContent=e.message;return;}
