@@ -1141,10 +1141,22 @@ td.c { text-align: center; }
 .ig-subtab.active { background:var(--bg-grey-lighter); color:var(--color-text-accent); font-weight:var(--font-weight-700); }
 .ig-subtab.active::before { content:""; position:absolute; left:-14px; top:9px; bottom:9px; width:3px; border-radius:var(--radius-2); background:var(--color-bg-accent); }
 .ig-subtab:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:2px; }
-.ig-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-16); margin:var(--spacing-16) 0; }
-.ig-media-cover { width:100%; aspect-ratio:1; object-fit:cover; background:var(--bg-grey-lighter); display:block; }
-.ig-media-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; white-space:pre-wrap; overflow-wrap:anywhere; margin:var(--spacing-8) 0; font-size:var(--font-size-13); line-height:var(--line-height-20); }
-#igManageStatus { margin-top:var(--spacing-12); font-size:var(--font-size-13); }
+.ig-manage-toolbar { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-12); margin-bottom:var(--spacing-8); }
+.ig-manage-toolbar strong { font-size:var(--font-size-15); }
+.ig-media-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--spacing-20); margin:var(--spacing-16) 0; }
+.ig-media-card { min-width:0; border:1px solid var(--color-border-neutral); border-radius:var(--radius-12); overflow:hidden; background:var(--bg-white-normal); transition:border-color .15s,box-shadow .15s; }
+.ig-media-card:has(a):hover { border-color:var(--color-text-accent); box-shadow:var(--elevation-2); }
+.ig-media-link { display:block; height:100%; text-decoration:none; color:inherit; }
+.ig-media-link:focus-visible { outline:2px solid var(--color-text-accent); outline-offset:-3px; }
+.ig-media-art { position:relative; background:var(--bg-grey-lighter); border-bottom:1px solid var(--color-border-neutral); }
+.ig-media-cover { width:100%; aspect-ratio:4 / 5; object-fit:contain; padding:var(--spacing-8); display:block; }
+.ig-media-cover.empty { display:grid; place-items:center; }
+.ig-media-type { position:absolute; left:var(--spacing-12); top:var(--spacing-12); border-radius:var(--radius-6); padding:var(--spacing-4) var(--spacing-8); background:var(--bg-white-normal); color:var(--txt-black-darker); font-size:var(--font-size-12); box-shadow:var(--elevation-1); }
+.ig-media-body { padding:var(--spacing-12); }
+.ig-media-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; min-height:40px; margin-bottom:var(--spacing-12); font-size:var(--font-size-13); line-height:var(--line-height-20); color:var(--txt-black-darkest); }
+.ig-media-meta { display:flex; align-items:center; justify-content:space-between; color:var(--txt-black-dark); font-size:var(--font-size-12); }
+.ig-media-open { font-size:var(--font-size-15); color:var(--color-text-accent); }
+#igManageStatus { font-size:var(--font-size-12); color:var(--txt-black-dark); }
 #igManageStatus[data-error=true] { color:var(--color-text-critical); }
 #igManageAccount { flex:1; }
 @media(max-width:860px) { .ig-subnav { flex-basis:100%; margin-left:var(--spacing-12); } }
@@ -1474,8 +1486,7 @@ window.ICO = {
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button><button class="btn ghost sm" id="igRecover" hidden>마지막 게시 상태 확인</button></div></div>
       </div>
       <div id="igManageView" hidden>
-        <div class="panel ig-account"><strong id="igManageAccount">게시물 관리</strong><button class="btn ghost sm" id="igRefresh" type="button">새로고침</button></div>
-        <p class="ig-hint">피드·릴스 게시물을 최신순으로 표시합니다. 수정·삭제는 인스타그램에서 진행해 주세요.</p>
+        <div class="ig-manage-toolbar"><strong id="igManageAccount">게시물 관리</strong><button class="btn ghost sm" id="igRefresh" type="button">새로고침</button></div>
         <p id="igManageStatus" role="status" aria-live="polite"></p>
         <div class="ig-media-grid" id="igMediaList"></div>
         <div class="btn-row"><button class="btn ghost" type="button" id="igLoadMore" hidden>더 보기</button></div>
@@ -1976,18 +1987,22 @@ window.ICO = {
   const mediaSeen=new Set();
   function mediaControls(){ $('igRefresh').disabled=mediaBusy; $('igLoadMore').disabled=mediaBusy; $('igLoadMore').hidden=!mediaCursor; }
   function mediaCard(item){
-    const card=document.createElement('article'); card.className='ig-card';
-    const placeholder=document.createElement('div'); placeholder.className='ig-media-cover empty'; placeholder.textContent='미리보기 없음';
+    const card=document.createElement('article');card.className='ig-media-card';
+    const content=document.createElement(item.permalink?'a':'div');content.className='ig-media-link';
+    if(item.permalink){content.href=item.permalink;content.target='_blank';content.rel='noopener noreferrer';content.setAttribute('aria-label','인스타그램에서 보기: '+(item.caption||item.type).slice(0,100));}
+    const art=document.createElement('div');art.className='ig-media-art';
+    const placeholder=document.createElement('div');placeholder.className='ig-media-cover empty';placeholder.textContent='미리보기 없음';
     if(item.thumbnail){
-      const img=document.createElement('img'); img.className='ig-media-cover'; img.src=item.thumbnail; img.alt='게시물 이미지'; img.loading='lazy'; img.referrerPolicy='no-referrer';
-      img.addEventListener('error',()=>img.replaceWith(placeholder),{once:true});card.append(img);
-    } else card.append(placeholder);
-    const body=document.createElement('div');body.className='ig-card-body';
-    const meta=document.createElement('div');meta.className='fname';meta.textContent=item.type+' · '+(item.timestamp?new Date(item.timestamp).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 없음');
-    const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption||'캡션 없음';
-    body.append(meta,caption);
-    if(item.permalink){const a=document.createElement('a');a.className='btn ghost sm';a.href=item.permalink;a.target='_blank';a.rel='noopener noreferrer';a.textContent='인스타그램에서 보기';body.append(a);}
-    card.append(body);return card;
+      const img=document.createElement('img');img.className='ig-media-cover';img.src=item.thumbnail;img.alt='게시물 이미지';img.loading='lazy';img.referrerPolicy='no-referrer';
+      img.addEventListener('error',()=>img.replaceWith(placeholder),{once:true});art.append(img);
+    } else art.append(placeholder);
+    if(item.type!=='사진'){const badge=document.createElement('span');badge.className='ig-media-type';badge.textContent=item.type;art.append(badge);}
+    const body=document.createElement('div');body.className='ig-media-body';
+    const caption=document.createElement('p');caption.className='ig-media-caption';caption.textContent=item.caption?.replace(/\s+/g,' ').trim()||'캡션 없음';
+    const meta=document.createElement('div');meta.className='ig-media-meta';
+    const date=document.createElement('span');date.textContent=item.timestamp?new Date(item.timestamp).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 없음';meta.append(date);
+    if(item.permalink){const arrow=document.createElement('span');arrow.className='ig-media-open';arrow.textContent='↗';arrow.setAttribute('aria-hidden','true');meta.append(arrow);}
+    body.append(caption,meta);content.append(art,body);card.append(content);return card;
   }
   async function loadMedia(more=false){
     if(mediaBusy || !window.gdrive?.isAllowed()) return;
