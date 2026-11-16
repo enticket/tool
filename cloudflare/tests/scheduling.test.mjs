@@ -48,3 +48,17 @@ test('durable scheduling, rescheduling, cancellation, processing and uncertain p
  const second=await(await invoke('schedules',{after:first.nextCursor})).json();assert.equal(second.items.length,1);assert.equal(second.nextCursor,null);
  }finally{await mf.dispose();}
 });
+
+test('completed reservations leave the list at 24 hours, without hiding pending or uncertain jobs',async()=>{
+ const {completedScheduleExpired}=await import('../src/instagram-job.mjs');
+ const day=86400000,now=1800000000000;
+ const base={status:'published',scheduledAt:now-3*day};
+ assert.equal(completedScheduleExpired({...base,publishedAt:now-day+1},now),false);
+ assert.equal(completedScheduleExpired({...base,publishedAt:now-day},now),true);
+ assert.equal(completedScheduleExpired({...base,publishedAt:new Date(now-day).toISOString()},now),true);
+ assert.equal(completedScheduleExpired({...base,attemptedAt:now-day},now),true);
+ assert.equal(completedScheduleExpired({...base,attemptedAt:now-1000},now),false);
+ for(const status of ['scheduled','processing','unknown','failed','cancelled'])
+   assert.equal(completedScheduleExpired({...base,status},now),false);
+ assert.equal(completedScheduleExpired({status:'published',publishedAt:now-3*day},now),false);
+});
