@@ -38,7 +38,7 @@ npm run dev    # 127.0.0.1:8787
 python3 tests/cloud-browser.py
 ```
 
-클라우드 개발 환경에서는 Wrangler 명령 앞에 `WRANGLER_SEND_METRICS=false XDG_CONFIG_HOME=/tmp/enticket-cloudflare-config`를 지정합니다. 기본 `Request.cf` 메타데이터의 외부 조회가 차단될 수 있지만 이 앱은 사용하지 않습니다. Wrangler 4.150.0과 호환 날짜 2026-10-13을 고정했습니다.
+클라우드 개발 환경에서는 Wrangler 명령 앞에 `WRANGLER_SEND_METRICS=false XDG_CONFIG_HOME=/tmp/enticket-cloudflare-config`를 지정합니다. 기본 `Request.cf` 메타데이터의 외부 조회가 차단될 수 있지만 이 앱은 사용하지 않습니다. Wrangler 4.162.0과 호환 날짜 2026-10-13을 고정했습니다.
 
 `browser-smoke.py`는 합성 파일의 XLSX/TXT/JPEG, 정산서 지급금액, 직인 XLSX/PDF, 직인 삭제/새로고침, 모바일 폭, 백엔드 호출 0건을 확인합니다. `cloud-browser.py`는 **모의 Google/API 응답**으로 로그인·세 종류 Drive 버튼·직인·만료/거부 계정을 확인합니다. Worker 테스트도 **모의 Google**을 사용하며 실제 Drive에 파일을 쓰지 않습니다. 실제 Google 연동 검증과 구분해야 합니다.
 
@@ -92,3 +92,31 @@ Cloudflare Git 연동을 사용할 경우 저장소 루트에서 빌드 명령 `
 - 확인 전: 실제 회사 Drive 저장. 로그인한 사용자가 예매자 명단의 **드라이브 저장**을 누른 뒤 회사 Drive의 `enticket/예매자명단/공연명` 폴더에서 파일을 열어 확인할 수 있습니다. 정산서와 문자 명단 저장도 사용자 확인 전입니다.
 - 직인 기능은 미완성이라는 사용자 설명에 따라 그대로 둡니다. 직인 완성을 이전이나 Instagram 연동의 선행 조건으로 삼지 않습니다.
 - 다음 기능은 Instagram 통합입니다. 기존 `instagram-admin/` 로컬 초안은 Node/SQLite/Sharp 서버용이므로 Workers에 그대로 배포할 수 없습니다. Meta 개발자 앱 생성과 회사 Instagram 연결이 별도로 필요합니다. 기존 회사 소개 페이지의 Netlify 연결은 유지합니다.
+
+## Instagram 통합 (2026-11-05)
+
+새 Cloudflare 계정 토큰 인증 및 두 Instagram 설정의 존재를 확인했습니다. Unified Login의 실제 `graph.facebook.com/v27.0` 계정 조회와 할당 계정 조회에서 `17841465620686597` / `en__ticket` 연결을 확인했습니다. 기존 Google 허용 계정 인증 뒤에 연결 확인, 브라우저 이미지 편집, 최종 미리보기와 명시적 확인 게시 흐름을 추가했습니다. SQLite 기반 무료 Durable Objects 바인딩(`INSTAGRAM_JOBS`)으로 게시용 이미지와 중복 방지 상태를 보관합니다. 운영 설정은 `keep_vars`로 유지합니다.
+
+자세한 검증 범위, 공식 문서와 동작은 [Instagram 연동](instagram.md)을 참조하세요. 실제 Instagram 게시와 Drive 저장의 사용자 확인은 남아 있습니다. 리디렉션/Webhook, 직인, 회사 홈페이지 Netlify 연결과 `instagram-admin/` 초안은 이번 작업에서 변경하지 않았습니다.
+
+Instagram 최종 운영 버전은 `e7452154-e02f-4c15-a2b2-061154130c51`이며, [초안 PR #1](https://github.com/enticket/tool/pull/1)의 `08a529e` 코드를 배포했습니다. `main` 병합은 하지 않았습니다. 기존 바인딩 이름/유형 보존, 무효 Google 토큰 401 및 비허용 출처 403을 운영에서 확인했습니다.
+
+## 로그인 유지와 예약 달력 (2026-11-06)
+
+허용된 Google 계정으로 로그인하면 `LOGIN_SESSIONS` SQLite Durable Object에 이메일과 만료 시각만 저장합니다. 브라우저에는 256비트 임의 세션 ID를 `__Host-enticket_session` 쿠키(HttpOnly, Secure, SameSite=Strict, Path=/)로 전달합니다. Google 액세스 토큰은 세션 저장소나 브라우저 영구 저장소에 저장하지 않습니다.
+
+마지막 인증 API 요청 또는 사용자 조작 확인 후 24시간 동안 유지하며, 사용자 조작 확인은 최대 분당 한 번입니다. 방치된 탭은 갱신하지 않습니다. 새로고침 시 `/api/session`으로 복원하며, 로그아웃은 서버 세션을 폐기합니다. 매 요청 허용 계정을 다시 확인하고 쿠키 인증은 동일 출처만 허용합니다. 기존 Google 토큰 기반 API 호환은 유지합니다.
+
+예약 날짜는 공통 달력 팝업에서 선택하고, 한국 시간의 시·분을 별도로 고릅니다. 게시 준비와 예약 관리에 같은 달력을 사용하며 서버의 2분 이후~30일 이내 검증을 유지합니다.
+
+
+## 2026-11-16 보안 보완
+
+- 정산서 권종명은 HTML 속성에 보간하지 않고 DOM의 `value`에 할당합니다. 병합 해제는 HTML의 `data-*` 대신 해당 권종명을 닫힌 함수에서 참조합니다. 공통 HTML 이스케이프는 양쪽 따옴표도 처리하고 권종명 사전은 프로토타입 없는 객체를 사용합니다.
+- 오래된 `xlsx-js-style`을 제거했습니다. 파일 읽기·쓰기는 공식 배포본 SheetJS CE 0.20.3으로 수행합니다. npm의 `xlsx` 배포는 구버전에서 중단되어 공식 CDN의 고정 버전을 사용합니다. 공개 공지의 두 파서 취약점 수정 버전은 각각 0.19.3, 0.20.2입니다. 정산서의 색상·테두리·숫자서식은 생성한 워크북에만 OOXML 서식을 추가하여 보존합니다. 업로드한 파일을 이 서식 작성기로 파싱하지 않습니다.
+- jsPDF 4.2.1, fflate 0.8.3, Wrangler 4.162.0, Miniflare 5.20261113.0-beta로 업데이트했습니다. 배포 의존성은 lockfile에 고정합니다. html2canvas 1.4.1은 유지합니다.
+- 네 개의 고정 외부 라이브러리에 SHA-384 SRI와 익명 CORS를 적용했습니다. 파일이 바뀌면 브라우저가 실행을 거부하므로 버전·URL·해시를 함께 갱신해야 합니다. Google GIS는 상시 갱신되는 공식 클라이언트라 해시를 고정하지 않고 CSP에서 공식 `/gsi/client` 경로만 허용합니다.
+- `scripts/security_headers.py`는 게시할 HTML의 인라인 스크립트 SHA-256 해시로 CSP를 생성합니다. 인라인 이벤트 핸들러와 eval, 임의 스크립트, iframe 삽입을 차단합니다. 기존 화면의 동적 스타일을 위해 CSS 인라인 스타일만 허용합니다. Google 로그인·Instagram 미디어·Cloudflare 분석에 필요한 출처를 명시했습니다. HSTS는 도구 호스트에만 적용하며 회사 홈페이지 설정은 바꾸지 않습니다.
+- 코드 수정 후 반드시 `python scripts/build-static.py --mode cloud`로 HTML과 헤더를 함께 갱신합니다. HTML만 별도로 교체하면 CSP 해시가 달라져 실행이 차단됩니다. 로컬 서버도 같은 CSP를 적용합니다.
+
+추가 회귀 검사: `python tests/security-browser.py` (로컬 Cloudflare 개발 서버 필요). 합성 엑셀의 공격 문자열이 CSP 없이도 실행되지 않는지, 병합·해제가 유지되는지, CSP가 새 스크립트를 차단하고 SRI가 변조 응답을 거부하는지 확인합니다. `tests/browser-smoke.py`는 생성 정산서의 모든 서식 셀·수식·병합을 별도 XML 파서로 검사하고 PDF까지 생성합니다. 브라우저 인증·Drive·Meta 요청은 모의 응답으로 검증하며 실제 게시나 저장은 하지 않습니다.
