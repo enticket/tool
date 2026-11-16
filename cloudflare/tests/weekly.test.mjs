@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
-import {dateOnly,weekOf,performanceInput,parsePerformanceCaption} from '../src/weekly.mjs';
+import {dateOnly,weekOf,performanceInput,parsePerformanceCaption,parsePerformancePrice,withCaptionPrice} from '../src/weekly.mjs';
 
 test('Korean Monday weeks, month/year boundaries and real session dates',()=>{
  assert.deepEqual(weekOf('2026-11-22'),{start:'2026-11-16',end:'2026-11-22',title:'2026년 11월 셋째 주 공연'});
@@ -87,4 +87,20 @@ test('Instagram caption dates are performance sessions, never ticket deadlines o
  assert.equal(parse('일시: 2026.11.16 오후 12시').sessions[0].time,'12:00');
  assert.equal(parse('일시: 2026.11.16 오전 12시').sessions[0].time,'00:00');
  assert.equal(parse('엔티켓 새 소식!').eligible,false);
+});
+
+
+test('caption ticket prices populate new and existing unknown performances without overwriting edits',()=>{
+ const parse=parsePerformancePrice;
+ assert.equal(parse('관람료: 전석 20,000원 (회원 20% 할인)').priceKind,'paid');
+ assert.deepEqual(parse('관람료: 전석 20,000원'),{priceKind:'paid',price:'전석 20,000원'});
+ assert.deepEqual(parse('가격 | R석 5만원, S석 30,000원'),{priceKind:'paid',price:'R석 5만원, S석 30,000원'});
+ assert.deepEqual(parse('티켓 가격\nR석 50,000원\nS석 30,000원'),{priceKind:'paid',price:'R석 50,000원 · S석 30,000원'});
+ for(const text of ['관람료: 무료','전석 무료','무료 관람','입장료: 0원'])assert.equal(parse(text).priceKind,'free',text);
+ for(const text of ['무료 주차','할인 5,000원','배송료 3,000원','예매 오픈 2026.11.16'])assert.equal(parse(text).priceKind,'unknown',text);
+ assert.equal(parsePerformanceCaption('공연\n일시: 11월 16일\n가격: 전석 10,000원').priceKind,'paid');
+ const original={priceKind:'unknown',price:'',description:'관람료: 20,000원'};
+ assert.equal(withCaptionPrice(original).price,'20,000원');assert.equal(original.priceKind,'unknown');
+ assert.equal(withCaptionPrice({...original,priceKind:'free'}).priceKind,'free');
+ assert.equal(withCaptionPrice({...original,priceKind:'paid',price:'10,000원'}).price,'10,000원');
 });

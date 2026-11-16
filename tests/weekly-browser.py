@@ -30,7 +30,7 @@ with sync_playwright() as p:
    else:fields[key]=value.decode()
   action=fields['action'];id=fields.get('id')
   if action=='sources':
-   route.fulfill(json={'ok':True,'items':[{'id':'999','caption':'🎭 가져온 공연\n일시: 2026.12.05 19:30','assets':[{'type':'image'}],'suggestion':{'title':'가져온 공연','venue':'아트홀','sessions':[{'date':'2026-12-05','time':'19:30'}]}},{'id':'998','caption':'🎭 날짜 미정 공연','assets':[{'type':'image'}],'suggestion':{'title':'날짜 미정 공연','venue':'','sessions':[]}}], 'nextCursor':None});return
+   route.fulfill(json={'ok':True,'items':[{'id':'999','caption':'🎭 가져온 공연\n일시: 2026.12.05 19:30','assets':[{'type':'image'}],'suggestion':{'title':'가져온 공연','venue':'아트홀','sessions':[{'date':'2026-12-05','time':'19:30'}]}},{'id':'998','caption':'🎭 날짜 미정 공연','assets':[{'type':'image'}],'suggestion':{'title':'날짜 미정 공연','venue':'','sessions':[],'priceKind':'paid','price':'전석 20,000원'}}], 'nextCursor':None});return
   if action=='source':route.fulfill(content_type='image/jpeg',body=poster_bytes);return
   if action=='list':route.fulfill(json={'ok':True,**db});return
   if action=='performance':
@@ -74,7 +74,7 @@ with sync_playwright() as p:
  page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
  page.locator('#wkClosePerformance').click()
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('날짜 배치 1개',timeout=20000);expect(page.locator('#wkUnscheduled')).to_contain_text('날짜 미정 공연')
- page.locator('#wkUnscheduled button').first.click();expect(page.locator('#wkPRestore')).to_be_visible();page.locator('#wkPRestore').click();expect(page.locator('#wkPMessage')).to_contain_text('이미지를 불러왔습니다');expect(page.locator('#wkPPreview')).to_be_visible();box=page.locator('#wkPPreview').bounding_box();assert abs(box['width']/box['height']-.75)<.01;page.locator('#wkClosePerformance').click()
+ page.locator('#wkUnscheduled button').first.click();expect(page.locator('#wkPPriceKind')).to_have_value('paid');expect(page.locator('#wkPPrice')).to_have_value('전석 20,000원');expect(page.locator('#wkPRestore')).to_be_visible();page.locator('#wkPRestore').click();expect(page.locator('#wkPMessage')).to_contain_text('이미지를 불러왔습니다');expect(page.locator('#wkPPreview')).to_be_visible();box=page.locator('#wkPPreview').bounding_box();assert abs(box['width']/box['height']-.75)<.01;page.locator('#wkClosePerformance').click()
  page.locator('#wkMonth').fill('2026-12');page.locator('#wkMonth').dispatch_event('change');expect(page.locator('[data-date="2026-12-05"]')).to_contain_text('가져온 공연');assert len(db['performances'])==3
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('기존/동영상 제외 2개');assert len(db['performances'])==3
  page.locator('#wkMonth').fill('2026-11');page.locator('#wkMonth').dispatch_event('change')

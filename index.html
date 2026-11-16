@@ -1742,7 +1742,7 @@ window.ICO = {
         <div class="wk-performance-fields">
           <label class="ig-field">공연명<input type="text" id="wkPTitle" required maxlength="220" placeholder="공연명을 입력하세요" autofocus></label>
           <label class="ig-field">장소<input type="text" id="wkPVenue" maxlength="220" placeholder="공연장 · 세부 장소"></label>
-          <section class="wk-session-section" aria-label="공연 회차"><div class="wk-toolbar"><span class="wk-field-label">공연 일시</span><span class="ig-hint">시간 미정이면 비워두세요</span></div><div id="wkSessionRows"></div><button class="btn ghost sm" id="wkAddSession" type="button">＋ 회차 추가</button><textarea id="wkPSessions" hidden></textarea></section>
+          <section class="wk-session-section" aria-label="공연 회차"><div class="wk-toolbar"><span class="wk-field-label">공연 일시</span></div><div id="wkSessionRows"></div><button class="btn ghost sm" id="wkAddSession" type="button">＋ 회차 추가</button><textarea id="wkPSessions" hidden></textarea></section>
           <div class="wk-price-row"><label class="ig-field">가격<select id="wkPPriceKind"><option value="unknown">미확인</option><option value="free">무료</option><option value="paid">유료</option></select></label><label class="ig-field" id="wkPPriceField">가격 안내<input type="text" id="wkPPrice" maxlength="220" placeholder="예: 전석 20,000원"></label></div>
           <details id="wkPExtra" class="wk-extra"><summary>원문 · 홍보 문구</summary><label class="ig-field">원문 · 홍보 문구<textarea id="wkPDescription" rows="4" maxlength="10000"></textarea></label></details>
         </div>
@@ -2613,7 +2613,7 @@ window.ICO = {
         const images=post.assets.map((a,index)=>({...a,index})).filter(a=>a.type==='image');
         if(!images.length){skipped++;continue;}
         if(performances.some(p=>p.sourcePostId===post.id)){skipped++;continue;}
-        const candidate={id:crypto.randomUUID(),version:0,title:suggestion.title,venue:suggestion.venue,sessions:suggestion.sessions,priceKind:'unknown',price:'',bookingUrl:'',description:post.caption||'',status:'needs_review',sourcePostId:post.id,sourceAsset:String(images[0].index)};
+        const candidate={id:crypto.randomUUID(),version:0,title:suggestion.title,venue:suggestion.venue,sessions:suggestion.sessions,priceKind:suggestion.priceKind||'unknown',price:suggestion.price||'',bookingUrl:'',description:post.caption||'',status:'needs_review',sourcePostId:post.id,sourceAsset:String(images[0].index)};
         async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;void loadEditorPoster(async()=>normalize(await api('source',{post:post.id,index:candidate.sourceAsset,after:after||''},true)));}
         // A multi-image post may advertise several different performances; do not assign all to one date.
         if(images.length>1){failed++;const button=el('button',candidate.title+' · 여러 이미지: 공연 확인','wk-source');button.addEventListener('click',()=>run(()=>openCandidate('여러 이미지가 있는 게시물입니다. 첫 이미지를 불러왔습니다. 공연별 날짜와 포스터를 확인해 주세요.')));$('wkSources').append(button);continue;}
