@@ -100,8 +100,20 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
     const post=form.get('post');if(!/^\d{1,40}$/.test(post||''))fail('invalid_fields');
     // Verify ownership via the connected account's media edge, never fetch arbitrary URLs.
     const after=form.get('after')||'';if(after.length>2048||!/^[-a-zA-Z0-9_+=/]*$/.test(after))fail('invalid_fields');
-    const page=await instagramRequest(env,instagramConfig(env)+'/media',{fields:'id,media_type,media_url,children{id,media_type,media_url}',limit:12,after:after||undefined});
-    const item=page.data?.find(x=>x.id===post), index=Number(form.get('index')||0);
+    const fields='id,media_type,media_url,children{id,media_type,media_url}';
+    let page=await instagramRequest(env,instagramConfig(env)+'/media',{fields,limit:12,after:after||undefined});
+    let item=page.data?.find(x=>x.id===post);
+    const performanceId=form.get('performance_id');
+    if(!item&&validDraftId(performanceId)){
+      const saved=await store.get('performance:'+performanceId);
+      if(saved?.sourcePostId===post){
+        for(let i=0;i<19&&!item&&page.paging?.cursors?.after&&page.paging?.next;i++){
+          page=await instagramRequest(env,instagramConfig(env)+'/media',{fields,limit:50,after:page.paging.cursors.after});
+          item=page.data?.find(x=>x.id===post);
+        }
+      }
+    }
+    const index=Number(form.get('index')||0);
     const asset=item?.media_type==='CAROUSEL_ALBUM'?item.children?.data?.[index]:item;
     if(!asset || asset.media_type!=='IMAGE')fail('source_unavailable');
     let url;try{url=new URL(asset.media_url);}catch{fail('source_unavailable');}
@@ -114,7 +126,8 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
   }
   if(action==='asset'){
     const meta=await store.get(key('asset:'));if(!meta)fail('asset_not_found',404);
-    const chunks=[];for(let i=0;i<meta.chunks;i++)chunks.push(await store.get(`bytes:${id}:${i}`));
+    const keys=Array.from({length:meta.chunks},(_,i)=>`bytes:${id}:${i}`),values=await store.get(keys);
+    const chunks=keys.map(k=>values.get(k));if(chunks.some(x=>!x))fail('asset_not_found',404);
     return new Response(new Blob(chunks),{headers:{'Content-Type':'image/jpeg','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
   }
   if(action==='performance'){
