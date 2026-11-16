@@ -2479,7 +2479,7 @@ window.ICO = {
     if(!window.gdrive?.isAllowed())throw Error('로그인이 필요합니다.');
     const epoch=generation,fd=new FormData();fd.set('action',action);
     for(const [k,v]of Object.entries(fields)){if(Array.isArray(v))v.forEach(f=>fd.append(k,f));else fd.set(k,v);}
-    const r=await fetch('/api/weekly',{method:'POST',body:fd});
+    const r=await fetch('/api/weekly',{method:'POST',body:fd,...(['asset','source'].includes(action)?{signal:AbortSignal.timeout(20000)}:{})});
     if(epoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
     if(binary&&r.ok)return r.blob();const data=await r.json();
     if(!r.ok||!data.ok)throw Error(messages[data.error]||({'instagram_access_blocked':'Meta API 접근이 차단되었습니다. 다운로드 후 수동 게시할 수 있습니다.','instagram_draft_conflict':'서버에 고정된 이미지와 다릅니다. 초안을 다시 열어 저장된 미리보기를 확인하세요.'}[data.error])||'요청 실패: '+(data.error||r.status));return data;
@@ -2496,7 +2496,7 @@ window.ICO = {
     $('wkJobStatus').hidden=!locked;$('wkJobStatus').disabled=busy;
     $('wkUnlock').hidden=!['prepared','failed'].includes(draft?.status);$('wkUnlock').disabled=busy;
     for(const n of $('wkCandidates').querySelectorAll('input'))n.disabled=busy||locked;
-    $('wkPSave').disabled=busy;$('wkPDelete').disabled=busy;
+    $('wkPSave').disabled=busy||posterWorking;$('wkPDelete').disabled=busy;
     $('wkMoreSources').disabled=busy;
     for(const id of ['wkRefresh','wkNewPerformance','wkImport'])$(id).disabled=busy;
   }
@@ -2558,12 +2558,19 @@ window.ICO = {
   $('wkAddSession').addEventListener('click',()=>{const rows=$('wkSessionRows').children;if(rows.length>=100)return;addSessionRow(rows.length?rows[rows.length-1].querySelector('[type="date"]').value:'').focus();});
   function priceControls(){$('wkPPrice').disabled=$('wkPPriceKind').value!=='paid';}
   $('wkPPriceKind').addEventListener('change',priceControls);
-  let pPreviewUrl=null;
+  let pPreviewUrl=null,performanceEpoch=0,posterWorking=false;
+  async function loadEditorPoster(task){
+    const editor=performanceEpoch;posterWorking=true;controls();
+    try{const blob=await task();if(editor!==performanceEpoch||!$('wkPerformanceDialog').open)return;pFile=blob;posterPreview(blob);}
+    catch(e){if(editor===performanceEpoch&&$('wkPerformanceDialog').open)$('wkPMessage').textContent=e.message;}
+    finally{if(editor===performanceEpoch){posterWorking=false;controls();}}
+  }
   function posterPreview(blob){if(pPreviewUrl)URL.revokeObjectURL(pPreviewUrl);pPreviewUrl=blob?URL.createObjectURL(blob):null;$('wkPPreview').hidden=!blob;$('wkPPosterEmpty').hidden=!!blob;if(blob)$('wkPPreview').src=pPreviewUrl;else $('wkPPreview').removeAttribute('src');}
-  async function openPerformance(p){pEdit=p?structuredClone(p):{id:crypto.randomUUID(),version:0,title:'',sessions:[],venue:'',priceKind:'unknown',price:'',bookingUrl:'',description:'',status:'needs_review',sourcePostId:'',sourceAsset:''};pFile=null;
+  async function openPerformance(p){const editor=++performanceEpoch;posterWorking=false;pEdit=p?structuredClone(p):{id:crypto.randomUUID(),version:0,title:'',sessions:[],venue:'',priceKind:'unknown',price:'',bookingUrl:'',description:'',status:'needs_review',sourcePostId:'',sourceAsset:''};pFile=null;
     for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',bookingUrl:'wkPBooking',description:'wkPDescription',status:'wkPStatus'}))$(id).value=pEdit[key];
     setPerformanceSessions(pEdit.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));priceControls();$('wkPExtra').open=false;$('wkPDialogTitle').textContent=pEdit.version?'공연 정보 수정':'새 공연';$('wkPSave').textContent=pEdit.version?'변경 저장':'공연 등록';$('wkPFile').value='';$('wkPMessage').textContent='';$('wkPDelete').hidden=!pEdit.version;posterPreview(null);$('wkPerformanceDialog').showModal();
-    if(pEdit.assetId)posterPreview(await asset(pEdit.assetId));
+    // A poster request must never hold the application-wide action lock.
+    if(pEdit.assetId)asset(pEdit.assetId).then(blob=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open)posterPreview(blob);}).catch(e=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open)$('wkPMessage').textContent='포스터를 불러오지 못했습니다. 정보는 수정할 수 있습니다.';});
   }
   function textBlock(ctx,text,x,y,width,maxLines,size,min=24,color='#251b35'){
     let lines=[];
@@ -2604,7 +2611,7 @@ window.ICO = {
         if(!images.length){skipped++;continue;}
         if(performances.some(p=>p.sourcePostId===post.id)){skipped++;continue;}
         const candidate={id:crypto.randomUUID(),version:0,title:suggestion.title,venue:suggestion.venue,sessions:suggestion.sessions,priceKind:'unknown',price:'',bookingUrl:'',description:post.caption||'',status:'needs_review',sourcePostId:post.id,sourceAsset:String(images[0].index)};
-        async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;try{pFile=await normalize(await api('source',{post:post.id,index:candidate.sourceAsset,after:after||''},true));posterPreview(pFile);}catch(e){$('wkPMessage').textContent=e.message;}}
+        async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;void loadEditorPoster(async()=>normalize(await api('source',{post:post.id,index:candidate.sourceAsset,after:after||''},true)));}
         // A multi-image post may advertise several different performances; do not assign all to one date.
         if(images.length>1){failed++;const button=el('button',candidate.title+' · 여러 이미지: 공연 확인','wk-source');button.addEventListener('click',()=>run(()=>openCandidate('여러 이미지가 있는 게시물입니다. 첫 이미지를 불러왔습니다. 공연별 날짜와 포스터를 확인해 주세요.')));$('wkSources').append(button);continue;}
         status('공연을 가져오는 중… '+(placed+undated)+'개 저장');
@@ -2622,14 +2629,14 @@ window.ICO = {
       if(undated)$('wkPending').open=true;
     }finally{sourceBusy=false;}
   }
-  $('wkPerformanceForm').addEventListener('submit',e=>{e.preventDefault();run(async()=>{try{
+  $('wkPerformanceForm').addEventListener('submit',e=>{e.preventDefault();if(posterWorking){$('wkPMessage').textContent='포스터 준비가 끝난 뒤 저장해 주세요.';return;}run(async()=>{try{
     syncSessionRows();const p={...pEdit};for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',bookingUrl:'wkPBooking',description:'wkPDescription',status:'wkPStatus'}))p[key]=$(id).value;
     p.sessions=$('wkPSessions').value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const m=/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?$/.exec(s);if(!m)throw Error(messages.weekly_invalid_sessions);return {date:m[1],time:m[2]||''};});
     await api('performance',{id:p.id,data:JSON.stringify(p),...(pFile?{file:pFile}:{})});$('wkPerformanceDialog').close();await load();status('공연 정보를 저장했습니다. 기존 주간 초안의 카드 문구는 그대로 유지됩니다.');
   }catch(e){$('wkPMessage').textContent=e.message;throw e;}});});
-  $('wkPFile').addEventListener('change',()=>run(async()=>{try{pFile=await normalize($('wkPFile').files[0]);posterPreview(pFile);}catch(e){$('wkPMessage').textContent=e.message;throw e;}}));
+  $('wkPFile').addEventListener('change',()=>{const file=$('wkPFile').files[0];if(!file)return;++performanceEpoch;void loadEditorPoster(()=>normalize(file));});
   $('wkPDelete').addEventListener('click',()=>{if(confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
-  $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>posterPreview(null));
+  $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>{if($('wkPerformanceDialog').open)return;++performanceEpoch;posterWorking=false;posterPreview(null);controls();});
   for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption'])$(id).addEventListener('input',changed);
   $('wkNewPerformance').addEventListener('click',()=>run(()=>openPerformance()));$('wkMonth').addEventListener('change',renderCalendar);
   $('wkImport').addEventListener('click',()=>run(()=>sourceList()));$('wkMoreSources').addEventListener('click',()=>run(()=>sourceList(true)));

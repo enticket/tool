@@ -35,7 +35,9 @@ with sync_playwright() as p:
   if action=='list':route.fulfill(json={'ok':True,**db});return
   if action=='performance':
    value=json.loads(fields['data']);value.update(id=id,version=value['version']+1,assetId=id);assets[id]=files[0] if files else assets[id];db['performances']=[v for v in db['performances'] if v['id']!=id]+[value];route.fulfill(json={'ok':True,'performance':value});return
-  if action=='asset':route.fulfill(content_type='image/jpeg',body=assets[id]);return
+  if action=='asset':
+   if state.get('hold_assets'):state.setdefault('held_assets',[]).append(route);return
+   route.fulfill(content_type='image/jpeg',body=assets[id]);return
   if action=='draft':
    value=json.loads(fields['data']);value.update(status='draft',weekEnd='2026-11-22',version=value['version']+1)
    for card in value['cards']:card['assetId']=card['performanceId']
@@ -55,7 +57,22 @@ with sync_playwright() as p:
  expect(page.locator('#wkCalendarView')).to_be_visible();expect(page.locator('#wkDesignView')).to_be_hidden()
  expect(page.locator('#igWeeklyView')).to_be_visible();expect(page.locator('#igPostView')).to_be_hidden()
 
- page.locator('#wkNewPerformance').click();page.locator('#wkPTitle').fill('11월의 작은 음악회');page.locator('#wkSessionRows input[type=date]').first.fill('2026-11-16');page.locator('#wkSessionRows input[type=time]').first.fill('19:30');page.locator('#wkAddSession').click();page.locator('#wkSessionRows input[type=date]').nth(1).fill('2026-11-22');page.locator('#wkPVenue').fill('엔티켓 아트홀');page.locator('#wkPFile').set_input_files({'name':'poster.jpg','mimeType':'image/jpeg','buffer':poster_bytes});expect(page.locator('#wkPPreview')).to_be_visible();page.locator('#wkPStatus').select_option('verified');page.locator('#wkPerformanceDialog').screenshot(path=str(artifact_dir/'performance-modal.png'));page.locator('#wkPerformanceForm button[type="submit"]').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkNewPerformance').click();page.locator('#wkPTitle').fill('11월의 작은 음악회');page.locator('#wkSessionRows input[type=date]').first.fill('2026-11-16');page.locator('#wkSessionRows input[type=time]').first.fill('19:30');page.locator('#wkAddSession').click();page.locator('#wkSessionRows input[type=date]').nth(1).fill('2026-11-22');page.locator('#wkPVenue').fill('엔티켓 아트홀');page.locator('#wkPFile').set_input_files({'name':'poster.jpg','mimeType':'image/jpeg','buffer':poster_bytes});expect(page.locator('#wkPPreview')).to_be_visible();page.locator('#wkPStatus').select_option('verified');page.locator('#wkPerformanceDialog').screenshot(path=str(artifact_dir/'performance-modal.png'));state['hold_assets']=True;page.locator('#wkPerformanceForm button[type="submit"]').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ # Opening a modal must not lock navigation while its poster request is pending.
+ page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
+ page.locator('#wkClosePerformance').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible(timeout=1500)
+ page.keyboard.press('Escape');expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkNewPerformance').click();expect(page.locator('#wkPTitle')).to_have_value('')
+ state['hold_assets']=False
+ for route in state.get('held_assets',[]):route.fulfill(content_type='image/jpeg',body=poster_bytes)
+ # The late old poster must not populate a newly opened blank performance.
+ page.wait_for_timeout(100);expect(page.locator('#wkPPreview')).to_be_hidden()
+ page.locator('#wkClosePerformance').click()
+ page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPPreview')).to_be_visible()
+ page.locator('#wkPSave').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
+ page.locator('#wkClosePerformance').click()
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('날짜 배치 1개');expect(page.locator('#wkUnscheduled')).to_contain_text('날짜 미정 공연')
  page.locator('#wkMonth').fill('2026-12');page.locator('#wkMonth').dispatch_event('change');expect(page.locator('[data-date="2026-12-05"]')).to_contain_text('가져온 공연');assert len(db['performances'])==3
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('기존/동영상 제외 2개');assert len(db['performances'])==3
