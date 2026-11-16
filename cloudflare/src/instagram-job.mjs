@@ -4,9 +4,17 @@ const DAY = 24 * 60 * 60 * 1000;
 const CHUNK = 64 * 1024;
 export const validDraftId = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
 const reply = (data, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
+export function completedScheduleExpired(job, now = Date.now()) {
+  if (job.status !== 'published' || !job.scheduledAt) return false;
+  // Older jobs predate completion timestamps: use their last publication attempt.
+  const completedAt = job.publishedAt || job.attemptedAt || job.scheduledAt;
+  const time = typeof completedAt === 'number' ? completedAt : Date.parse(completedAt);
+  return Number.isFinite(time) && now >= time + DAY;
+}
 const publicJob = job => ({ ok: true, draftId: job.id, fingerprint: job.fingerprint,
   account: { id: job.accountId, username: job.username }, channel: job.channel,
   caption: job.caption, scheduledAt:job.scheduledAt?new Date(job.scheduledAt).toISOString():null, previewUrl:job.scheduledAt && job.expiresAt>Date.now()?`/instagram-media/${job.id}/${job.capability}`:null, status: job.status, mediaId: job.mediaId || null,
+  publishedAt: job.status === 'published' ? new Date(job.publishedAt || job.attemptedAt || job.scheduledAt || job.expiresAt - DAY).toISOString() : null,
   error: job.error || null, expiresAt: new Date(job.expiresAt).toISOString() });
 const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', value)), b => b.toString(16).padStart(2, '0')).join('');
 
@@ -55,7 +63,7 @@ export class InstagramJob {
         if (job.status === 'unknown' && job.containerId) {
           const state = await instagramRequest(this.env, job.containerId, { fields: 'status_code' });
           if (state.status_code === 'PUBLISHED') {
-            job.status = 'published'; job.error = null; await this.ctx.storage.put('job', job);
+            job.status = 'published'; job.publishedAt ||= Date.now(); job.error = null; await this.ctx.storage.put('job', job);
           }
         }
         return reply(publicJob(job));
@@ -76,16 +84,18 @@ export class InstagramJob {
     if(!/^\d{1,4}$/.test(String(after)))throw new InstagramError('instagram_invalid_cursor',400);
     const active=[...entries].filter(([,e])=>e.until>=Date.now()).sort((a,b)=>a[1].when-b[1].when);
     for(const [key,entry] of entries)if(entry.until<Date.now())await this.ctx.storage.delete(key);
-    const offset=Number(after);
-    for(const [key,entry] of active.slice(offset,offset+20)){
+    let offset=Number(after);
+    // Scan past hidden completions so a page does not appear empty while upcoming jobs remain.
+    while(offset<active.length && items.length<20){
+      const [key,entry]=active[offset++];
       if(entry.until<Date.now()){await this.ctx.storage.delete(key);continue;}
       const stub=this.env.INSTAGRAM_JOBS.get(this.env.INSTAGRAM_JOBS.idFromName(entry.id));
       const r=await stub.fetch('https://job/snapshot',{method:'POST',body:'{}'});
       if(r.status===404){await this.ctx.storage.delete(key);continue;}
       if(!r.ok) throw new InstagramError('instagram_unavailable');
-      const job=await r.json();if(job.scheduledAt)items.push(job);
+      const job=await r.json();if(job.scheduledAt && !completedScheduleExpired(job))items.push(job);
     }
-    return reply({ok:true,nextCursor:offset+20<active.length?String(offset+20):null,items:items.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt))});
+    return reply({ok:true,nextCursor:offset<active.length?String(offset):null,items:items.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt))});
   }
   async schedule(original,input,path){
     const cancel=path==='/cancel';
@@ -184,7 +194,7 @@ export class InstagramJob {
         await this.ctx.storage.put('job', job);
       }
       const state = await instagramRequest(this.env, job.containerId, { fields: 'status_code' });
-      if (state.status_code === 'PUBLISHED') { job.status = 'published'; }
+      if (state.status_code === 'PUBLISHED') { job.status = 'published'; job.publishedAt ||= Date.now(); }
       else if (['ERROR', 'EXPIRED'].includes(state.status_code)) {
         job.status = 'failed'; job.error = 'instagram_media_failed';
       } else if (state.status_code === 'FINISHED') {
@@ -193,7 +203,7 @@ export class InstagramJob {
         posting = true;
         const result = await instagramRequest(this.env, job.accountId + '/media_publish', { body: { creation_id: job.containerId } });
         if (!/^\d+$/.test(result.id || '')) throw new InstagramError('instagram_unavailable');
-        job.mediaId = result.id; job.status = 'published';
+        job.mediaId = result.id; job.status = 'published'; job.publishedAt ||= Date.now();
       } else { job.status = 'processing'; }
       await this.ctx.storage.put('job', job);
     } catch (e) {
