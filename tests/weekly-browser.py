@@ -55,12 +55,22 @@ with sync_playwright() as p:
  expect(page.locator('#wkCalendarView')).to_be_visible();expect(page.locator('#wkDesignView')).to_be_hidden()
  expect(page.locator('#igWeeklyView')).to_be_visible();expect(page.locator('#igPostView')).to_be_hidden()
 
- page.locator('#wkNewPerformance').click();page.locator('#wkPTitle').fill('11월의 작은 음악회');page.locator('#wkPSessions').fill('2026-11-16 19:30\n2026-11-22');page.locator('#wkPVenue').fill('엔티켓 아트홀');page.locator('#wkPFile').set_input_files({'name':'poster.jpg','mimeType':'image/jpeg','buffer':poster_bytes});expect(page.locator('#wkPPreview')).to_be_visible();page.locator('#wkPStatus').select_option('verified');page.locator('#wkPerformanceForm button[type="submit"]').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkNewPerformance').click();page.locator('#wkPTitle').fill('11월의 작은 음악회');page.locator('#wkSessionRows input[type=date]').first.fill('2026-11-16');page.locator('#wkSessionRows input[type=time]').first.fill('19:30');page.locator('#wkAddSession').click();page.locator('#wkSessionRows input[type=date]').nth(1).fill('2026-11-22');page.locator('#wkPVenue').fill('엔티켓 아트홀');page.locator('#wkPFile').set_input_files({'name':'poster.jpg','mimeType':'image/jpeg','buffer':poster_bytes});expect(page.locator('#wkPPreview')).to_be_visible();page.locator('#wkPStatus').select_option('verified');page.locator('#wkPerformanceDialog').screenshot(path=str(artifact_dir/'performance-modal.png'));page.locator('#wkPerformanceForm button[type="submit"]').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('날짜 배치 1개');expect(page.locator('#wkUnscheduled')).to_contain_text('날짜 미정 공연')
  page.locator('#wkMonth').fill('2026-12');page.locator('#wkMonth').dispatch_event('change');expect(page.locator('[data-date="2026-12-05"]')).to_contain_text('가져온 공연');assert len(db['performances'])==3
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('기존/동영상 제외 2개');assert len(db['performances'])==3
  page.locator('#wkMonth').fill('2026-11');page.locator('#wkMonth').dispatch_event('change')
+ assert page.locator('#wkCalendar .wk-event').evaluate_all('(nodes)=>nodes.every(n=>n.getBoundingClientRect().height<=28)')
  page.screenshot(path=str(artifact_dir/'calendar.png'),full_page=True)
+ # Existing sessions restore as actual date/time controls; footer stays in the dialog on mobile.
+ page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkSessionRows input[type=date]')).to_have_count(2)
+ expect(page.locator('#wkSessionRows input[type=time]').first).to_have_value('19:30')
+ for width in [390,320]:
+  page.set_viewport_size({'width':width,'height':740});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  footer=page.locator('.wk-modal-footer').bounding_box();assert footer['y']+footer['height']<=740
+ page.locator('#wkPerformanceDialog').screenshot(path=str(artifact_dir/'performance-modal-mobile.png'))
+ page.locator('#wkSessionRows .wk-session-remove').nth(1).click();expect(page.locator('#wkSessionRows input[type=date]')).to_have_count(1)
+ page.locator('#wkClosePerformance').click();page.set_viewport_size({'width':1440,'height':1000})
  page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkCalendarView')).to_be_hidden();expect(page.locator('#wkDesignView')).to_be_visible()
  page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('2026년 11월 셋째 주 공연')
  page.locator('#wkCandidates input').check();page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
