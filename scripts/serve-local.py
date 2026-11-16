@@ -2,6 +2,7 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
+from security_headers import security_headers
 
 class LegacyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -18,7 +19,8 @@ class LegacyHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.send_header('Content-Length', str(len(content)))
-        self.send_header('X-Content-Type-Options', 'nosniff')
+        for name, value in security_headers(content.decode()).items():
+            self.send_header(name, value)
         self.end_headers()
         if body:
             self.wfile.write(content)

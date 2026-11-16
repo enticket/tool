@@ -1,15 +1,13 @@
 """Browser image/review flow with synthetic providers; never calls Meta or publishes."""
 import base64
 import os
+from pathlib import Path
 import urllib.request
 from email import policy
 from email.parser import BytesParser
 from playwright.sync_api import sync_playwright, expect
 
-def cdn(route):
-    req = urllib.request.Request(route.request.url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        route.fulfill(status=response.status, content_type='application/javascript', body=response.read())
+from browser_support import install_library_routes, wait_for_js
 
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
@@ -18,7 +16,7 @@ with sync_playwright() as p:
     state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'caption_error':False, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
-    page.route('https://cdn.jsdelivr.net/**', cdn)
+    install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{initTokenClient(opts){return {requestAccessToken(){opts.callback({access_token:'synthetic-google-token',expires_in:3600});}}},revoke(){}}}};
     '''))
@@ -137,6 +135,9 @@ with sync_playwright() as p:
         page.locator('#igCaptionToggle').click()
     else:
         expect(page.locator('#igCaptionToggle')).to_be_hidden()
+    with page.expect_download() as download:
+        page.locator('#igDownload').click()
+    preview = Path(download.value.path()).read_bytes()
     page.locator('#igPrepare').click()
     expect(page.locator('#igReviewImage')).to_be_visible()
     assert page.locator('#igReviewImage').get_attribute('src')==page.locator('#igPreview').get_attribute('src')
@@ -144,7 +145,6 @@ with sync_playwright() as p:
     expect(page.locator('#igPublish')).to_be_disabled()
     expect(page.locator('#igReviewAccount')).to_contain_text('@en__ticket')
     expect(page.locator('#igField_title')).to_be_disabled()
-    preview = page.locator('#igPreview').evaluate('async img=>Array.from(new Uint8Array(await (await fetch(img.src)).arrayBuffer()))')
     assert bytes(preview) == state['published_image']
     assert state['publish_count'] == 0
     page.locator('#igConfirm').check()
@@ -170,7 +170,7 @@ with sync_playwright() as p:
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionLabel')).to_be_hidden()
     expect(page.locator('#igStoryNote')).to_be_visible()
-    page.wait_for_function("document.getElementById('igPreview').naturalHeight===1920")
+    wait_for_js(page, "document.getElementById('igPreview').naturalHeight===1920")
     expect(page.locator('#igPreview')).to_be_visible()
     assert page.locator('#igPreview').bounding_box()['height']<=300
     if page.locator('#igChannel').input_value()=='feed':

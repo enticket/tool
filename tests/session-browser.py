@@ -1,3 +1,4 @@
+from browser_support import install_library_routes
 """Session restoration and custom calendar UI; all identity responses are synthetic."""
 import os
 from playwright.sync_api import sync_playwright, expect
@@ -5,7 +6,7 @@ with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium')
     context=browser.new_context()
     page=context.new_page()
-    page.route('https://cdn.jsdelivr.net/**',lambda r:r.abort())
+    install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client',lambda r:r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient(o){return {requestAccessToken(){o.callback({access_token:'test',expires_in:300})}}}}}};"))
     page.route('https://www.googleapis.com/**',lambda r:r.fulfill(json={'email':'staff@example.test'}))
     pending=[]

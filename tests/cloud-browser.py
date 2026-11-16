@@ -5,9 +5,7 @@ import ssl
 import urllib.request
 from playwright.sync_api import sync_playwright, expect
 
-def cdn(route):
-    with urllib.request.urlopen(route.request.url, context=ssl.create_default_context(), timeout=30) as r:
-        route.fulfill(status=r.status, content_type='application/javascript', body=r.read())
+from browser_support import install_library_routes, wait_for_js
 
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
@@ -19,7 +17,7 @@ with sync_playwright() as p:
         dialogs.append(dialog.message)
         dialog.accept()
     page.on('dialog', accept_dialog)
-    page.route('https://cdn.jsdelivr.net/**', cdn)
+    install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{
         initTokenClient(opts){ return { requestAccessToken(){opts.callback({access_token:'synthetic-token',expires_in:3600});} }; },
@@ -107,7 +105,7 @@ with sync_playwright() as p:
         count = len(dialogs)
         with page.expect_event('dialog'):
             page.locator('#gLoginBtn').click()
-        page.wait_for_function('gdrive.isLoggedIn() === false')
+        wait_for_js(page, 'gdrive.isLoggedIn() === false')
         expect(page.locator('#gLoginBtn')).to_be_visible()
         assert len(dialogs) == count + 1, dialogs
         assert message in dialogs[-1], dialogs[-1]

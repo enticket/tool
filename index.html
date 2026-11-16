@@ -2386,13 +2386,13 @@ window.ICO = {
 })();
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js" integrity="sha384-ETfVLWAUsU3zp3SpnQsPDbAyrF6jYv2w8aNYo6KtY2JuyxXhzYLOL7e0ATbLSIHP" crossorigin="anonymous"></script>
 <script>
 /* ===== 라이브러리 로드 확인 ===== */
 (function(){
   const missing=[];
-  if(typeof XLSX==='undefined') missing.push('XLSX(xlsx-js-style)');
+  if(typeof XLSX==='undefined') missing.push('XLSX(SheetJS)');
   if(typeof fflate==='undefined') missing.push('fflate');
   if(missing.length){
     const msg='필수 라이브러리를 불러오지 못했습니다: '+missing.join(', ')+
@@ -2603,7 +2603,7 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   let nodes=[];   // {id,name,rows:[9col objects],missing:[],error,errMsg}
   let seq=0;
   let outFilename="예매자명단_정리본.xlsx";
-  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const esc=s=>s==null?"":String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const pad=n=>String(n).padStart(2,"0");
   const won=n=>Number(n).toLocaleString("ko-KR");
@@ -2967,7 +2967,7 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   const countEl=document.getElementById("imCount");
   let results=[];
   const usedNames=new Set();
-  const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const baseName=name=>name.replace(/\.[^.]+$/,"");
   function uniqueName(name){
     let n=name,i=2;
@@ -3080,7 +3080,7 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
 // ===== 정산서 레시피 빌더 =====
 // ============================================================
 // 트라이보울 정산서 빌더 (브라우저용)
-// buildSettlementWorkbook(data) → xlsx-js-style workbook 반환
+// buildSettlementWorkbook(data) → SheetJS workbook 반환
 // ============================================================
 function buildSettlementWorkbook(data){
 // ============ 트라이보울 정산서 전체 재생성 레시피 ============
@@ -3136,7 +3136,7 @@ const COL = {}; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((l,i)=>COL[l]=i);
 const ws = {}; const merges = [];
 function M(a,b){ const A=XLSX.utils.decode_cell(a),Bc=XLSX.utils.decode_cell(b); merges.push({s:{r:A.r,c:A.c},e:{r:Bc.r,c:Bc.c}}); }
 function excelDate(d){ return (d.getTime()/86400000) + 25569 - (d.getTimezoneOffset()/1440); }
-// xlsx-js-style의 f 속성은 선행 '='를 받지 않음 (붙으면 출력 시 '=='로 중복됨)
+// SheetJS의 f 속성은 선행 '='를 받지 않음 (붙으면 출력 시 '=='로 중복됨)
 function fClean(v){ return (typeof v==='string' && v[0]==='=') ? v.slice(1) : v; }
 function put(addr,v,style,isF){
   let cell;
@@ -3437,20 +3437,101 @@ ws['!rows']=rows;
 ws['!margins']={left:0.25,right:0.25,top:0.5,bottom:0.5};
 const wb=XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb,ws,'정산서');
-// 페이지 설정은 xlsx-js-style 제약상 Props로
+// 페이지 설정은 내보낸 OOXML에 별도로 반영
 if(!wb.Workbook) wb.Workbook={};
 if(!wb.Workbook.Sheets) wb.Workbook.Sheets=[{}];
 ws['!pageSetup']={scale:0,fitToWidth:1,fitToHeight:1,orientation:'portrait',paperSize:9};
 return wb;
 }
+// Current SheetJS CE handles all parsing and workbook serialization. Keep the
+// generated settlement's formatting without loading the obsolete style fork.
+// This adapter only serializes styles created by buildSettlementWorkbook above;
+// it is never used to parse or rewrite an uploaded workbook.
+function writeSettlementWorkbook(wb){
+  const files=fflate.unzipSync(new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'})));
+  const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const parser=new DOMParser(), serializer=new XMLSerializer();
+  const dec=new TextDecoder(), enc=new TextEncoder();
+  const styles=parser.parseFromString(dec.decode(files['xl/styles.xml']),'application/xml');
+  const root=styles.documentElement;
+  const node=(tag,attrs={})=>{
+    const el=styles.createElementNS(ns,tag);
+    Object.entries(attrs).forEach(([k,v])=>{if(v!==undefined)el.setAttribute(k,String(v));});
+    return el;
+  };
+  const sections=new Map([...root.children].map(el=>[el.localName,el]));
+  if(!sections.has('numFmts')){const el=node('numFmts',{count:0});root.insertBefore(el,root.firstChild);sections.set('numFmts',el);}
+  const caches=new Map();
+  function intern(section,el){
+    const table=sections.get(section);
+    if(!caches.has(section))caches.set(section,new Map([...table.children].map((item,i)=>[serializer.serializeToString(item),i])));
+    const cache=caches.get(section),key=serializer.serializeToString(el);
+    if(cache.has(key))return cache.get(key);
+    const id=table.children.length;table.appendChild(el);table.setAttribute('count',id+1);cache.set(key,id);return id;
+  }
+  const formats=new Map([...sections.get('numFmts').children].map(el=>[el.getAttribute('formatCode'),Number(el.getAttribute('numFmtId'))]));
+  let nextFormat=Math.max(163,...formats.values())+1;
+  function formatId(format){
+    if(!format)return 0;
+    if(!formats.has(format)){
+      const id=nextFormat++,table=sections.get('numFmts');
+      table.appendChild(node('numFmt',{numFmtId:id,formatCode:format}));table.setAttribute('count',table.children.length);formats.set(format,id);
+    }
+    return formats.get(format);
+  }
+  function color(tag,value){return node(tag,{rgb:value.rgb,theme:value.theme,indexed:value.indexed,tint:value.tint});}
+  const styleCache=new Map();
+  function styleId(style){
+    const key=JSON.stringify(style);if(styleCache.has(key))return styleCache.get(key);
+    let fontId=0,fillId=0,borderId=0;
+    if(style.font){
+      const f=style.font,el=node('font');
+      el.append(node('sz',{val:f.sz||11}),node('name',{val:f.name||'Calibri'}));
+      for(const [prop,tag] of [['bold','b'],['italic','i'],['underline','u'],['strike','strike']])if(f[prop])el.append(node(tag));
+      if(f.color)el.append(color('color',f.color));fontId=intern('fonts',el);
+    }
+    if(style.fill){
+      const f=style.fill,el=node('fill'),pattern=node('patternFill',{patternType:f.patternType||'solid'});
+      if(f.fgColor)pattern.append(color('fgColor',f.fgColor));
+      if(f.bgColor)pattern.append(color('bgColor',f.bgColor));
+      el.append(pattern);fillId=intern('fills',el);
+    }
+    if(style.border){
+      const el=node('border');
+      for(const side of ['left','right','top','bottom','diagonal']){
+        const b=style.border[side]||{},edge=node(side,{style:b.style});
+        if(b.color)edge.append(color('color',b.color));el.append(edge);
+      }
+      borderId=intern('borders',el);
+    }
+    const numFmtId=formatId(style.numFmt),xf=node('xf',{fontId,fillId,borderId,numFmtId,xfId:0,
+      applyFont:1,applyFill:1,applyBorder:1,applyNumberFormat:1});
+    if(style.alignment){
+      const alignment={};
+      for(const [k,v] of Object.entries(style.alignment))alignment[k]=typeof v==='boolean'?Number(v):v;
+      xf.append(node('alignment',alignment));xf.setAttribute('applyAlignment','1');
+    }
+    const id=intern('cellXfs',xf);styleCache.set(key,id);return id;
+  }
+  wb.SheetNames.forEach((name,i)=>{
+    const path=`xl/worksheets/sheet${i+1}.xml`,sheet=parser.parseFromString(dec.decode(files[path]),'application/xml');
+    for(const cell of sheet.getElementsByTagNameNS(ns,'c')){
+      const style=wb.Sheets[name][cell.getAttribute('r')]?.s;
+      if(style&&typeof style==='object')cell.setAttribute('s',styleId(style));
+    }
+    files[path]=enc.encode(serializer.serializeToString(sheet));
+  });
+  files['xl/styles.xml']=enc.encode(serializer.serializeToString(styles));
+  return fflate.zipSync(files,{level:6});
+}
 // ===== 페이지 설정 주입 =====
 // ============================================================
 // 페이지 설정 주입 (브라우저, fflate 사용)
-// xlsx-js-style이 pageSetup을 안 써주므로, 생성된 xlsx(zip)의
+// SheetJS CE가 pageSetup을 안 써주므로, 생성된 xlsx(zip)의
 // sheet XML에 fitToPage 설정을 직접 주입.
 // ============================================================
 /**
- * @param {Uint8Array} xlsxBytes  xlsx-js-style이 만든 .xlsx 바이트
+ * @param {Uint8Array} xlsxBytes  SheetJS로 만든 .xlsx 바이트
  * @param {number} lastRow  인쇄영역 마지막 행 (A1:AL{lastRow})
  * @returns {Uint8Array} 페이지설정이 주입된 .xlsx
  */
@@ -3518,7 +3599,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
 // ============================================================
 /**
  * @param {Object} data  생성에 사용한 입력 데이터 (rounds, channels, 수수료율, 기타거래 등)
- * @param {Object} ws    생성된 xlsx-js-style 워크시트 객체 (셀 검증용)
+ * @param {Object} ws    생성된 SheetJS 워크시트 객체 (셀 검증용)
  * @returns {Object} { ok, expected, issues:[] }
  */
 function validateSettlement(data, ws) {
@@ -3625,10 +3706,10 @@ function renderValidationCard(result) {
   let sessions=[];
   let seq=0;
   let dragSource=null;
-  let mergeMap={};
+  let mergeMap=Object.create(null);
   let mergeOpen=false;
   let inviteEdited=false;  // 초대좌석권 입력란을 직원이 수동 편집했는지
-  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const esc=s=>s==null?"":String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const won=n=>Number(n).toLocaleString("ko-KR");
   const p2=n=>String(n).padStart(2,"0");
@@ -3973,7 +4054,7 @@ function renderValidationCard(result) {
     sorted.forEach(n=>{
       const col=simColor.get(n);
       html+=`<label class="merge-item ${col?'sim':''}">
-        <input type="checkbox" class="mg-chk" value="${esc(n)}" data-cnt="${counts.get(n)}">
+        <input type="checkbox" class="mg-chk" data-cnt="${counts.get(n)}">
         <span class="dot" style="background:${col||'transparent'}"></span>
         <span class="nm">${esc(n)}</span>
         ${col?'<span class="sim-hint">유사</span>':''}
@@ -3995,6 +4076,8 @@ function renderValidationCard(result) {
       mergeEl.querySelector(".chev").style.transform=`rotate(${mergeOpen?90:0}deg)`;
     });
     const chks=[...mergeEl.querySelectorAll(".mg-chk")];
+    // Spreadsheet text is data, never HTML attributes or event handlers.
+    chks.forEach((checkbox,index)=>{ checkbox.value=sorted[index]; });
     const canon=mergeEl.querySelector("#mgCanon");
     const applyBtn=mergeEl.querySelector("#mgApply");
     function onChange(){
@@ -4020,16 +4103,16 @@ function renderValidationCard(result) {
   function renderRules(){
     const box=mergeEl.querySelector("#mgRules");
     if(!box) return;
-    const groups={};
+    const groups=Object.create(null);
     Object.entries(mergeMap).forEach(([src,c])=>{ if(src!==c){ (groups[c]=groups[c]||[]).push(src); } });
     const keys=Object.keys(groups);
     if(!keys.length){ box.innerHTML=""; return; }
     box.innerHTML=keys.map(c=>{
       const srcs=groups[c].map(esc).join(", ");
-      return `<div class="rule"><span>${srcs}</span><span class="arrow">→</span><b>${esc(c)}</b><span class="undo" data-canon="${esc(c)}">해제</span></div>`;
+      return `<div class="rule"><span>${srcs}</span><span class="arrow">→</span><b>${esc(c)}</b><span class="undo">해제</span></div>`;
     }).join("");
-    box.querySelectorAll(".undo").forEach(u=>u.addEventListener("click",()=>{
-      const c=u.dataset.canon;
+    box.querySelectorAll(".undo").forEach((u,index)=>u.addEventListener("click",()=>{
+      const c=keys[index];
       Object.keys(mergeMap).forEach(k=>{ if(mergeMap[k]===c) delete mergeMap[k]; });
       recompute();
     }));
@@ -4135,7 +4218,7 @@ function renderValidationCard(result) {
     const check=validateSettlement(data, null);
     if(typeof XLSX==='undefined' || !XLSX.write){ throw new Error('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); }
     const wb=buildSettlementWorkbook(data);
-    const baseBytes=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    const baseBytes=writeSettlementWorkbook(wb);
     if(!baseBytes || baseBytes.byteLength<2000){ throw new Error('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); }
     let bytes=baseBytes;
     try{
@@ -4212,7 +4295,7 @@ function renderValidationCard(result) {
   const dlInfo=document.getElementById("smsDlInfo");
   let nodes=[];   // {id, name, headers, rows, map:{이름,전화}}
   let seq=0;
-  const esc=s=>s==null?"":String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const esc=s=>s==null?"":String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const norm=s=>String(s==null?"":s).replace(/\s+/g,"").trim();
   const won=n=>Number(n).toLocaleString("ko-KR");
   // 전화번호 정규화: 숫자만 추출 → 010-XXXX-XXXX 형태로. 중복 판정은 숫자열 기준.
@@ -4950,7 +5033,7 @@ window.OrigSeal = (function(){
     return { bytes: out, sheetName: target.name, sheetPath };
   }
   /* ==================== PDF용 HTML 렌더러 ==================== */
-  /* 값·숫자서식·병합·행높이·열너비는 xlsx-js-style로, 셀 서식(테두리·폰트·채움)은 styles.xml 직접 파싱 */
+  /* 값·숫자서식·병합·행높이·열너비는 SheetJS로, 셀 서식(테두리·폰트·채움)은 styles.xml 직접 파싱 */
   const IDX_COLORS={8:"000000",9:"FFFFFF",10:"FF0000",11:"00FF00",12:"0000FF",13:"FFFF00",14:"FF00FF",15:"00FFFF",16:"800000",17:"008000",18:"000080",19:"808000",20:"800080",21:"008080",22:"C0C0C0",23:"808080",64:"000000"};
   function parseTheme(themeXml){
     const out=[]; if(!themeXml) return ["FFFFFF","000000","FFFFFF","000000"];
@@ -5222,10 +5305,10 @@ window.OrigSeal = (function(){
   function loadPdfLibs(){
     if(window.html2canvas && window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
     if(pdfLibP) return pdfLibP;
-    function load(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error("PDF 라이브러리를 불러오지 못했습니다. 네트워크(외부 CDN) 확인 후 다시 시도해 주세요.")); document.head.appendChild(s); }); }
+    function load(src,integrity){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.integrity=integrity; s.crossOrigin="anonymous"; s.onload=()=>res(); s.onerror=()=>rej(new Error("PDF 라이브러리를 불러오지 못했습니다. 네트워크(외부 CDN) 확인 후 다시 시도해 주세요.")); document.head.appendChild(s); }); }
     pdfLibP=(async()=>{
-      if(!window.html2canvas) await load("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
-      if(!(window.jspdf && window.jspdf.jsPDF)) await load("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
+      if(!window.html2canvas) await load("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js","sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H");
+      if(!(window.jspdf && window.jspdf.jsPDF)) await load("https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js","sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3");
     })().catch(e=>{ pdfLibP=null; throw e; });
     return pdfLibP;
   }

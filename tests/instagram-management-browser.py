@@ -6,10 +6,7 @@ from email import policy
 from email.parser import BytesParser
 from playwright.sync_api import sync_playwright, expect
 
-def cdn(route):
-    req = urllib.request.Request(route.request.url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        route.fulfill(status=response.status, content_type='application/javascript', body=response.read())
+from browser_support import install_library_routes
 
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'))
@@ -18,7 +15,7 @@ with sync_playwright() as p:
     state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'caption_error':False, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
-    page.route('https://cdn.jsdelivr.net/**', cdn)
+    install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{initTokenClient(opts){return {requestAccessToken(){opts.callback({access_token:'synthetic-google-token',expires_in:3600});}}},revoke(){}}}};
     '''))

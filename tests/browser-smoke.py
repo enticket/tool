@@ -11,13 +11,8 @@ from playwright.sync_api import sync_playwright, expect
 
 TEMP = tempfile.TemporaryDirectory(prefix='enticket-browser-')
 ROOT = Path(TEMP.name)
-CDN = 'https://cdn.jsdelivr.net/'
-
-def verified_cdn(route):
-    # Chromium does not trust this machine's proxy CA. Use the existing
-    # system CA bundle with hostname/certificate verification still enabled.
-    with urllib.request.urlopen(route.request.url, context=ssl.create_default_context(), timeout=30) as response:
-        route.fulfill(status=response.status, content_type='application/javascript', body=response.read())
+from browser_support import install_library_routes, wait_for_js
+from settlement_styles import assert_settlement_styles
 
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH', '/usr/bin/chromium'), headless=True)
@@ -26,7 +21,7 @@ with sync_playwright() as p:
     failed = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('requestfailed', lambda request: failed.append(request.url.split('?')[0]))
-    page.route(CDN + '**', verified_cdn)
+    install_library_routes(page)
     backend_requests = []
     def block_backend(route):
         backend_requests.append(route.request.url)
@@ -115,11 +110,16 @@ with sync_playwright() as p:
     expect(page.locator('#genSettlement')).to_be_enabled()
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     expect(page.locator('#saveSettlementDrive')).to_be_hidden()
+    page.evaluate('''()=>{
+      const write=writeSettlementWorkbook;
+      window.writeSettlementWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};
+    }''')
     with page.expect_download() as event:
         page.locator('#genSettlement').click()
     settlement_path = ROOT / 'settlement.xlsx'
     event.value.save_as(settlement_path)
     assert zipfile.is_zipfile(settlement_path)
+    assert_settlement_styles(settlement_path, page.evaluate('window.__expectedSettlement'))
     print('PASS: settlement 30,000 gross / 28,020 payout, XLSX generation')
 
     page.locator('[data-tab="oseal"]').click()
@@ -143,7 +143,7 @@ with sync_playwright() as p:
                    for name in archive.namelist() if name.endswith('.xml'))
     with page.expect_download() as event:
         page.locator('#osealDlPdf').click()
-        page.wait_for_function("/PDF (저장 완료|생성 실패)/.test(document.getElementById('osealStatus').textContent)")
+        wait_for_js(page, "/PDF (저장 완료|생성 실패)/.test(document.getElementById('osealStatus').textContent)")
         assert 'PDF 저장 완료' in page.locator('#osealStatus').inner_text(), page.locator('#osealStatus').inner_text()
     event.value.save_as(ROOT / 'sealed.pdf')
     assert (ROOT / 'sealed.pdf').read_bytes().startswith(b'%PDF-')
@@ -157,11 +157,12 @@ with sync_playwright() as p:
     expect(page.locator('#osealWork')).to_be_visible()
     page.reload(wait_until='networkidle')
     assert not page.evaluate('gdrive.hasLocalStamp()')
-    assert page.evaluate('localStorage.length === 0 && sessionStorage.length === 0')
+    assert page.evaluate("Object.keys(localStorage).every(key=>key==='enticket-nav-collapsed') && sessionStorage.length === 0")
     assert not backend_requests, backend_requests
     assert not failed, failed
     print('PASS: clearing/reloading forgets stamp; no login, Worker or API calls')
     page.set_viewport_size({'width':390,'height':844})
+    page.locator('[data-tab="settlement"]').click()
     page.locator('[data-tab="oseal"]').click()
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     assert not errors, errors

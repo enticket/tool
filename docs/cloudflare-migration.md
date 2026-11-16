@@ -38,7 +38,7 @@ npm run dev    # 127.0.0.1:8787
 python3 tests/cloud-browser.py
 ```
 
-클라우드 개발 환경에서는 Wrangler 명령 앞에 `WRANGLER_SEND_METRICS=false XDG_CONFIG_HOME=/tmp/enticket-cloudflare-config`를 지정합니다. 기본 `Request.cf` 메타데이터의 외부 조회가 차단될 수 있지만 이 앱은 사용하지 않습니다. Wrangler 4.150.0과 호환 날짜 2026-10-13을 고정했습니다.
+클라우드 개발 환경에서는 Wrangler 명령 앞에 `WRANGLER_SEND_METRICS=false XDG_CONFIG_HOME=/tmp/enticket-cloudflare-config`를 지정합니다. 기본 `Request.cf` 메타데이터의 외부 조회가 차단될 수 있지만 이 앱은 사용하지 않습니다. Wrangler 4.162.0과 호환 날짜 2026-10-13을 고정했습니다.
 
 `browser-smoke.py`는 합성 파일의 XLSX/TXT/JPEG, 정산서 지급금액, 직인 XLSX/PDF, 직인 삭제/새로고침, 모바일 폭, 백엔드 호출 0건을 확인합니다. `cloud-browser.py`는 **모의 Google/API 응답**으로 로그인·세 종류 Drive 버튼·직인·만료/거부 계정을 확인합니다. Worker 테스트도 **모의 Google**을 사용하며 실제 Drive에 파일을 쓰지 않습니다. 실제 Google 연동 검증과 구분해야 합니다.
 
@@ -108,3 +108,15 @@ Instagram 최종 운영 버전은 `e7452154-e02f-4c15-a2b2-061154130c51`이며, 
 마지막 인증 API 요청 또는 사용자 조작 확인 후 24시간 동안 유지하며, 사용자 조작 확인은 최대 분당 한 번입니다. 방치된 탭은 갱신하지 않습니다. 새로고침 시 `/api/session`으로 복원하며, 로그아웃은 서버 세션을 폐기합니다. 매 요청 허용 계정을 다시 확인하고 쿠키 인증은 동일 출처만 허용합니다. 기존 Google 토큰 기반 API 호환은 유지합니다.
 
 예약 날짜는 공통 달력 팝업에서 선택하고, 한국 시간의 시·분을 별도로 고릅니다. 게시 준비와 예약 관리에 같은 달력을 사용하며 서버의 2분 이후~30일 이내 검증을 유지합니다.
+
+
+## 2026-11-16 보안 보완
+
+- 정산서 권종명은 HTML 속성에 보간하지 않고 DOM의 `value`에 할당합니다. 병합 해제는 HTML의 `data-*` 대신 해당 권종명을 닫힌 함수에서 참조합니다. 공통 HTML 이스케이프는 양쪽 따옴표도 처리하고 권종명 사전은 프로토타입 없는 객체를 사용합니다.
+- 오래된 `xlsx-js-style`을 제거했습니다. 파일 읽기·쓰기는 공식 배포본 SheetJS CE 0.20.3으로 수행합니다. npm의 `xlsx` 배포는 구버전에서 중단되어 공식 CDN의 고정 버전을 사용합니다. 공개 공지의 두 파서 취약점 수정 버전은 각각 0.19.3, 0.20.2입니다. 정산서의 색상·테두리·숫자서식은 생성한 워크북에만 OOXML 서식을 추가하여 보존합니다. 업로드한 파일을 이 서식 작성기로 파싱하지 않습니다.
+- jsPDF 4.2.1, fflate 0.8.3, Wrangler 4.162.0, Miniflare 5.20261113.0-beta로 업데이트했습니다. 배포 의존성은 lockfile에 고정합니다. html2canvas 1.4.1은 유지합니다.
+- 네 개의 고정 외부 라이브러리에 SHA-384 SRI와 익명 CORS를 적용했습니다. 파일이 바뀌면 브라우저가 실행을 거부하므로 버전·URL·해시를 함께 갱신해야 합니다. Google GIS는 상시 갱신되는 공식 클라이언트라 해시를 고정하지 않고 CSP에서 공식 `/gsi/client` 경로만 허용합니다.
+- `scripts/security_headers.py`는 게시할 HTML의 인라인 스크립트 SHA-256 해시로 CSP를 생성합니다. 인라인 이벤트 핸들러와 eval, 임의 스크립트, iframe 삽입을 차단합니다. 기존 화면의 동적 스타일을 위해 CSS 인라인 스타일만 허용합니다. Google 로그인·Instagram 미디어·Cloudflare 분석에 필요한 출처를 명시했습니다. HSTS는 도구 호스트에만 적용하며 회사 홈페이지 설정은 바꾸지 않습니다.
+- 코드 수정 후 반드시 `python scripts/build-static.py --mode cloud`로 HTML과 헤더를 함께 갱신합니다. HTML만 별도로 교체하면 CSP 해시가 달라져 실행이 차단됩니다. 로컬 서버도 같은 CSP를 적용합니다.
+
+추가 회귀 검사: `python tests/security-browser.py` (로컬 Cloudflare 개발 서버 필요). 합성 엑셀의 공격 문자열이 CSP 없이도 실행되지 않는지, 병합·해제가 유지되는지, CSP가 새 스크립트를 차단하고 SRI가 변조 응답을 거부하는지 확인합니다. `tests/browser-smoke.py`는 생성 정산서의 모든 서식 셀·수식·병합을 별도 XML 파서로 검사하고 PDF까지 생성합니다. 브라우저 인증·Drive·Meta 요청은 모의 응답으로 검증하며 실제 게시나 저장은 하지 않습니다.
