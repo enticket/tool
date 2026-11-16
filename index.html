@@ -1344,6 +1344,9 @@ td.c { text-align: center; }
 .ig-time-stepper input { width:100%; min-width:0; padding:0; height:28px; border:0; outline:none; background:transparent; text-align:center; font-family:inherit; line-height:28px; font-size:20px; font-weight:600; color:#563373; font-variant-numeric:tabular-nums; }
 
 .ig-calendar-apply { width:100%; border:0; border-radius:8px; background:#64348b; color:white; padding:11px; }
+
+.wk-layout{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1.3fr);gap:20px}.wk-panel{padding:20px;border:1px solid var(--color-border-neutral);border-radius:12px;margin:16px 0;min-width:0;background:var(--bg-white-normal)}.wk-toolbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}.wk-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin:20px 0}.wk-day{min-height:85px;border:1px solid var(--color-border-neutral);padding:4px;min-width:0}.wk-day-name{text-align:center;padding:8px;font-size:12px}.wk-event{display:block;font:inherit;font-size:11px;line-height:1.4;background:var(--bg-grey-lighter);color:var(--color-text-accent);border:0;border-radius:4px;margin:4px 0;padding:4px;width:100%;text-align:left;overflow-wrap:anywhere;cursor:pointer}.wk-candidate{display:flex;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--color-border-neutral)}.wk-card-editor{padding:16px;margin:16px 0;border:1px solid var(--color-border-neutral);border-radius:8px}.wk-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.wk-previews figure{margin:0;min-width:0}.wk-previews img{width:100%;border-radius:8px}.wk-previews a{font-size:12px}.wk-source{display:block;text-align:left;width:100%;background:var(--bg-grey-lighter);color:inherit;padding:10px;border:0;border-radius:6px;margin:6px 0;cursor:pointer}.wk-event img{width:100%;height:44px;object-fit:contain;display:block;background:var(--bg-white-normal)}.wk-event-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.wk-event small{display:block;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#igWeeklyView input[type="text"],#igWeeklyView input[type="date"],#igWeeklyView input[type="month"],#igWeeklyView input[type="url"]{border:1px solid var(--color-border-neutral);border-radius:8px;padding:10px 12px;background:var(--bg-white-normal);color:var(--txt-black-darkest);font:inherit;width:100%;box-sizing:border-box}#igWeeklyView .ig-field{margin:10px 0}#wkEditor{border:0;padding:0;min-width:0}#wkFinalCaption{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;padding:12px;background:var(--bg-grey-lighter)}#wkPPreview{max-width:100%;max-height:280px;object-fit:contain;margin:12px 0}#wkStatus[data-error="true"],#wkPMessage{color:var(--color-text-danger,#b23a4a)}#igWeeklyView input:not([type="checkbox"]),#igWeeklyView textarea,#igWeeklyView select{max-width:100%;min-width:0}#igWeeklyView .btn-row{flex-wrap:wrap;margin:12px 0}@media(max-width:1000px){.wk-layout{grid-template-columns:1fr}}@media(max-width:480px){.wk-panel{padding:12px}.wk-day{min-height:65px}.wk-previews{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -1382,7 +1385,7 @@ window.ICO = {
     <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg><span class="nav-label">공연 정산서</span></button>
     <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div></div>
     <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg><span class="nav-label">인스타그램</span></button>
-    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div></div>
+    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button><button type="button" class="ig-subtab" data-ig-view="weekly" aria-pressed="false">공연 달력</button></div></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
     <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
@@ -1671,6 +1674,57 @@ window.ICO = {
       <p id="igStatus" role="status" aria-live="polite"></p>
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button></div></div>
       </div>
+<section id="igWeeklyView" hidden>
+  <div class="wk-toolbar"><h2>공연 달력 · 주간 캐러셀</h2><button class="btn ghost sm" id="wkRefresh">새로고침</button></div>
+  <p class="ig-hint">공연일 기준으로 등록하고, 이번 주에 소개할 공연을 골라 주세요. 한국 시간 기준 · 표지와 뒷표지를 포함해 최대 10장</p>
+  <p id="wkStatus" role="status" aria-live="polite"></p>
+  <div class="wk-layout">
+    <div>
+      <div class="wk-panel">
+        <div class="wk-toolbar"><label>공연 달력 <input type="month" id="wkMonth"></label><button class="btn primary sm" id="wkNewPerformance">공연 등록</button></div>
+        <div class="wk-calendar" id="wkCalendar"></div>
+        <details><summary>날짜 확인 필요 · 숨긴 공연</summary><div id="wkUnscheduled"></div></details>
+        <button class="btn ghost sm" id="wkImport">기존 인스타 게시물에서 등록</button>
+        <div id="wkSources"></div><button class="btn ghost sm" id="wkMoreSources" hidden>게시물 더 보기</button>
+      </div>
+      <div class="wk-panel">
+        <label class="ig-field">주 선택 <input type="date" id="wkWeek"></label>
+        <p id="wkRange" class="ig-hint"></p><div id="wkCandidates"></div>
+        <div class="wk-toolbar"><button class="btn ghost sm" id="wkNewDraft">이 주의 새 초안</button><span id="wkCount"></span></div>
+        <label class="ig-field">저장한 초안·발행 이력 <select id="wkDraftList"><option value="">새 초안</option></select></label>
+      </div>
+    </div>
+    <div class="wk-panel">
+      <fieldset id="wkEditor"><legend>주간 게시물 편집</legend>
+        <label class="ig-field">표지 제목 <input type="text" id="wkTitle" maxlength="220"></label>
+        <label class="ig-field">부제 <input type="text" id="wkSubtitle" maxlength="220" placeholder="이번 주, 공연장에서 만나요"></label>
+        <div id="wkCards"></div>
+        <label class="ig-field">뒷표지 안내 <textarea id="wkClosing" maxlength="300" rows="2"></textarea></label>
+        <label class="ig-field">캡션 <textarea id="wkCaption" maxlength="2200" rows="7"></textarea></label>
+        <button class="btn ghost sm" id="wkCaptionGenerate">선택한 공연으로 캡션 채우기</button>
+      </fieldset>
+      <div class="btn-row"><button class="btn primary sm" id="wkSave">초안 저장</button><button class="btn ghost sm" id="wkRender">이미지 미리보기</button><button class="btn ghost sm" id="wkDownload" disabled>이미지 ZIP 내려받기</button></div>
+      <div class="wk-previews" id="wkPreviews"></div>
+      <div id="wkReview" hidden><p id="wkAccount"></p><pre id="wkFinalCaption"></pre><label><input type="checkbox" id="wkConfirm"> 이미지 전체, 순서, 캡션과 게시 계정을 확인했습니다.</label></div>
+      <div class="btn-row"><button class="btn primary" id="wkPrepare">게시 전 최종 확인</button><button class="btn primary" id="wkPublish" hidden>확인한 내용 지금 게시</button><button class="btn ghost sm" id="wkJobStatus" hidden>게시 상태 확인</button><button class="btn ghost sm" id="wkUnlock" hidden>초안 다시 편집</button></div>
+      <p class="ig-hint">정보 확인 완료인 공연만 게시할 수 있습니다. 주간 캐러셀은 즉시 게시만 지원합니다.</p>
+    </div>
+  </div>
+  <dialog id="wkPerformanceDialog" class="ig-detail"><form id="wkPerformanceForm" class="wk-panel">
+    <div class="wk-toolbar"><h3>공연 정보</h3><button type="button" class="btn ghost sm" id="wkClosePerformance">닫기</button></div>
+    <label class="ig-field">공연명 <input type="text" id="wkPTitle" required maxlength="220"></label>
+    <label class="ig-field">공연 회차 · 한 줄에 YYYY-MM-DD 또는 YYYY-MM-DD HH:MM <textarea id="wkPSessions" rows="4" placeholder="2026-11-16 19:30&#10;2026-11-22"></textarea></label>
+    <p class="ig-hint">공연하는 날짜만 입력하세요. 날짜만 입력하면 시간 미정으로 저장합니다.</p>
+    <label class="ig-field">장소 <input type="text" id="wkPVenue" maxlength="220"></label>
+    <div class="wk-toolbar"><label class="ig-field">가격 <select id="wkPPriceKind"><option value="unknown">미확인 · 카드에서 생략</option><option value="free">무료</option><option value="paid">유료</option></select></label><label class="ig-field">가격 안내 <input type="text" id="wkPPrice" maxlength="220"></label></div>
+    <label class="ig-field">예매 상세 링크 <input type="url" id="wkPBooking" placeholder="https://" maxlength="1500"></label>
+    <label class="ig-field">원문·홍보 문구 <textarea id="wkPDescription" rows="4" maxlength="10000"></textarea></label>
+    <label class="ig-field">포스터 <input type="file" id="wkPFile" accept="image/jpeg,image/png,image/webp"></label><img id="wkPPreview" alt="공연 포스터" hidden>
+    <label class="ig-field">정보 확인 상태 <select id="wkPStatus"><option value="needs_review">정보 확인 필요</option><option value="verified">정보 확인 완료</option><option value="hidden">숨김</option></select></label>
+    <p id="wkPMessage" role="status"></p><div class="btn-row"><button class="btn primary" type="submit">공연 저장</button><button class="btn ghost" type="button" id="wkPDelete">공연 삭제</button></div>
+  </form></dialog>
+</section>
+
       <dialog class="ig-detail" id="igDetail" aria-labelledby="igDetailTitle">
         <div class="ig-detail-head"><strong id="igDetailTitle">게시물 상세</strong><button class="ig-detail-close" type="button" id="igDetailClose" aria-label="게시물 상세 닫기" title="닫기" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
         <div class="ig-detail-body"><div><div id="igDetailMedia"></div><div class="ig-detail-nav" id="igDetailNav" hidden><button class="ig-detail-arrow" id="igDetailPrev" type="button" aria-label="이전 이미지" title="이전 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><span id="igDetailPage"></span><button class="ig-detail-arrow" id="igDetailNext" type="button" aria-label="다음 이미지" title="다음 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div><div><p class="fname" id="igDetailDate"></p><p id="igDetailCaption"></p><a class="ig-detail-link" id="igDetailLink" target="_blank" rel="noopener noreferrer"><span>인스타그램에서 보기</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M10 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4"/></svg></a></div></div>
@@ -2362,7 +2416,7 @@ window.ICO = {
   }
   for(const button of document.querySelectorAll('[data-ig-view]')) button.addEventListener('click',()=>{
     manageView=button.dataset.igView==='manage';
-    $('igPostView').hidden=manageView;$('igManageView').hidden=!manageView;
+    $('igPostView').hidden=button.dataset.igView!=='post';$('igManageView').hidden=!manageView;$('igWeeklyView').hidden=button.dataset.igView!=='weekly';
     for(const tab of document.querySelectorAll('[data-ig-view]')){const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));}
     if(manageView){if(!$('igScheduledPane').hidden)loadSchedules();else if(!mediaLoaded)loadMedia();}
   });
@@ -2383,6 +2437,154 @@ window.ICO = {
     controls();
   });
   controls();
+})();
+
+/* Weekly performance library. All persistent data is behind existing staff auth. */
+(()=>{
+  const $=id=>document.getElementById(id), el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+  const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const week=value=>{const d=new Date(value+'T00:00:00Z');if(!Number.isFinite(+d))throw Error('날짜를 선택해 주세요.');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return {start:d.toISOString().slice(0,10),end:new Date(+d+6*86400000).toISOString().slice(0,10),title:`${d.getUTCFullYear()}년 ${d.getUTCMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째'][Math.floor((d.getUTCDate()-1)/7)]} 주 공연`};};
+  const labels={draft:'편집 중',preparing:'준비 결과 확인 필요',prepared:'게시 준비 완료',processing:'미디어 처리 중',creating:'미디어 생성 중',checking:'미디어 확인 중',posting:'발행 처리 중',published:'게시 완료',unknown:'결과 확인 필요',failed:'실패'};
+  const messages={weekly_conflict:'다른 창에서 수정되었습니다. 내용을 복사한 뒤 새로고침해 주세요.',weekly_source_duplicate:'이 게시물의 이미지는 이미 등록했습니다. 달력에서 기존 공연을 수정해 주세요.',weekly_locked:'게시 작업이 연결된 초안입니다. 먼저 게시 상태를 확인해 주세요.',weekly_verification_required:'공연명·공연일·장소·포스터와 정보 확인 상태를 점검해 주세요.',weekly_in_use:'주간 초안이나 발행 이력에서 사용하는 공연입니다. 삭제 대신 숨김으로 변경해 주세요.',weekly_source_unavailable:'원본 이미지를 가져오지 못했습니다. 포스터 파일을 직접 선택해 주세요.',weekly_invalid_sessions:'회차를 YYYY-MM-DD 또는 YYYY-MM-DD HH:MM 형식으로 입력하고 중복을 제거해 주세요.',weekly_invalid_image:'포스터는 JPEG, 최대 2MB로 저장합니다. 다른 이미지를 선택해 주세요.',weekly_poster_required:'포스터 파일을 선택해 주세요.',weekly_invalid_fields:'필수 항목과 가격 정보를 확인해 주세요.',weekly_library_full:'저장 한도에 도달했습니다. 담당자에게 문의해 주세요.'};
+  let thumbUrls=new Map();
+  let performances=[],drafts=[],draft=null,pEdit=null,pFile=null,sourceCursor=null,sourceBusy=false,busy=false,dirty=false,generation=0,rendered=[],urls=[],assetCache=new Map();
+  const status=(text,error=false)=>{$('wkStatus').textContent=text;$('wkStatus').dataset.error=String(error);};
+  async function api(action,fields={},binary=false){
+    if(!window.gdrive?.isAllowed())throw Error('로그인이 필요합니다.');
+    const epoch=generation,fd=new FormData();fd.set('action',action);
+    for(const [k,v]of Object.entries(fields)){if(Array.isArray(v))v.forEach(f=>fd.append(k,f));else fd.set(k,v);}
+    const r=await fetch('/api/weekly',{method:'POST',body:fd});
+    if(epoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
+    if(binary&&r.ok)return r.blob();const data=await r.json();
+    if(!r.ok||!data.ok)throw Error(messages[data.error]||({'instagram_access_blocked':'Meta API 접근이 차단되었습니다. 다운로드 후 수동 게시할 수 있습니다.','instagram_draft_conflict':'서버에 고정된 이미지와 다릅니다. 초안을 다시 열어 저장된 미리보기를 확인하세요.'}[data.error])||'요청 실패: '+(data.error||r.status));return data;
+  }
+  async function run(fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){status(e.message,true);}finally{busy=false;controls();}}
+  function controls(){
+    const locked=!!draft?.jobId;
+    $('wkEditor').disabled=busy||locked;$('wkSave').disabled=busy||locked;$('wkPrepare').disabled=busy||locked;
+    $('wkWeek').disabled=busy||locked;$('wkDraftList').disabled=busy;$('wkNewDraft').disabled=busy;
+    $('wkRender').disabled=busy;$('wkDownload').disabled=busy||!rendered.length;
+    $('wkPublish').hidden=!locked||!['prepared','processing'].includes(draft?.status);
+    $('wkPublish').disabled=busy||!$('wkConfirm').checked||!rendered.length;
+    $('wkPublish').textContent=draft?.status==='processing'?'확인한 게시 처리 계속':'확인한 내용 지금 게시';
+    $('wkJobStatus').hidden=!locked;$('wkJobStatus').disabled=busy;
+    $('wkUnlock').hidden=!['prepared','failed'].includes(draft?.status);$('wkUnlock').disabled=busy;
+    for(const n of $('wkCandidates').querySelectorAll('input'))n.disabled=busy||locked;
+    for(const id of ['wkRefresh','wkNewPerformance','wkImport'])$(id).disabled=busy;
+  }
+  function clearRender(){urls.forEach(URL.revokeObjectURL);urls=[];rendered=[];$('wkPreviews').replaceChildren();$('wkReview').hidden=true;$('wkConfirm').checked=false;controls();}
+  function changed(){dirty=true;clearRender();}
+  function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
+  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,week:w.start,weekEnd:w.end,title:w.title,subtitle:'이번 주, 공연장에서 만나요',closing:'공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
+  function fillDraft(){
+    clearRender();$('wkWeek').value=draft.week;
+    for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
+    $('wkDraftList').value=drafts.some(d=>d.id===draft.id)?draft.id:'';renderCandidates();renderCards();controls();
+    status(draft.jobId?(labels[draft.status]||draft.status)+' · 게시 상태와 저장된 이미지를 확인해 주세요.':'초안을 편집한 뒤 저장해 주세요.');
+  }
+  const weekSessions=p=>p.sessions.filter(s=>s.date>=draft.week&&s.date<=draft.weekEnd);
+  const scheduleText=p=>weekSessions(p).map(s=>s.date.slice(5).replace('-','.')+(s.time?' '+s.time:'')).join(' / ');
+  function renderCandidates(){
+    $('wkRange').textContent=draft.week+' ~ '+draft.weekEnd+' · 월요일 기준';$('wkCandidates').replaceChildren();
+    const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
+    if(!candidates.length)$('wkCandidates').append(el('p','이 주에 등록된 공연이 없습니다.','ig-hint'));
+    for(const p of candidates){const row=el('label',undefined,'wk-candidate'),check=el('input');check.type='checkbox';check.checked=draft.cards.some(c=>c.performanceId===p.id);check.disabled=!!draft.jobId;
+      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();});
+      const info=el('span',p.title+' · '+scheduleText(p)+(p.status==='verified'?'':' · 확인 필요'));row.append(check,info);$('wkCandidates').append(row);}
+    $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
+  }
+  function renderCards(){
+    $('wkCards').replaceChildren();draft.cards.forEach((card,i)=>{const box=el('div',undefined,'wk-card-editor');box.draggable=!draft.jobId;
+      box.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',String(i)));box.addEventListener('dragover',e=>e.preventDefault());box.addEventListener('drop',e=>{e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(draft.jobId||!Number.isInteger(from)||from<0||from>=draft.cards.length)return;draft.cards.splice(i,0,draft.cards.splice(from,1)[0]);changed();renderCards();});
+      const head=el('div',undefined,'wk-toolbar');head.append(el('strong',(i+1)+'. 공연 카드'));
+      for(const [name,delta]of [['위로',-1],['아래로',1],['제외',0]]){const button=el('button',name,'btn ghost sm');button.type='button';button.disabled=!!draft.jobId||(delta!==0&&(i+delta<0||i+delta>=draft.cards.length));button.addEventListener('click',()=>{pull();const [c]=draft.cards.splice(i,1);if(delta)draft.cards.splice(i+delta,0,c);changed();renderCards();renderCandidates();});head.append(button);}box.append(head);
+      for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?600:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} $('wkCards').append(box);});
+    $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
+  }
+  function performanceButton(p){const b=el('button',undefined,'wk-event');const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=p.title;b.type='button';b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
+  function renderCalendar(){
+    const month=$('wkMonth').value,first=new Date(month+'-01T00:00:00Z');if(!Number.isFinite(+first))return;
+    const grid=$('wkCalendar');grid.replaceChildren();for(const day of ['월','화','수','목','금','토','일'])grid.append(el('strong',day,'wk-day-name'));
+    for(let i=0;i<(first.getUTCDay()+6)%7;i++)grid.append(el('div'));
+    const count=new Date(first.getUTCFullYear(),first.getUTCMonth()+1,0).getDate();
+    for(let i=1;i<=count;i++){const date=month+'-'+String(i).padStart(2,'0'),cell=el('div',undefined,'wk-day');cell.append(el('span',String(i)));
+      for(const p of performances.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.title=p.title+' · '+times;button.append(el('small',times));
+        const img=el('img');img.alt='';img.loading='lazy';button.prepend(img);const epoch=generation;
+        asset(p.assetId).then(blob=>{if(epoch!==generation||!img.isConnected)return;if(!thumbUrls.has(p.assetId))thumbUrls.set(p.assetId,URL.createObjectURL(blob));img.src=thumbUrls.get(p.assetId);}).catch(()=>img.remove());cell.append(button);}grid.append(cell);}
+    $('wkUnscheduled').replaceChildren();for(const p of performances.filter(p=>!p.sessions.length||p.status==='hidden'))$('wkUnscheduled').append(performanceButton(p));
+  }
+  function renderDraftList(){const select=$('wkDraftList');select.replaceChildren(new Option('새 초안',''));for(const d of drafts)select.append(new Option(d.title+' · '+(labels[d.status]||d.status),d.id));select.value=draft?.id||'';}
+  async function load(){const data=await api('list');performances=data.performances;drafts=data.drafts;renderCalendar();renderDraftList();if(!draft)blankDraft();else renderCandidates();status('공연 '+performances.length+'개 · 저장된 초안 '+drafts.length+'개');}
+  function cacheDraft(d){draft=d;drafts=[d,...drafts.filter(x=>x.id!==d.id)];dirty=false;renderDraftList();controls();}
+  async function save(){pull();const result=await api('draft',{id:draft.id,data:JSON.stringify(draft)});cacheDraft(result.draft);status('초안을 저장했습니다.');}
+  async function asset(id){if(!assetCache.has(id)){const promise=api('asset',{id},true);assetCache.set(id,promise);try{await promise;}catch(e){assetCache.delete(id);throw e;}}return assetCache.get(id);}
+  async function image(blob){const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();return img;}finally{URL.revokeObjectURL(url);}}
+  async function normalize(file){if(file.size>15*1024*1024)throw Error('원본 포스터는 15MB 이하로 선택해 주세요.');const img=await image(file);if(img.width*img.height>40000000)throw Error('이미지가 너무 큽니다.');const c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const result=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.9));if(!result||result.size>2*1024*1024)throw Error('포스터 용량을 줄여 다시 선택해 주세요.');return result;}
+  let pPreviewUrl=null;
+  function posterPreview(blob){if(pPreviewUrl)URL.revokeObjectURL(pPreviewUrl);pPreviewUrl=blob?URL.createObjectURL(blob):null;$('wkPPreview').hidden=!blob;if(blob)$('wkPPreview').src=pPreviewUrl;else $('wkPPreview').removeAttribute('src');}
+  async function openPerformance(p){pEdit=p?structuredClone(p):{id:crypto.randomUUID(),version:0,title:'',sessions:[],venue:'',priceKind:'unknown',price:'',bookingUrl:'',description:'',status:'needs_review',sourcePostId:'',sourceAsset:''};pFile=null;
+    for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',bookingUrl:'wkPBooking',description:'wkPDescription',status:'wkPStatus'}))$(id).value=pEdit[key];
+    $('wkPSessions').value=pEdit.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n');$('wkPFile').value='';$('wkPMessage').textContent='';$('wkPDelete').hidden=!pEdit.version;posterPreview(null);$('wkPerformanceDialog').showModal();
+    if(pEdit.assetId)posterPreview(await asset(pEdit.assetId));
+  }
+  function textBlock(ctx,text,x,y,width,maxLines,size,min=24,color='#251b35'){
+    let lines=[];
+    for(;size>=min;size-=2){ctx.font=`600 ${size}px system-ui, sans-serif`;lines=[];for(const paragraph of text.split('\n')){let line='';for(const char of paragraph){if(ctx.measureText(line+char).width>width&&line){lines.push(line);line='';}line+=char;}lines.push(line);}if(lines.length<=maxLines)break;}
+    if(lines.length>maxLines)throw Error('카드 문구가 너무 깁니다. 제목이나 일시·장소를 짧게 다듬어 주세요.');ctx.fillStyle=color;lines.forEach((line,i)=>ctx.fillText(line,x,y+i*size*1.4));return lines.length*size*1.4;
+  }
+  async function render(){
+    clearRender();if(dirty||!draft.version)await save();
+    if(draft.jobId){for(let i=0;i<draft.cards.length+2;i++)rendered.push(await api('rendered',{id:draft.id,index:String(i)},true));}
+    else{
+      if(!draft.cards.length)throw Error('공연을 하나 이상 선택해 주세요.');await document.fonts.ready;
+      for(let i=0;i<draft.cards.length+2;i++){
+        const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
+        textBlock(ctx,'ENTICKET  /  WEEKLY',64,83,950,1,26,26,'#6c35a5');
+        if(i===0){textBlock(ctx,draft.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2'),64,390,950,3,92,48);textBlock(ctx,draft.subtitle,64,860,950,3,36,28);textBlock(ctx,draft.week+' — '+draft.weekEnd,64,1160,950,1,36,28);}
+        else if(i===draft.cards.length+1){textBlock(ctx,'공연장에서\n만나요',64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
+        else{const card=draft.cards[i-1],img=await image(await asset(card.assetId));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
+          textBlock(ctx,card.title,64,1040,952,2,38,28);textBlock(ctx,card.schedule,64,1150,952,2,25,22);textBlock(ctx,card.venue+(card.price?' · '+card.price:''),64,1230,952,2,25,22);}
+        textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));if(!blob)throw Error('이미지 생성에 실패했습니다.');rendered.push(blob);
+      }
+    }
+    for(let i=0;i<rendered.length;i++){const url=URL.createObjectURL(rendered[i]);urls.push(url);const fig=el('figure'),img=el('img');img.src=url;img.alt=(i+1)+'번 실제 게시 이미지';const a=el('a',(i+1)+'번 이미지 내려받기');a.href=url;a.download=String(i+1).padStart(2,'0')+'.jpg';const zoom=el('a');zoom.href=url;zoom.target='_blank';zoom.rel='noopener';zoom.title='원본 크기로 보기';zoom.append(img);fig.append(zoom,a);$('wkPreviews').append(fig);}
+    status('실제 출력 이미지 '+rendered.length+'장을 생성했습니다.');controls();if(draft.jobId)showReview();
+  }
+  function showReview(){$('wkReview').hidden=false;$('wkAccount').textContent='게시 계정 @'+(draft.job?.account?.username||'확인 필요')+' · '+(labels[draft.status]||draft.status);$('wkFinalCaption').textContent=draft.caption;const old=$('wkPublishedLink');if(old)old.remove();if(draft.job?.permalink){const a=el('a','인스타그램에서 게시물 보기');a.id='wkPublishedLink';a.href=draft.job.permalink;a.target='_blank';a.rel='noopener noreferrer';$('wkReview').append(a);}$('wkConfirm').checked=false;controls();}
+  async function sourceList(more=false){if(sourceBusy)return;sourceBusy=true;try{const after=more?sourceCursor:'';const result=await window.gdrive.api('/instagram/media',after?{after}:{});if(!more)$('wkSources').replaceChildren();sourceCursor=result.nextCursor;$('wkMoreSources').hidden=!sourceCursor;
+    for(const post of result.items){post.assets.forEach((a,index)=>{if(a.type!=='image')return;const b=el('button',(post.caption||'캡션 없는 게시물').slice(0,60)+' · 이미지 '+(index+1),'wk-source');b.addEventListener('click',()=>run(async()=>{const existing=performances.find(p=>p.sourcePostId===post.id&&p.sourceAsset===String(index));await openPerformance(existing||null);if(existing)return;pEdit.sourcePostId=post.id;pEdit.sourceAsset=String(index);$('wkPDescription').value=post.caption||'';$('wkPMessage').textContent='공연명·실제 공연일을 확인해 입력하세요. 게시일은 공연일로 사용하지 않습니다.';try{pFile=await normalize(await api('source',{post:post.id,index:String(index),after:after||''},true));posterPreview(pFile);}catch(e){$('wkPMessage').textContent=e.message;}}));$('wkSources').append(b);});}
+  }finally{sourceBusy=false;}}
+  $('wkPerformanceForm').addEventListener('submit',e=>{e.preventDefault();run(async()=>{try{
+    const p={...pEdit};for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',bookingUrl:'wkPBooking',description:'wkPDescription',status:'wkPStatus'}))p[key]=$(id).value;
+    p.sessions=$('wkPSessions').value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const m=/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?$/.exec(s);if(!m)throw Error(messages.weekly_invalid_sessions);return {date:m[1],time:m[2]||''};});
+    await api('performance',{id:p.id,data:JSON.stringify(p),...(pFile?{file:pFile}:{})});$('wkPerformanceDialog').close();await load();status('공연 정보를 저장했습니다. 기존 주간 초안의 카드 문구는 그대로 유지됩니다.');
+  }catch(e){$('wkPMessage').textContent=e.message;throw e;}});});
+  $('wkPFile').addEventListener('change',()=>run(async()=>{try{pFile=await normalize($('wkPFile').files[0]);posterPreview(pFile);}catch(e){$('wkPMessage').textContent=e.message;throw e;}}));
+  $('wkPDelete').addEventListener('click',()=>{if(confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
+  $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>posterPreview(null));
+  for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption'])$(id).addEventListener('input',changed);
+  $('wkNewPerformance').addEventListener('click',()=>run(()=>openPerformance()));$('wkMonth').addEventListener('change',renderCalendar);
+  $('wkImport').addEventListener('click',()=>run(()=>sourceList()));$('wkMoreSources').addEventListener('click',()=>run(()=>sourceList(true)));
+  $('wkRefresh').addEventListener('click',()=>run(load));
+  $('wkWeek').addEventListener('change',()=>{if(dirty&&!confirm('저장하지 않은 초안을 바꾸고 새 주를 선택할까요?')){$('wkWeek').value=draft.week;return;}blankDraft();});
+  $('wkNewDraft').addEventListener('click',()=>{if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;if(drafts.some(d=>d.week===draft.week&&d.jobId)&&!confirm('이 주에 게시 작업이 있습니다. 기존 게시 결과를 확인했으며 별도 초안을 만들까요?'))return;blankDraft();});
+  $('wkDraftList').addEventListener('change',()=>{if(dirty&&!confirm('저장하지 않은 내용을 버리고 초안을 열까요?')){$('wkDraftList').value=draft.id;return;}const d=drafts.find(x=>x.id===$('wkDraftList').value);if(d){draft=structuredClone(d);dirty=false;fillDraft();}else blankDraft();});
+  $('wkSave').addEventListener('click',()=>run(save));$('wkRender').addEventListener('click',()=>run(render));
+  $('wkCaptionGenerate').addEventListener('click',()=>{if($('wkCaption').value&&!confirm('편집한 캡션을 선택 공연 기준으로 다시 채울까요?'))return;pull();$('wkCaption').value=draft.title+'\n'+draft.week+' ~ '+draft.weekEnd+'\n\n'+draft.cards.map(c=>[c.title,c.schedule,c.venue,c.price,performances.find(p=>p.id===c.performanceId)?.bookingUrl].filter(Boolean).join('\n')).join('\n\n')+'\n\n#엔티켓';changed();});
+  $('wkDownload').addEventListener('click',()=>run(async()=>{const files={'caption.txt':new TextEncoder().encode($('wkCaption').value)};for(let i=0;i<rendered.length;i++)files[String(i+1).padStart(2,'0')+'.jpg']=new Uint8Array(await rendered[i].arrayBuffer());const blob=new Blob([fflate.zipSync(files,{level:0})],{type:'application/zip'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=draft.week+'-enticket.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}));
+  $('wkPrepare').addEventListener('click',()=>run(async()=>{
+    if(drafts.some(d=>d.id!==draft.id&&d.week===draft.week&&d.jobId)&&!confirm('같은 주의 다른 게시 작업이 있습니다. 중복 여부를 확인했나요?'))return;
+    await render();let result;try{result=await api('prepare',{id:draft.id,version:String(draft.version),file:rendered});}catch(e){const current=draft.id;await load();const saved=drafts.find(d=>d.id===current);if(saved)cacheDraft(saved);throw e;}cacheDraft(result.draft);showReview();status('이미지·순서·캡션을 고정했습니다. 확인 체크 후에만 실제 게시합니다.');
+  }));
+  $('wkConfirm').addEventListener('change',controls);
+  $('wkPublish').addEventListener('click',()=>run(async()=>{if(!$('wkConfirm').checked||!rendered.length)return;try{const result=await api('publish',{id:draft.id,confirm:'publish',fingerprint:draft.job.fingerprint});cacheDraft(result.draft);showReview();status(labels[draft.status]||draft.status);}catch(e){draft.status='unknown';$('wkConfirm').checked=false;status('게시 응답을 확인하지 못했습니다. 게시 상태 확인을 눌러 주세요.',true);throw e;}}));
+  $('wkJobStatus').addEventListener('click',()=>run(async()=>{const result=await api('status',{id:draft.id});cacheDraft(result.draft);if(rendered.length)showReview();status((labels[draft.status]||draft.status)+(draft.job?.mediaId?' · 게시 ID '+draft.job.mediaId:''));controls();}));
+  $('wkUnlock').addEventListener('click',()=>run(async()=>{if(!confirm('고정된 게시 준비를 취소하고 다시 편집할까요? 수정 후 최종 확인이 다시 필요합니다.'))return;cacheDraft((await api('unlock',{id:draft.id})).draft);fillDraft();}));
+  for(const button of document.querySelectorAll('[data-ig-view="weekly"]'))button.addEventListener('click',()=>{if(window.gdrive?.isAllowed())run(async()=>{if(!draft)await load();});});
+  document.addEventListener('enticket-auth',()=>{generation++;performances=[];drafts=[];draft=null;dirty=false;pFile=null;assetCache.clear();thumbUrls.forEach(URL.revokeObjectURL);thumbUrls.clear();clearRender();$('wkPerformanceDialog').close();for(const id of ['wkCalendar','wkCandidates','wkCards','wkSources','wkPreviews','wkUnscheduled'])$(id).replaceChildren();for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption','wkPTitle','wkPDescription','wkPSessions','wkPVenue','wkPPrice','wkPBooking'])$(id).value='';$('wkFinalCaption').textContent='';$('wkStatus').textContent='';renderDraftList();if(window.gdrive?.isAllowed()&&!$('igWeeklyView').hidden)run(load);});
+  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+  $('wkMonth').value=today().slice(0,7);$('wkWeek').value=today();
 })();
 
 </script>

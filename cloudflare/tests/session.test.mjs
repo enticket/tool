@@ -9,7 +9,7 @@ test('secure session survives token expiry, renews, expires and is revoked on lo
  export class LoginSession extends BaseSession {
  async fetch(r){if(new URL(r.url).pathname==='/expire') {let s=await this.ctx.storage.get('session');s.expiresAt=Date.now()-1;await this.ctx.storage.put('session',s);return Response.json({ok:true});}return super.fetch(r);}}
  `;
- const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','instagram.mjs','instagram-job.mjs','instagram-caption.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url)),...(name==='worker.mjs'?{contents:source}:{})})),compatibilityDate:'2026-10-13',bindings:{GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@test.example'},durableObjects:{LOGIN_SESSIONS:{className:'LoginSession',useSQLite:true}},outboundService:async()=>{googleCalls++;return Response.json({aud:'client',email:'staff@test.example',email_verified:true,expires_in:300});}}));
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','weekly.mjs','instagram.mjs','instagram-job.mjs','instagram-caption.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url)),...(name==='worker.mjs'?{contents:source}:{})})),compatibilityDate:'2026-10-13',bindings:{GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@test.example'},durableObjects:{LOGIN_SESSIONS:{className:'LoginSession',useSQLite:true}},outboundService:async()=>{googleCalls++;return Response.json({aud:'client',email:'staff@test.example',email_verified:true,expires_in:300});}}));
  let cookie='';
  async function call(path,token,origin='https://tools.enticket.kr'){
  const form=new FormData();if(token)form.set('access_token',token);
