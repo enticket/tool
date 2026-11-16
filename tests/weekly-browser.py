@@ -29,9 +29,12 @@ with sync_playwright() as p:
    if key=='file':files.append(value)
    else:fields[key]=value.decode()
   action=fields['action'];id=fields.get('id')
+  if action=='sources':
+   route.fulfill(json={'ok':True,'items':[{'id':'999','caption':'🎭 가져온 공연\n일시: 2026.12.05 19:30','assets':[{'type':'image'}],'suggestion':{'title':'가져온 공연','venue':'아트홀','sessions':[{'date':'2026-12-05','time':'19:30'}]}},{'id':'998','caption':'🎭 날짜 미정 공연','assets':[{'type':'image'}],'suggestion':{'title':'날짜 미정 공연','venue':'','sessions':[]}}], 'nextCursor':None});return
+  if action=='source':route.fulfill(content_type='image/jpeg',body=poster_bytes);return
   if action=='list':route.fulfill(json={'ok':True,**db});return
   if action=='performance':
-   value=json.loads(fields['data']);value.update(id=id,version=value['version']+1,assetId=id);assets[id]=files[0] if files else assets[id];db['performances']=[value];route.fulfill(json={'ok':True,'performance':value});return
+   value=json.loads(fields['data']);value.update(id=id,version=value['version']+1,assetId=id);assets[id]=files[0] if files else assets[id];db['performances']=[v for v in db['performances'] if v['id']!=id]+[value];route.fulfill(json={'ok':True,'performance':value});return
   if action=='asset':route.fulfill(content_type='image/jpeg',body=assets[id]);return
   if action=='draft':
    value=json.loads(fields['data']);value.update(status='draft',weekEnd='2026-11-22',version=value['version']+1)
@@ -53,6 +56,10 @@ with sync_playwright() as p:
  expect(page.locator('#igWeeklyView')).to_be_visible();expect(page.locator('#igPostView')).to_be_hidden()
 
  page.locator('#wkNewPerformance').click();page.locator('#wkPTitle').fill('11월의 작은 음악회');page.locator('#wkPSessions').fill('2026-11-16 19:30\n2026-11-22');page.locator('#wkPVenue').fill('엔티켓 아트홀');page.locator('#wkPFile').set_input_files({'name':'poster.jpg','mimeType':'image/jpeg','buffer':poster_bytes});expect(page.locator('#wkPPreview')).to_be_visible();page.locator('#wkPStatus').select_option('verified');page.locator('#wkPerformanceForm button[type="submit"]').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
+ page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('날짜 배치 1개');expect(page.locator('#wkUnscheduled')).to_contain_text('날짜 미정 공연')
+ page.locator('#wkMonth').fill('2026-12');page.locator('#wkMonth').dispatch_event('change');expect(page.locator('[data-date="2026-12-05"]')).to_contain_text('가져온 공연');assert len(db['performances'])==3
+ page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('기존/동영상 제외 2개');assert len(db['performances'])==3
+ page.locator('#wkMonth').fill('2026-11');page.locator('#wkMonth').dispatch_event('change')
  page.screenshot(path=str(artifact_dir/'calendar.png'),full_page=True)
  page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkCalendarView')).to_be_hidden();expect(page.locator('#wkDesignView')).to_be_visible()
  page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('2026년 11월 셋째 주 공연')

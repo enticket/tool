@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
-import {dateOnly,weekOf,performanceInput} from '../src/weekly.mjs';
+import {dateOnly,weekOf,performanceInput,parsePerformanceCaption} from '../src/weekly.mjs';
 
 test('Korean Monday weeks, month/year boundaries and real session dates',()=>{
  assert.deepEqual(weekOf('2026-11-22'),{start:'2026-11-16',end:'2026-11-22',title:'2026년 11월 셋째 주 공연'});
@@ -22,6 +22,7 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   const u=new URL(r.url);if(u.hostname==='oauth2.googleapis.com')return Response.json({aud:'client',email:'staff@test.example',email_verified:true,expires_in:300});
   assert.equal(u.hostname,'graph.facebook.com');remote.push({path:u.pathname,body:r.method==='POST'?await r.json():null});
   if(u.pathname.endsWith('/media_publish')){publishes++;return lost?new Response('lost',{status:502}):Response.json({id:'777'});}
+  if(u.pathname.endsWith('/media')&&r.method==='GET')return Response.json({data:[{id:'222',caption:'🎭 공연\n일시: 2026.11.16 오후 7시',media_type:'IMAGE',media_url:'https://scontent.cdninstagram.com/test.jpg',timestamp:'2026-11-01T00:00:00Z'}]});
   if(u.pathname.endsWith('/media'))return Response.json({id:String(++next)});
   if(u.searchParams.get('fields')==='status_code')return Response.json({status_code:processing?'IN_PROGRESS':'FINISHED'});
   if(connectionFails)return Response.json({error:{code:190}},{status:400});
@@ -34,6 +35,7 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
  const p={title:'<img src=x onerror=alert(1)> 공연',venue:'극장',priceKind:'unknown',price:'',bookingUrl:'',description:'원문',status:'verified',sessions:[{date:'2026-11-16',time:''},{date:'2026-11-22',time:'19:00'}],version:0,sourcePostId:'222',sourceAsset:'0'};
  try{
   assert.equal((await call('list',{},null)).status,400);
+  const sources=await ok('sources');assert.equal(sources.items[0].suggestion.sessions[0].date,'2026-11-16');assert.equal(sources.items[0].suggestion.sessions[0].time,'19:00');
   const id=crypto.randomUUID();let saved=(await ok('performance',{id,data:JSON.stringify(p),file:file()})).performance;
   assert.equal((await call('performance',{id,data:JSON.stringify(p)})).status,409);
   assert.equal((await call('performance',{id:crypto.randomUUID(),data:JSON.stringify(p),file:file()})).status,409);
@@ -71,4 +73,18 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,caption:'다시 검토'})})).draft;
   d=(await ok('prepare',{id:d.id,version:d.version,file:[file(),file(),file()]})).draft;assert.notEqual(d.jobId,abandonedId);assert.equal(d.job.caption,'다시 검토');
  }finally{await mf.dispose();}
+});
+
+
+test('Instagram caption dates are performance sessions, never ticket deadlines or publication dates',()=>{
+ const parse=parsePerformanceCaption;
+ let result=parse('🎭 작은 음악회\n📅 일시 | 2026.11.16.(월) 오후 7시 30분\n📍 장소 | 아트홀\n예매 오픈 2026.11.01. 10:00');
+ assert.equal(result.title,'작은 음악회');assert.equal(result.venue,'아트홀');assert.deepEqual(result.sessions,[{date:'2026-11-16',time:'19:30'}]);
+ assert.deepEqual(parse('공연명: 두 회차\n일시: 2026년 11월 16일 14:00, 19:00\n11월 22일 오후 3시').sessions,[{date:'2026-11-16',time:'14:00'},{date:'2026-11-16',time:'19:00'},{date:'2026-11-22',time:'15:00'}]);
+ assert.deepEqual(parse('콘서트\n일시: 2026-11-16').sessions,[{date:'2026-11-16',time:''}]);
+ for(const caption of ['공연\n예매 오픈: 2026.11.16','공연\n일시: 11월 16일','공연\n일시: 2026.02.30','공연\n일시: 2026.11.16.(화)','공연\n일시: 2026.11.16 ~ 2026.11.22']) assert.equal(parse(caption).sessions.length,0,caption);
+ assert.equal(parse('일시: 2026.11.16 7시').sessions[0].time,'');
+ assert.equal(parse('일시: 2026.11.16 오후 12시').sessions[0].time,'12:00');
+ assert.equal(parse('일시: 2026.11.16 오전 12시').sessions[0].time,'00:00');
+ assert.equal(parse('엔티켓 새 소식!').eligible,false);
 });

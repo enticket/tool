@@ -1,4 +1,4 @@
-import { InstagramError, instagramConfig, instagramRequest } from './instagram.mjs';
+import { InstagramError, instagramConfig, instagramRequest, instagramMedia } from './instagram.mjs';
 
 const fail = (code, status = 400) => { throw new InstagramError('weekly_' + code, status); };
 const reply = data => Response.json({ok:true, ...data}, {headers:{'Cache-Control':'no-store'}});
@@ -15,6 +15,46 @@ export function weekOf(value) {
   return {start:start.toISOString().slice(0,10), end:end.toISOString().slice(0,10),
     title:`${start.getUTCFullYear()}년 ${start.getUTCMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째'][Math.floor((start.getUTCDate()-1)/7)]} 주 공연`};
 }
+// Extract only explicitly described performance sessions. Never use publication time.
+export function parsePerformanceCaption(caption='') {
+  const lines=String(caption).slice(0,10000).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const labelled=lines.find(s=>/공연명\s*[:|｜]/.test(s));
+  const title=(labelled?labelled.replace(/^.*?공연명\s*[:|｜]\s*/,''):lines[0]||'공연명 확인 필요').replace(/^[🎭🎵🎶\s]+/u,'').slice(0,220);
+  const venue=(lines.find(s=>/(?:장소|공연장)\s*[:|｜]/.test(s))||'').replace(/^.*?(?:장소|공연장)\s*[:|｜]\s*/,'').slice(0,220);
+  const sessionLines=[];let inDates=false;
+  for(const line of lines){
+    if(/예매|티켓\s*오픈|예약|판매|접수|마감|모집/.test(line)){inDates=false;continue;}
+    if(/(?:공연\s*(?:일시|일정|날짜|일)|일시|일정|📅)/u.test(line)){inDates=true;sessionLines.push(line);continue;}
+    if(inDates&&/^(?:[-•·]\s*)?(?:20\d{2}[.\-/년]|\d{1,2}[.\/월])/.test(line)){sessionLines.push(line);continue;}
+    inDates=false;
+  }
+  // An unlabelled full date is usable only on a line explicitly about a performance.
+  if(!sessionLines.length)sessionLines.push(...lines.filter(s=>/공연|콘서트|음악회/.test(s)&&/20\d{2}[.\-/년]/.test(s)&&!/예매|오픈|접수|마감/.test(s)));
+  const sessions=[];let year=null,uncertain=false,reason='공연 날짜를 찾지 못했습니다.';
+  for(const line of sessionLines){
+    if(/[~～〜–]/.test(line)||/부터|까지/.test(line)||/\d\s*[일.)]?\s*-\s*\d/.test(line.replace(/20\d{2}-\d{1,2}-\d{1,2}/g,''))){return {title,venue,sessions:[],reason:'기간 표기입니다. 실제 공연 회차를 확인해 주세요.'};}
+    if(/[,、]\s*\d{1,2}\s*(?:일|\.\s*\()/.test(line))return {title,venue,sessions:[],reason:'축약된 여러 날짜입니다. 공연 회차를 확인해 주세요.'};
+    const matches=[...line.matchAll(/(?:(20\d{2})\s*[.\-/년]\s*)?(\d{1,2})\s*[.\/월-]\s*(\d{1,2})(?:일)?(?!\d)/g)];
+    for(let i=0;i<matches.length;i++){
+      const m=matches[i];if(m[1])year=m[1];if(!year){uncertain=true;reason='연도가 없는 일정입니다. 공연 연도를 확인해 주세요.';continue;}
+      const date=`${year}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+      if(!dateOnly(date))return {title,venue,sessions:[],reason:'존재하지 않는 날짜가 포함되어 있습니다.'};
+      const tail=line.slice(m.index+m[0].length,matches[i+1]?.index),weekday=/\(([일월화수목금토])(?:요일)?\)/.exec(tail);
+      if(weekday&&'일월화수목금토'[new Date(date+'T00:00:00Z').getUTCDay()]!==weekday[1])return {title,venue,sessions:[],reason:'날짜와 요일이 일치하지 않습니다.'};
+      const times=[...tail.matchAll(/(오전|오후|AM|PM)?\s*(\d{1,2})(?::(\d{2})|시(?:\s*(\d{1,2})분)?)/gi)];
+      if(!times.length)sessions.push({date,time:''});
+      else for(const t of times){let hour=Number(t[2]),minute=Number(t[3]||t[4]||0);const meridiem=t[1]?.toUpperCase();
+        if(hour>23||minute>59||(meridiem&&(hour<1||hour>12)))return {title,venue,sessions:[],reason:'공연 시간을 확인해 주세요.'};
+        if(meridiem)hour=hour%12+(['오후','PM'].includes(meridiem)?12:0);
+        // Bare 1~12시 has no AM/PM certainty. Keep its date but leave time unset.
+        const time=meridiem||t[3]||hour>12?`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`:'';
+        sessions.push({date,time});}
+    }
+  }
+  const unique=[...new Map(sessions.map(s=>[s.date+s.time,s])).values()];
+  return {title,venue,eligible:sessionLines.length>0||/공연|콘서트|음악회|뮤지컬|연극|독주회|연주회/.test(caption),sessions:uncertain?[]:unique,reason:!uncertain&&unique.length?'':reason};
+}
+
 const str = (x, max=220) => { if(typeof x !== 'string' || x.length>max) fail('invalid_fields'); return x.trim(); };
 export function performanceInput(x) {
   if(!x || !Array.isArray(x.sessions) || x.sessions.length>100) fail('invalid_sessions');
@@ -51,6 +91,7 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
   const action=form.get('action'), id=form.get('id');
   const getJson=()=>{try{return JSON.parse(form.get('data'));}catch{fail('invalid_fields');}};
   const key=(prefix)=>{if(!validDraftId(id))fail('invalid_id');return prefix+id;};
+  if(action==='sources'){const result=await instagramMedia(env,form.get('after')||'');return reply({...result,items:result.items.map(p=>({...p,suggestion:parsePerformanceCaption(p.caption)}))});}
   if(action==='list'){
     const [p,d]=await Promise.all([store.list({prefix:'performance:'}),store.list({prefix:'draft:'})]);
     return reply({performances:[...p.values()],drafts:[...d.values()].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))});
