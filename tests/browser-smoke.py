@@ -1,3 +1,4 @@
+from browser_support import accept_app_messages
 """Local-only onboarding smoke checks; no authenticated service writes."""
 import base64
 import json
@@ -30,6 +31,7 @@ with sync_playwright() as p:
     page.route('https://accounts.google.com/**', block_backend)
     page.route('**/api/**', block_backend)
     page.on('dialog', lambda dialog: dialog.accept())
+    accept_app_messages(page)
     response = page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8000'), wait_until='networkidle')
     expect(page.locator('#gLoginBtn')).to_be_hidden()
     assert page.locator('[data-cloud-only]:visible').count() == 0

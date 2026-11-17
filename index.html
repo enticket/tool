@@ -1374,9 +1374,11 @@ td.c { text-align: center; }
 .wk-layer-stage{position:relative;max-width:440px;margin:20px auto;line-height:0;touch-action:pan-y;box-shadow:0 8px 28px #0002}.wk-layer-stage canvas{display:block;width:100%;height:auto;outline:0}.wk-layer-stage canvas:focus-visible{outline:2px solid #713eb0;outline-offset:5px}.wk-layer-selection{position:absolute;border:1px solid #713eb0;box-shadow:0 0 0 1px #fff9;pointer-events:none}.wk-layer-selection:after{content:'';position:absolute;width:6px;height:6px;background:white;border:1px solid #713eb0;right:-4px;bottom:-4px}.wk-layer-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:14px 0}.wk-layer-grid button{padding:9px 10px;border:1px solid #e5e0e9;border-radius:6px;background:white;color:#726b79;font:inherit;font-size:12px;text-align:left;cursor:pointer}.wk-layer-grid button[aria-pressed=true]{background:#f4edf9;color:#592c87;border-color:#956eb8}.wk-layer-grid button[data-hidden=true]{opacity:.55}.wk-layer-properties .ig-row{gap:10px}.wk-layer-properties input[type=number]{width:100%;padding:8px;border:1px solid #ded8e4;border-radius:6px;font:inherit}.wk-layer-properties input[type=color]{width:100%;height:36px;padding:3px;border:1px solid #ded8e4;border-radius:6px;background:white}.wk-layer-properties textarea{font:inherit;font-size:13px;padding:9px;border:1px solid #ded8e4;border-radius:6px}.wk-layer-properties input[type=range]{width:100%;accent-color:#663399}.wk-layer-properties label{font-size:12px}.wk-layer-properties .wk-layer-visible{display:flex;gap:8px;align-items:center;margin:12px 0;font-size:12px}.wk-layer-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.wk-layer-note{font-size:11px;line-height:1.6;color:#84798f}.wk-layer-properties [hidden]{display:none!important}
 
 /* WEEKLY_STUDIO_CSS */
+/* SHARED_CONTROLS_CSS */
 </style>
 </head>
 <body>
+<script>/* SHARED_CONTROLS_JS */</script>
 <svg style="display:none" aria-hidden="true">
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 8V6a2 2 0 0 1 2-2h3.9l2 2H19a2 2 0 0 1 2 2v1"/><path d="M3.4 9h17.3a1 1 0 0 1 .97 1.26l-2.06 7.5A2 2 0 0 1 17.68 19H5.4a2 2 0 0 1-2-2Z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
@@ -1906,7 +1908,7 @@ window.ICO = {
       client_id: CLIENT_ID,
       scope: "openid email profile",
       callback: async (resp)=>{
-        if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        if(resp && resp.error){ EnticketUI.alert("로그인 실패: "+resp.error); return; }
         authRevision++;
         accessToken = resp.access_token;
         tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
@@ -1919,12 +1921,12 @@ window.ICO = {
           isAllowedUser = await verifyAllowed();
         }catch(e){
           showLoggedOut();
-          alert(e.message);
+          EnticketUI.alert(e.message);
           return;
         }
         showLoggedIn(userEmail || "로그인됨");
         if(!isAllowedUser){
-          alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
+          EnticketUI.alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
         }
       }
     });
@@ -1938,7 +1940,7 @@ window.ICO = {
   document.head.appendChild(gis);
   if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
   loginBtn.addEventListener("click", ()=>{
-    if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
+    if(!tokenClient){ EnticketUI.alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     tokenClient.requestAccessToken();
   });
   logoutBtn.addEventListener("click", async ()=>{
@@ -1949,7 +1951,7 @@ window.ICO = {
       if(!r.ok) throw new Error();
       showLoggedOut();
       authChannel?.postMessage('logout');
-    } catch { alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
+    } catch { EnticketUI.alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
     finally { logoutBtn.disabled = false; }
   });
   const authChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('enticket-auth') : null;
@@ -2177,8 +2179,8 @@ window.ICO = {
     $('igPublish').textContent='게시하기';
     controls();
   }
-  function canStartNew(){
-    return !job || !['unknown','creating','checking','posting'].includes(job.status) || confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
+  async function canStartNew(){
+    return !job || !['unknown','creating','checking','posting'].includes(job.status) || await EnticketUI.confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
   }
   function showJob(data){
     job=data; openReview();
@@ -2281,10 +2283,10 @@ window.ICO = {
       render().catch(e=>status(describe(e)));
     });
   }
-  $('igAutoCaption').addEventListener('click',()=>{
+  $('igAutoCaption').addEventListener('click',async()=>{
     if(working || job || !bitmap) return;
     const existing=captionKeys.some(key=>key!=='tags' && $('igField_'+key).value.trim())?$('igCaption').value:'';
-    if(existing.trim() && existing!==captionTemplate && !confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
+    if(existing.trim() && existing!==captionTemplate && !await EnticketUI.confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
     run(async current=>{
       captionAnalyzing=true; controls(); status('포스터에서 공연 정보를 읽고 있습니다.');
       try {
@@ -2312,7 +2314,7 @@ window.ICO = {
     const fields=composeCaption();
     if($('igChannel').value==='feed'){
       if($('igCaption').value.length>2200){status('캡션을 2,200자 이내로 줄여 주세요.','error');return;}
-      if(['title','schedules','venue'].some(key=>!fields[key]) && !confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
+      if(['title','schedules','venue'].some(key=>!fields[key]) && !await EnticketUI.confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
     }
     const id=crypto.randomUUID(); remember(id); status('확인할 이미지 보관 중…');
     const data=await api('prepare',{draft_id:id,channel:$('igChannel').value,caption:$('igChannel').value==='feed'?$('igCaption').value:'',file:new File([rendered],'instagram.jpg',{type:'image/jpeg'})});
@@ -2354,12 +2356,12 @@ window.ICO = {
       }
     }
   }));
-  function editReview(){
-    if(working || !canStartNew()) return;
+  async function editReview(){
+    if(working || !await canStartNew()) return;
     job=null; closeReview(); $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
   }
-  $('igReset').addEventListener('click',()=>{
-    if(working || !canStartNew()) return;
+  $('igReset').addEventListener('click',async()=>{
+    if(working || !await canStartNew()) return;
     resetEditor(); status('');
   });
   let scheduleBusy=false,scheduleCursor=null;
@@ -2395,7 +2397,7 @@ window.ICO = {
           async function mutate(action){
             if(scheduleBusy)return;
             let scheduled_at;try{if(action==='schedule')scheduled_at=scheduleISO(time.value);}catch(e){$('igScheduleStatus').textContent=e.message;return;}
-            if(!confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
+            if(!await EnticketUI.confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
             scheduleBusy=true;change.disabled=true;cancel.disabled=true;
             try{await api(action,{draft_id:item.draftId,fingerprint:item.fingerprint,confirm:action,...(scheduled_at?{scheduled_at}:{})});if(current!==session)return;scheduleBusy=false;await loadSchedules();}
             catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
@@ -2877,26 +2879,26 @@ window.ICO = {
   $('wkPChange').addEventListener('click',()=>$('wkPFile').click());
   $('wkPRestore').addEventListener('click',()=>{const p=pEdit;let fetched;if(!p?.sourcePostId)return;++performanceEpoch;$('wkPMessage').textContent='인스타그램 이미지를 가져오는 중…';void loadEditorPoster(async()=>{const blob=await normalize(await api('source',{post:p.sourcePostId,index:p.sourceAsset||'0',performance_id:p.id},true));fetched=blob;return blob;}).then(()=>{if(pEdit===p&&$('wkPerformanceDialog').open&&fetched&&pFile===fetched)$('wkPMessage').textContent='이미지를 불러왔습니다. 변경 저장을 누르면 포스터가 교체됩니다.';});});
   $('wkPFile').addEventListener('change',()=>{const file=$('wkPFile').files[0];if(!file)return;++performanceEpoch;void loadEditorPoster(()=>normalize(file));});
-  $('wkPDelete').addEventListener('click',()=>{if(confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
+  $('wkPDelete').addEventListener('click',async()=>{if(await EnticketUI.confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
   $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>{if($('wkPerformanceDialog').open)return;++performanceEpoch;posterWorking=false;posterPreview(null);controls();});
   for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption'])$(id).addEventListener('input',changed);
   $('wkNewPerformance').addEventListener('click',()=>run(()=>openPerformance()));$('wkMonth').addEventListener('change',renderCalendar);
   $('wkImport').addEventListener('click',()=>run(()=>{if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');return sourceList();}));$('wkMoreSources').addEventListener('click',()=>run(()=>{if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');return sourceList(true);}));
   $('wkRefresh').addEventListener('click',()=>run(load));
-  $('wkWeek').addEventListener('change',()=>{if(dirty&&!confirm('저장하지 않은 초안을 바꾸고 새 주를 선택할까요?')){$('wkWeek').value=draft.week;return;}blankDraft();run(render);});
-  $('wkNewDraft').addEventListener('click',()=>{if(dirty&&!confirm('저장하지 않은 내용을 버릴까요?'))return;if(drafts.some(d=>d.week===draft.week&&d.jobId)&&!confirm('이 주에 게시 작업이 있습니다. 기존 게시 결과를 확인했으며 별도 초안을 만들까요?'))return;blankDraft();run(render);});
-  $('wkDraftList').addEventListener('change',()=>{if(dirty&&!confirm('저장하지 않은 내용을 버리고 초안을 열까요?')){$('wkDraftList').value=draft.id;return;}const d=drafts.find(x=>x.id===$('wkDraftList').value);if(d){draft=structuredClone(d);dirty=false;fillDraft();}else blankDraft();run(render);});
+  $('wkWeek').addEventListener('change',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 초안을 바꾸고 새 주를 선택할까요?')){$('wkWeek').value=draft.week;return;}blankDraft();run(render);});
+  $('wkNewDraft').addEventListener('click',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 내용을 버릴까요?'))return;if(drafts.some(d=>d.week===draft.week&&d.jobId)&&!await EnticketUI.confirm('이 주에 게시 작업이 있습니다. 기존 게시 결과를 확인했으며 별도 초안을 만들까요?'))return;blankDraft();run(render);});
+  $('wkDraftList').addEventListener('change',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 내용을 버리고 초안을 열까요?')){$('wkDraftList').value=draft.id;return;}const d=drafts.find(x=>x.id===$('wkDraftList').value);if(d){draft=structuredClone(d);dirty=false;fillDraft();}else blankDraft();run(render);});
   $('wkSave').addEventListener('click',()=>run(async()=>{await save();if(draft.template==='paper-editorial')await render();status('디자인을 저장했습니다.');}));$('wkRender').addEventListener('click',()=>run(render));
-  $('wkCaptionGenerate').addEventListener('click',()=>{if($('wkCaption').value&&!confirm('편집한 캡션을 선택 공연 기준으로 다시 채울까요?'))return;pull();$('wkCaption').value=draft.title+'\n'+draft.week+' ~ '+draft.weekEnd+'\n\n'+draft.cards.map(c=>[c.title,c.schedule,c.venue,c.price].filter(Boolean).join('\n')).join('\n\n')+'\n\n#엔티켓';changed();});
+  $('wkCaptionGenerate').addEventListener('click',async()=>{if($('wkCaption').value&&!await EnticketUI.confirm('편집한 캡션을 선택 공연 기준으로 다시 채울까요?'))return;pull();$('wkCaption').value=draft.title+'\n'+draft.week+' ~ '+draft.weekEnd+'\n\n'+draft.cards.map(c=>[c.title,c.schedule,c.venue,c.price].filter(Boolean).join('\n')).join('\n\n')+'\n\n#엔티켓';changed();});
   $('wkDownload').addEventListener('click',()=>run(async()=>{const files={'caption.txt':new TextEncoder().encode($('wkCaption').value)};for(let i=0;i<rendered.length;i++)files[String(i+1).padStart(2,'0')+'.jpg']=new Uint8Array(await rendered[i].arrayBuffer());const blob=new Blob([fflate.zipSync(files,{level:0})],{type:'application/zip'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=draft.week+'-enticket.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}));
   $('wkPrepare').addEventListener('click',()=>run(async()=>{
-    if(drafts.some(d=>d.id!==draft.id&&d.week===draft.week&&d.jobId)&&!confirm('같은 주의 다른 게시 작업이 있습니다. 중복 여부를 확인했나요?'))return;
+    if(drafts.some(d=>d.id!==draft.id&&d.week===draft.week&&d.jobId)&&!await EnticketUI.confirm('같은 주의 다른 게시 작업이 있습니다. 중복 여부를 확인했나요?'))return;
     if(!draft.cards.length)throw Error('게시할 공연을 하나 이상 선택해 주세요.');if(dirty||!draft.version)await save();await render();let result;try{result=await api('prepare',{id:draft.id,version:String(draft.version),file:rendered});}catch(e){const current=draft.id;await load();const saved=drafts.find(d=>d.id===current);if(saved)cacheDraft(saved);throw e;}cacheDraft(result.draft);showReview();status('이미지·순서·캡션을 고정했습니다. 확인 체크 후에만 실제 게시합니다.');
   }));
   $('wkConfirm').addEventListener('change',controls);
   $('wkPublish').addEventListener('click',()=>run(async()=>{if(!$('wkConfirm').checked||!rendered.length)return;try{const result=await api('publish',{id:draft.id,confirm:'publish',fingerprint:draft.job.fingerprint});cacheDraft(result.draft);showReview();status(labels[draft.status]||draft.status);}catch(e){draft.status='unknown';$('wkConfirm').checked=false;status('게시 응답을 확인하지 못했습니다. 게시 상태 확인을 눌러 주세요.',true);throw e;}}));
   $('wkJobStatus').addEventListener('click',()=>run(async()=>{const result=await api('status',{id:draft.id});cacheDraft(result.draft);if(rendered.length)showReview();status((labels[draft.status]||draft.status)+(draft.job?.mediaId?' · 게시 ID '+draft.job.mediaId:''));controls();}));
-  $('wkUnlock').addEventListener('click',()=>run(async()=>{if(!confirm('고정된 게시 준비를 취소하고 다시 편집할까요? 수정 후 최종 확인이 다시 필요합니다.'))return;cacheDraft((await api('unlock',{id:draft.id})).draft);fillDraft();}));
+  $('wkUnlock').addEventListener('click',()=>run(async()=>{if(!await EnticketUI.confirm('고정된 게시 준비를 취소하고 다시 편집할까요? 수정 후 최종 확인이 다시 필요합니다.'))return;cacheDraft((await api('unlock',{id:draft.id})).draft);fillDraft();}));
   for(const button of document.querySelectorAll('[data-ig-view="weekly"],[data-ig-view="calendar"]'))button.addEventListener('click',()=>{const design=button.dataset.igView==='weekly';status('');$('wkCalendarView').hidden=design;$('wkDesignView').hidden=!design;$('wkPageTitle').textContent=design?'주간 디자인':'공연 달력';$('wkPageHint').textContent=design?'카드를 선택하고 문구를 편집하세요.':'공연 날짜와 회차를 관리합니다.';if(window.gdrive?.isAllowed())run(async()=>{if(!draft)await load();if(design&&!rendered.length)await render();});});
   for(const [id,delta]of [['wkPrevMonth',-1],['wkNextMonth',1]])$(id).addEventListener('click',()=>{const d=new Date($('wkMonth').value+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+delta);$('wkMonth').value=d.toISOString().slice(0,7);renderCalendar();});
   $('wkToday').addEventListener('click',()=>{$('wkMonth').value=today().slice(0,7);renderCalendar();});
@@ -3360,7 +3362,7 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
           if(OfficeCrypto.isEncrypted(bytes)){
             let pw=pwFromName(file.name); let dec=null, lastErr="";
             for(let attempt=0;attempt<4;attempt++){
-              if(!pw){ pw=prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+              if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
               try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
               catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
             }
@@ -3455,16 +3457,16 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   }
   function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
   async function saveToDrive(){
-    if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!allRows().length){ EnticketUI.alert("저장할 명단이 없습니다."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
       const bytes=XLSX.write(buildWb(),{type:"array",bookType:"xlsx"});
       const res=await window.gdrive.saveFile(["enticket","예매자명단", firstShowName()||"미지정"], outFilename,
         new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
   // 상시 드롭존: 드래그/선택 시마다 파일 추가
@@ -4345,7 +4347,7 @@ function renderValidationCard(result) {
       const reader=new FileReader();
       reader.onload=e=>{
         const parsed=parseWorkbook(new Uint8Array(e.target.result));
-        if(!parsed){ alert("읽을 데이터가 없어요."); return; }
+        if(!parsed){ EnticketUI.alert("읽을 데이터가 없어요."); return; }
         data.name=file.name; data.headers=parsed.headers; data.rows=parsed.rows; data.map=parsed.map;
         // 공연명 자동 추출 → 입력란이 비어 있을 때만 채움 (직원 입력 보호)
         if(parsed.showTitle){
@@ -4757,10 +4759,10 @@ function renderValidationCard(result) {
     return { bytes:(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes)), filename, data, check };
   }
   // 정산서 생성 (로컬 다운로드)
-  function generateSettlement(){
+  async function generateSettlement(){
     let built;
-    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); console.error(err); return; }
-    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 생성할까요?')) return; }
+    try{ built=buildSettlementFile(); }catch(err){ EnticketUI.alert('정산서 생성 중 오류: '+err.message); console.error(err); return; }
+    if(!built.check.ok){ if(!await EnticketUI.confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 생성할까요?')) return; }
     const blob=new Blob([built.bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob); a.download=built.filename;
@@ -4769,10 +4771,10 @@ function renderValidationCard(result) {
   }
   // 정산서 드라이브 저장
   async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     let built;
-    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
-    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
+    try{ built=buildSettlementFile(); }catch(err){ EnticketUI.alert('정산서 생성 중 오류: '+err.message); return; }
+    if(!built.check.ok){ if(!await EnticketUI.confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
     const btn=document.getElementById("saveSettlementDrive"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
@@ -4781,8 +4783,8 @@ function renderValidationCard(result) {
       if(withDt) year=withDt.dt.getFullYear();
       const res=await window.gdrive.saveFile(["enticket","정산서", String(year), built.data.공연명||"미지정"],
         built.filename, built.bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
   // 접이식 패널 토글
@@ -5101,7 +5103,7 @@ function renderValidationCard(result) {
           let pw=pwFromName(file.name);
           let dec=null, lastErr="";
           for(let attempt=0;attempt<4;attempt++){
-            if(!pw){ pw=prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+            if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
             try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
             catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
           }
@@ -5247,16 +5249,16 @@ function renderValidationCard(result) {
   }
   // 드라이브 저장 (엑셀)
   async function smsSaveToDrive(){
-    if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
+    if(!lastResult.length){ EnticketUI.alert("저장할 명단이 없습니다."); return; }
+    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
       const bytes=XLSX.write(buildSmsWb(),{type:"array",bookType:"xlsx"});
       const res=await window.gdrive.saveFile(["enticket","문자발송명단"], fname("xlsx"),
         new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
+      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
+    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
   }
   function fname(ext){
@@ -5771,7 +5773,7 @@ window.OrigSeal = (function(){
   async function handleFile(file){
     if(!file) return;
     if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
-    if(!canUseStamp()){ updateGate(); alert(window.gdrive.isLocal ? "직인 이미지를 먼저 선택해 주세요." : "로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
+    if(!canUseStamp()){ updateGate(); EnticketUI.alert(window.gdrive.isLocal ? "직인 이미지를 먼저 선택해 주세요." : "로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
     const current = ++conversion;
     out=null; btnRow.style.display="none"; fnameEl.textContent="";
     preview.innerHTML='<div class="empty">변환 중…</div>';
@@ -5883,63 +5885,6 @@ window.OrigSeal = (function(){
   });
 })();
 </script>
-<script>
-(function(){
-  const dialog=document.createElement('dialog');dialog.className='ig-calendar';dialog.setAttribute('aria-label','예약 날짜와 시간 선택');
-  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="시 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="시" inputmode="numeric" type="text" maxlength="2" value="00" data-max="23"><button type="button" data-step="-1" aria-label="시 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><span>:</span><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="분 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="분" inputmode="numeric" type="text" maxlength="2" value="00" data-max="59"><button type="button" data-step="-1" aria-label="분 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
-  document.body.append(dialog);
-  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('.ig-time-stepper input');
-  const pad=n=>String(n).padStart(2,'0');
-  function normalizeTime(input){input.value=pad(Math.min(Number(input.dataset.max),Math.max(0,Number(input.value)||0)));}
-  for(const input of [hour,minute]){
-    const step=delta=>{normalizeTime(input);input.value=pad((Number(input.value)+delta+Number(input.dataset.max)+1)%(Number(input.dataset.max)+1));};
-    input.parentElement.querySelectorAll('button').forEach(button=>button.onclick=()=>step(Number(button.dataset.step)));
-    input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,2);});
-    input.addEventListener('blur',()=>normalizeTime(input));
-    input.addEventListener('focus',()=>input.select());
-    input.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();step(event.key==='ArrowUp'?1:-1);}});
-  }
-  let target,selected,month;
-  const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-  function render(){
-    const minMonth=korea().slice(0,7);
-    const maxMonth=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,7);
-    const current=month.toISOString().slice(0,7);
-    if(current<minMonth)month=new Date(minMonth+'-01T00:00:00Z');
-    if(current>maxMonth)month=new Date(maxMonth+'-01T00:00:00Z');
-    const visible=month.toISOString().slice(0,7);
-    dialog.querySelector('[data-prev]').disabled=visible<=minMonth;
-    dialog.querySelector('[data-next]').disabled=visible>=maxMonth;
-    const y=month.getUTCFullYear(),m=month.getUTCMonth();
-    dialog.querySelector('strong').textContent=`${y}년 ${m+1}월`;grid.replaceChildren();
-    for(const day of ['일','월','화','수','목','금','토']){const el=document.createElement('span');el.textContent=day;grid.append(el);}
-    for(let n=0;n<new Date(Date.UTC(y,m,1)).getUTCDay();n++)grid.append(document.createElement('i'));
-    const max=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,10);
-    for(let n=1;n<=new Date(Date.UTC(y,m+1,0)).getUTCDate();n++){
-      const date=`${y}-${pad(m+1)}-${pad(n)}`,button=document.createElement('button');button.type='button';button.className='ig-calendar-day';button.textContent=n;
-      button.setAttribute('aria-label',`${y}년 ${m+1}월 ${n}일`);button.setAttribute('aria-pressed',String(date===selected));button.disabled=date<korea()||date>max;
-      button.onclick=()=>{selected=date;render();};grid.append(button);
-    }
-  }
-  dialog.querySelector('[data-prev]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()-1);render();};
-  dialog.querySelector('[data-next]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()+1);render();};
-  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
-  dialog.querySelector('.ig-calendar-apply').onclick=()=>{
-    normalizeTime(hour);normalizeTime(minute);
-    target.value=selected+'T'+hour.value+':'+minute.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));dialog.close();
-  };
-  function attach(input){
-    if(input.dataset.calendar)return;input.dataset.calendar='true';input.hidden=true;input.tabIndex=-1;
-    const button=document.createElement('button');button.type='button';button.className='ig-date-trigger';button.setAttribute('aria-label','예약 날짜와 시간 선택');input.after(button);
-    function sync(){button.disabled=input.disabled;button.textContent=(input.value?input.value.replace('T','  ').replaceAll('-','.'):'날짜와 시간 선택')+'  ▦';}
-    button.onclick=()=>{target=input;const value=input.value||new Date(Date.now()+10*3600000).toISOString().slice(0,16);selected=value.slice(0,10);month=new Date(selected.slice(0,7)+'-01T00:00:00Z');hour.value=value.slice(11,13);minute.value=value.slice(14,16);render();dialog.showModal();};
-    input.addEventListener('input',sync);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled']});sync();
-    // Mode changes may initialize the underlying value without an input event.
-    document.querySelectorAll('[data-publish-mode]').forEach(b=>b.addEventListener('click',sync));
-  }
-  function scan(){document.querySelectorAll('#panel-instagram input[type="datetime-local"]').forEach(attach);}
-  scan();new MutationObserver(scan).observe(document.getElementById('panel-instagram'),{childList:true,subtree:true});
-})();
-</script>
+
 </body>
 </html>

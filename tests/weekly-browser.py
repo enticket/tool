@@ -1,3 +1,4 @@
+from browser_support import accept_app_messages
 """Weekly editor against synthetic providers; no production account calls."""
 import os,json,io,base64,zipfile
 from pathlib import Path
@@ -12,6 +13,7 @@ out=io.BytesIO();poster=Image.new('RGB',(900,1200),'#fbcc87');ImageDraw.Draw(pos
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium'))
  page=browser.new_page(viewport={'width':1440,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('dialog',lambda d:d.accept())
+ accept_app_messages(page)
  install_library_routes(page)
  db={'performances':[],'drafts':[]};assets={};images=[];state={'logged':False,'publishes':0}
  page.route('https://accounts.google.com/gsi/client',lambda r:r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient(o){return{requestAccessToken(){o.callback({access_token:'synthetic',expires_in:3600})}}},revoke(){}}}}"))

@@ -17,6 +17,12 @@ with sync_playwright() as p:
         dialogs.append(dialog.message)
         dialog.accept()
     page.on('dialog', accept_dialog)
+    def accept_app_dialog():
+        box=page.locator('.ui-message[open]')
+        expect(box).to_be_visible()
+        dialogs.append(box.locator('#uiMessageText').inner_text())
+        box.locator('[data-accept]').click()
+        expect(box).not_to_be_visible()
     install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{
@@ -85,14 +91,17 @@ with sync_playwright() as p:
         page.locator(input_selector).first.set_input_files(file)
         expect(page.locator(button)).to_be_enabled()
         page.locator(button).click()
+        accept_app_dialog()
         expect(page.locator(button)).to_have_text('드라이브 저장')
     assert calls.count('upload') == 3, calls
     state['expired'] = True
     page.locator('#saveSettlementDrive').click()
+    accept_app_dialog()
     expect(page.locator('#gLoginBtn')).to_be_visible()
     assert not page.evaluate('gdrive.isLoggedIn()')
     state.update(expired=False, allowed=False)
     page.locator('#gLoginBtn').click()
+    accept_app_dialog()
     expect(page.locator('#gUser')).to_be_hidden()
     page.locator('[data-tab="settlement"]').click()
     page.locator('[data-tab="oseal"]').click()
@@ -103,8 +112,8 @@ with sync_playwright() as p:
     for failure, message in [('server_error', '계정 확인에 실패'), ('network_error', '연결하지 못했습니다'), ('expired', 'Google 인증을 확인하지 못했습니다')]:
         state[failure] = True
         count = len(dialogs)
-        with page.expect_event('dialog'):
-            page.locator('#gLoginBtn').click()
+        page.locator('#gLoginBtn').click()
+        accept_app_dialog()
         wait_for_js(page, 'gdrive.isLoggedIn() === false')
         expect(page.locator('#gLoginBtn')).to_be_visible()
         assert len(dialogs) == count + 1, dialogs
