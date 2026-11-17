@@ -35,6 +35,13 @@ with sync_playwright() as p:
   if action=='list':route.fulfill(json={'ok':True,**db});return
   if action=='performance':
    value=json.loads(fields['data']);value.update(id=id,version=value['version']+1,assetId=id);assets[id]=files[0] if files else assets[id];db['performances']=[v for v in db['performances'] if v['id']!=id]+[value];route.fulfill(json={'ok':True,'performance':value});return
+  if action=='calendar-save':
+   updates=json.loads(fields['data']);state['calendar_saves']=state.get('calendar_saves',0)+1
+   if state.get('calendar_fail'):route.fulfill(status=409,json={'ok':False,'error':'weekly_conflict'});return
+   changed=[]
+   for update in updates:
+    value=next(v for v in db['performances'] if v['id']==update['id']);assert value['version']==update['version'];value.update(sessions=update['sessions'],version=value['version']+1);changed.append(value)
+   route.fulfill(json={'ok':True,'performances':changed});return
   if action=='asset':
    if state.get('hold_assets'):state.setdefault('held_assets',[]).append(route);return
    route.fulfill(content_type='image/jpeg',body=assets[id]);return
@@ -73,6 +80,20 @@ with sync_playwright() as p:
  page.locator('#wkPSave').click();expect(page.locator('#wkPerformanceDialog')).not_to_be_visible()
  page.locator('#wkCalendar .wk-event').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
  page.locator('#wkClosePerformance').click()
+ # Pointer dragging stages only the selected date's sessions until explicit save.
+ def drag_day(source,target):
+  button=page.locator(f'#wkCalendar [data-date="2026-11-{source}"] .wk-event').first
+  dest=page.locator(f'#wkCalendar [data-date="2026-11-{target}"]')
+  button.evaluate("e=>e.scrollIntoView({block:'center'})");a=button.bounding_box();b=dest.bounding_box()
+  page.mouse.move(a['x']+a['width']/2,a['y']+a['height']/2);page.mouse.down();page.mouse.move(b['x']+b['width']/2,b['y']+b['height']/2,steps=12);page.mouse.up()
+ drag_day('16','17');expect(page.locator('#wkCalendar [data-date="2026-11-17"] .wk-event')).to_have_count(1)
+ expect(page.locator('#wkPerformanceDialog')).not_to_be_visible();expect(page.locator('#wkCalendarSave')).to_be_enabled()
+ assert db['performances'][0]['sessions'][0]['date']=='2026-11-16';assert not state.get('calendar_saves')
+ page.locator('#wkCalendarCancel').click();expect(page.locator('#wkCalendar [data-date="2026-11-16"] .wk-event')).to_have_count(1)
+ drag_day('16','17');state['calendar_fail']=True;page.locator('#wkCalendarSave').click();expect(page.locator('#wkStatus')).to_contain_text('다른 창에서 수정');expect(page.locator('#wkCalendarSave')).to_be_enabled();assert db['performances'][0]['sessions'][0]['date']=='2026-11-16'
+ state['calendar_fail']=False;page.locator('#wkCalendarSave').click();expect(page.locator('#wkCalendarSave')).to_be_disabled();expect(page.locator('#wkStatus')).to_contain_text('변경한 일정을 저장')
+ assert db['performances'][0]['sessions']==[{'date':'2026-11-17','time':'19:30'},{'date':'2026-11-22','time':''}]
+ drag_day('17','16');page.locator('#wkCalendarSave').click();expect(page.locator('#wkStatus')).to_contain_text('변경한 일정을 저장')
  page.locator('#wkImport').click();expect(page.locator('#wkStatus')).to_contain_text('날짜 배치 1개',timeout=20000);expect(page.locator('#wkUnscheduled')).to_contain_text('날짜 미정 공연')
  page.locator('#wkUnscheduled button').first.click();expect(page.locator('#wkPPriceKind')).to_have_value('paid');expect(page.locator('#wkPPrice')).to_have_value('전석 20,000원');expect(page.locator('#wkPRestore')).to_be_enabled();assert abs(page.locator('.wk-poster-control').bounding_box()['height']-desktop_poster_height)<1;page.set_viewport_size({'width':390,'height':1000});assert abs(page.locator('.wk-poster-control').bounding_box()['height']-mobile_poster_height)<1;page.set_viewport_size({'width':1440,'height':1000});page.locator('#wkPRestore').click();expect(page.locator('#wkPMessage')).to_contain_text('이미지를 불러왔습니다',timeout=20000);expect(page.locator('#wkPPreview')).to_be_visible();box=page.locator('#wkPPreview').bounding_box();assert abs(box['width']/box['height']-.75)<.01;page.locator('#wkClosePerformance').click()
  page.locator('#wkMonth').fill('2026-12');page.locator('#wkMonth').dispatch_event('change');expect(page.locator('[data-date="2026-12-05"]')).to_contain_text('가져온 공연');assert len(db['performances'])==3

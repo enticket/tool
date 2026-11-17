@@ -159,6 +159,22 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
     const chunks=keys.map(k=>values.get(k));if(chunks.some(x=>!x))fail('asset_not_found',404);
     return new Response(new Blob(chunks),{headers:{'Content-Type':'image/jpeg','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
   }
+  if(action==='calendar-save'){
+    const changes=getJson();
+    if(!Array.isArray(changes)||!changes.length||changes.length>1000||new Set(changes.map(x=>x?.id)).size!==changes.length)fail('invalid_fields');
+    return reply({performances:await store.transaction(async tx=>{
+      const updated=[];
+      for(const change of changes){
+        if(!change||!validDraftId(change.id))fail('invalid_id');
+        const old=await tx.get('performance:'+change.id);
+        if(!old||old.version!==change.version)fail('conflict',409);
+        const {sessions}=performanceInput({...old,sessions:change.sessions});
+        updated.push({...old,sessions,version:old.version+1,updatedAt:new Date().toISOString()});
+      }
+      await tx.put(Object.fromEntries(updated.map(p=>['performance:'+p.id,p])));
+      return updated.map(withCaptionPrice);
+    })});
+  }
   if(action==='performance'){
     const k=key('performance:'),x=getJson(),p=performanceInput(x),file=form.get('file');
     let bytes,assetId;

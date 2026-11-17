@@ -41,6 +41,17 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   assert.equal((await call('performance',{id:crypto.randomUUID(),data:JSON.stringify(p),file:file()})).status,409);
   assert.equal((await ok('list')).performances.length,1);
   assert.deepEqual(new Uint8Array(await(await call('asset',{id:saved.assetId})).arrayBuffer()),jpeg);
+  const secondId=crypto.randomUUID();const second=(await ok('performance',{id:secondId,data:JSON.stringify({...p,sourcePostId:''}),file:file()})).performance;
+  const moves=[{id,version:saved.version,sessions:[{date:'2026-11-17',time:''},{date:'2026-11-22',time:'19:00'}]},{id:secondId,version:second.version,sessions:[{date:'2026-11-18',time:'19:00'}]}];
+  assert.equal((await call('calendar-save',{data:JSON.stringify([moves[0],{...moves[1],version:0}])})).status,409);
+  assert.deepEqual((await ok('list')).performances.find(x=>x.id===id).sessions,p.sessions);
+  assert.equal((await call('calendar-save',{data:JSON.stringify([{...moves[0],sessions:[{date:'2026-02-30',time:''}]}])})).status,400);
+  const moved=(await ok('calendar-save',{data:JSON.stringify(moves)})).performances;
+  assert.deepEqual(moved[0].sessions,moves[0].sessions);assert.equal(moved[0].assetId,saved.assetId);assert.equal(moved[0].title,p.title);
+  assert.equal(moved[1].version,second.version+1);
+  assert.equal((await call('calendar-save',{data:JSON.stringify(moves)})).status,409);
+  saved=(await ok('calendar-save',{data:JSON.stringify([{id,version:moved[0].version,sessions:p.sessions}])})).performances[0];
+  await ok('delete',{id:secondId,data:JSON.stringify({version:moved[1].version})});
   const draftInput={week:'2026-11-16',title:'2026년 11월 셋째 주 공연',subtitle:'',closing:'엔티켓',caption:'검토한 캡션',version:0,cards:[{performanceId:id,title:'카드 제목',schedule:'11.16 / 11.22 19:00',venue:'극장',price:''}]};
   const make=async()=>{const id=crypto.randomUUID();return (await ok('draft',{id,data:JSON.stringify(draftInput)})).draft;};
   let d=await make();
