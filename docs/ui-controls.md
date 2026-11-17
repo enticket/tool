@@ -24,3 +24,7 @@
 - `security-browser.py`: 악성 XLSX 문자열, CSP, 외부 라이브러리 SRI.
 
 실제 계정의 게시·예약·공연 일정 변경은 검증 목적으로 실행하지 않았다. 실제 다른 브라우저 엔진 검사는 별도이며 fallback 동작은 Chromium에서 지원 검사 결과를 모의로 바꿔 확인했다.
+
+## 운영 반영
+
+코드 `3ee5f9d`, Worker 버전 `294029dc-ee1b-4f42-a0e7-af5afaf8a0fb`. 배포 단계의 서버 52개 테스트와 빌드를 통과했다. `https://tools.enticket.kr/`의 HTML/CSP와 공개 자산이 검사한 빌드와 일치하며 health 200, 소스/환경 파일 경로 404, 무인증 목록/초안 저장 거부를 확인했다.
