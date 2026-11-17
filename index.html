@@ -2537,7 +2537,7 @@ window.ICO = {
       for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?600:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
     $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
   }
-  function performanceButton(p){const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=p.title;b.type='button';b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
+  function performanceButton(p){const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=[p.title,p.venue].filter(Boolean).join('\n');b.type='button';b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
   function renderCalendar(){
     const items=performances.map(p=>calendarChanges.has(p.id)?{...p,sessions:calendarChanges.get(p.id).sessions}:p);
     const month=$('wkMonth').value,first=new Date(month+'-01T00:00:00Z');if(!Number.isFinite(+first))return;
@@ -2545,13 +2545,13 @@ window.ICO = {
     const offset=(first.getUTCDay()+6)%7;for(let i=0;i<offset;i++){const prior=new Date(+first-(offset-i)*86400000);const cell=el('div',String(prior.getUTCDate()),'wk-day wk-outside');cell.dataset.date=prior.toISOString().slice(0,10);grid.append(cell);}
     const count=new Date(first.getUTCFullYear(),first.getUTCMonth()+1,0).getDate();
     for(let i=1;i<=count;i++){const date=month+'-'+String(i).padStart(2,'0'),cell=el('div',undefined,'wk-day');const dateButton=el('button',String(i),'wk-day-date'+(date===today()?' wk-today':''));dateButton.title=date+' 공연 등록';dateButton.addEventListener('click',()=>run(async()=>{await openPerformance();setPerformanceSessions(date);}));cell.dataset.date=date;cell.append(dateButton);
-      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.title=p.title+' · '+times;button.append(el('small',times));
+      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.title=[p.title,times,p.venue].filter(Boolean).join('\n');button.append(el('small',times));
         button.dataset.performanceId=p.id;button.dataset.fromDate=date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);}grid.append(cell);}
     for(let i=1;i<=(7-(offset+count)%7)%7;i++){const cell=el('div',String(i),'wk-day wk-outside');cell.dataset.date=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,i)).toISOString().slice(0,10);grid.append(cell);}
     for(const cell of grid.querySelectorAll('.wk-outside')){
       for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===cell.dataset.date))){
         const button=performanceButton(p),times=p.sessions.filter(s=>s.date===cell.dataset.date).map(s=>s.time||'시간 미정').join(', ');
-        button.title=p.title+' · '+times;button.append(el('small',times));button.dataset.performanceId=p.id;button.dataset.fromDate=cell.dataset.date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);
+        button.title=[p.title,times,p.venue].filter(Boolean).join('\n');button.append(el('small',times));button.dataset.performanceId=p.id;button.dataset.fromDate=cell.dataset.date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);
       }
     }
     for(const cell of grid.querySelectorAll('.wk-day')){const content=el('div',undefined,'wk-day-content');content.append(...cell.childNodes);cell.append(content);}
