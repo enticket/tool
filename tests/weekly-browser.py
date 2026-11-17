@@ -117,10 +117,13 @@ with sync_playwright() as p:
  page.locator('#wkSessionRows .wk-session-remove').nth(1).click();expect(page.locator('#wkSessionRows input[type=date]')).to_have_count(1)
  page.locator('#wkClosePerformance').click();page.set_viewport_size({'width':1440,'height':1000})
  page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkCalendarView')).to_be_hidden();expect(page.locator('#wkDesignView')).to_be_visible()
- page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('2026년 11월 셋째 주 공연')
+ page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('이번 주\n인천에서 볼 공연')
+ expect(page.locator('#wkPreviousTemplates')).not_to_have_attribute('open','')
+ page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(2)
  page.locator('#wkCandidates input').check()
+ page.locator('#wkPreviousTemplates summary').click()
  template_bytes=[]
- for template in ['editorial','midnight','ticket','gallery']:
+ for template in ['editorial','midnight','ticket','gallery','poster-news']:
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');expect(choice).to_be_enabled(timeout=20000);choice.click();expect(choice).to_have_attribute('aria-pressed','true');expect(choice).to_be_enabled(timeout=20000)
   expect(page.locator('#wkPreviews img')).to_have_count(3)
   for j,label in enumerate(['cover','performance','closing']):
@@ -131,20 +134,39 @@ with sync_playwright() as p:
   data=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
   template_bytes.append(data)
  page.locator('#wkTemplates').screenshot(path=str(artifact_dir/'templates.png'))
- assert len(set(template_bytes))==4
+ assert len(set(template_bytes))==5
+ # The cover adapts to two and three posters, while extra performances remain in the carousel.
+ base_performance=next(p for p in db['performances'] if p['title']=='11월의 작은 음악회')
+ for n in [2,3,4]:
+  sample={**base_performance,'id':f'cover-fixture-{n}','assetId':f'cover-fixture-{n}','title':f'표지 배치 확인 {n}'}
+  db['performances'].append(sample);assets[sample['id']]=poster_bytes
+ page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(4)
+ for n in [2,3,4]:
+  page.locator('#wkCandidates input').nth(n-1).check();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+  expect(page.locator('#wkPreviews img')).to_have_count(n+2)
+  page.locator('#wkFilmstrip button').first.click()
+  page.wait_for_function('document.querySelector("#wkPreviews img").naturalWidth===1080')
+  encoded=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
+  (artifact_dir/f'poster-news-cover-{n}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
+ for n in [4,3,2]:
+  page.locator('#wkCandidates input').nth(n-1).uncheck();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+ db['performances']=[p for p in db['performances'] if not p['id'].startswith('cover-fixture-')]
+ page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(1)
  # Realistic long copy must fit all styles; excessive copy must not leave a partial export enabled.
  page.locator('#wkFilmstrip button').nth(1).click()
  fields=page.locator('#wkCards input');original=[fields.nth(i).input_value() for i in range(4)]
  stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11.16 14:00 / 11.17 19:30 / 11.18 19:30 / 11.19 19:30 / 11.22 15:00','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
  for i,value in enumerate(stress):fields.nth(i).fill(value)
- for template in ['editorial','midnight','ticket','gallery']:
+ for template in ['editorial','midnight','ticket','gallery','poster-news']:
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');choice.click();expect(choice).to_be_enabled(timeout=20000);expect(page.locator('#wkPreviews img')).to_have_count(3);expect(page.locator('#wkDownload')).to_be_enabled()
+ page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
  fields.nth(2).fill('장소가 너무 긴 문구입니다 '*15);page.locator('#wkRender').click();expect(page.locator('#wkStatus')).to_contain_text('너무 깁니다');expect(page.locator('#wkDownload')).to_be_disabled();expect(page.locator('#wkPreviews img')).to_have_count(0)
  for i,value in enumerate(original):fields.nth(i).fill(value)
- page.locator('#wkTemplates [data-template="midnight"]').click();expect(page.locator('#wkTemplates [data-template="midnight"]')).to_be_enabled(timeout=20000)
+ page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
  page.locator('#wkFilmstrip button').first.click()
  page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
- assert db['drafts'][0]['template']=='midnight'
+ assert db['drafts'][0]['template']=='poster-news'
+ assert db['drafts'][0]['title']=='이번 주\n인천에서 볼 공연'
  saved_id=db['drafts'][0]['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkCards input').first).to_have_value('11월의 작은 음악회')
  page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(3);page.locator('#wkFilmstrip button').nth(1).click();expect(page.locator('#wkCards input').first).to_be_visible()
  assert page.locator('#wkPreviews img').evaluate_all('(xs)=>xs.every(i=>i.naturalWidth===1080&&i.naturalHeight===1350)')

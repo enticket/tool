@@ -207,7 +207,7 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
     const k=key('draft:'),x=getJson(),week=weekOf(x.week);
     if(!Array.isArray(x.cards)||x.cards.length>8||new Set(x.cards.map(c=>c.performanceId)).size!==x.cards.length)fail('invalid_cards');
     const cards=x.cards.map(c=>({performanceId:str(c.performanceId,40),title:str(c.title),schedule:str(c.schedule,600),venue:str(c.venue),price:str(c.price)}));
-    const template=x.template??'classic';if(!['classic','editorial','midnight','ticket','gallery'].includes(template))fail('invalid_fields');
+    const template=x.template??'classic';if(!['classic','editorial','midnight','ticket','gallery','poster-news'].includes(template))fail('invalid_fields');
     const value={id,template,week:week.start,weekEnd:week.end,title:str(x.title),subtitle:str(x.subtitle),closing:str(x.closing,300),caption:str(x.caption,2200),cards};
     return reply({draft:await store.transaction(async tx=>{
       const old=await tx.get(k);if((old?.version||0)!==x.version)fail('conflict',409);
