@@ -1367,6 +1367,7 @@ td.c { text-align: center; }
 .wk-day::before{content:"";grid-area:1/1;padding-top:100%;pointer-events:none}.wk-day-content{grid-area:1/1;min-width:0;padding:6px;display:flex;flex-direction:column;gap:3px}@media(max-width:640px){.wk-day-content{padding:3px}}
 .wk-calendar-savebar{margin-top:16px;font-size:12px;color:var(--txt-black-dark)}.wk-draggable{cursor:grab;touch-action:none;user-select:none}.wk-draggable:active{cursor:grabbing}.wk-dragging{opacity:.35}.wk-moved{box-shadow:inset 0 0 0 1px #9461c4}.wk-drop-target{background:#eee6f8;box-shadow:inset 0 0 0 2px #9461c4}.wk-drag-ghost{position:fixed;z-index:10000;pointer-events:none;opacity:.9;box-shadow:0 5px 18px #0003}
 .wk-event.wk-linked-highlight{background:#eee3fb;border-color:#9461c4;box-shadow:0 0 0 1px #9461c470,0 0 12px #9461c43d;color:var(--txt-black-darkest)}
+.wk-template-picker{margin:20px 0 24px;padding:20px;border:1px solid var(--color-border-neutral);border-radius:14px;background:var(--bg-white-normal)}.wk-template-picker h3{margin:0;font-size:15px}.wk-template-picker .ig-hint{margin:5px 0 0}.wk-template-picker #wkTemplateName{color:var(--color-text-accent);font-size:12px}.wk-templates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}.wk-template{display:flex;flex-direction:column;align-items:stretch;text-align:left;min-width:0;padding:8px;border:1px solid var(--color-border-neutral);border-radius:10px;background:var(--bg-white-normal);color:var(--txt-black-darkest);cursor:pointer;font:inherit;transition:border-color .15s,box-shadow .15s}.wk-template img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:5px}.wk-template strong{font-size:12px;margin:10px 2px 4px}.wk-template span{font-size:10px;color:var(--txt-black-dark);margin:0 2px 3px;line-height:1.5}.wk-template[aria-pressed="true"]{border-color:#7c4aaa;box-shadow:0 0 0 2px #7c4aaa25}.wk-template:hover:not(:disabled){border-color:#7c4aaa}.wk-template:disabled{cursor:default;opacity:.65}.wk-template:focus-visible{outline:2px solid #7c4aaa;outline-offset:3px}@media(max-width:640px){.wk-template-picker{padding:14px}.wk-templates{display:flex;overflow-x:auto;gap:10px;padding:3px 3px 8px;margin-inline:-3px;scroll-snap-type:x proximity}.wk-template{flex:0 0 132px;scroll-snap-align:start}.wk-template span{font-size:10px}}
 </style>
 </head>
 <body>
@@ -1712,6 +1713,7 @@ window.ICO = {
       <button class="btn ghost sm" id="wkNewDraft">새 디자인</button><button class="btn primary sm" id="wkSave">저장</button>
     </div>
     <p id="wkRange" class="ig-hint"></p>
+    <section class="wk-template-picker" aria-label="캐러셀 템플릿"><div class="wk-toolbar"><div><h3>템플릿</h3><p class="ig-hint">표지부터 마지막 장까지 한 번에 적용됩니다.</p></div><span id="wkTemplateName"></span></div><div id="wkTemplates" class="wk-templates"></div></section>
     <div class="wk-studio">
       <div class="wk-stage">
         <div class="wk-toolbar"><strong id="wkStageTitle">표지</strong><span id="wkStageState" class="ig-hint"></span></div>
@@ -2495,6 +2497,7 @@ window.ICO = {
   function controls(){
     $('wkCalendarSave').disabled=busy||!calendarChanges.size;$('wkCalendarCancel').disabled=busy||!calendarChanges.size;
     $('wkCalendarChanges').textContent=calendarChanges.size?'저장하지 않은 변경 · '+calendarChanges.size+'개 공연':'저장된 일정';
+    templateControls();
     const locked=!!draft?.jobId;
     $('wkEditor').disabled=busy||locked;$('wkSave').disabled=busy||locked;$('wkPrepare').disabled=busy||locked;
     $('wkWeek').disabled=busy||locked;$('wkDraftList').disabled=busy;$('wkNewDraft').disabled=busy;
@@ -2512,7 +2515,7 @@ window.ICO = {
   function clearRender(){urls.forEach(URL.revokeObjectURL);urls=[];rendered=[];$('wkPreviews').replaceChildren();$('wkFilmstrip').replaceChildren();$('wkReview').hidden=true;$('wkConfirm').checked=false;controls();}
   function changed(){dirty=true;rendered=[];$('wkReview').hidden=true;$('wkConfirm').checked=false;$('wkStageState').textContent='수정됨 · 미리보기 갱신';controls();}
   function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
-  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,week:w.start,weekEnd:w.end,title:w.title,subtitle:'이번 주, 공연장에서 만나요',closing:'공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
+  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'editorial',week:w.start,weekEnd:w.end,title:w.title,subtitle:'이번 주, 공연장에서 만나요',closing:'공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
   function fillDraft(){
     selectedCard=0;clearRender();$('wkWeek').value=draft.week;
     for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
@@ -2641,6 +2644,87 @@ window.ICO = {
     // A poster request must never hold the application-wide action lock.
     if(pEdit.assetId)asset(pEdit.assetId).then(blob=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open){posterPreview(blob);$('wkPMessage').textContent='';}}).catch(e=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open)$('wkPMessage').textContent='저장된 포스터를 불러오지 못했습니다. 인스타 원본 불러오기를 눌러 주세요.';});
   }
+  const weeklyTemplates=[
+    {id:'editorial',name:'크림 매거진',note:'차분한 여백 · 선명한 정보',bg:'#f4f0e7',ink:'#203c33',accent:'#c05b3a'},
+    {id:'midnight',name:'퍼플 나이트',note:'깊은 보라 · 라임 포인트',bg:'#19162c',ink:'#f2edff',accent:'#d9fa84'},
+    {id:'ticket',name:'오렌지 티켓',note:'티켓 모티프 · 경쾌한 구성',bg:'#ee6b42',ink:'#252b39',accent:'#ee6b42'},
+    {id:'gallery',name:'화이트 갤러리',note:'큰 포스터 · 절제된 타이포',bg:'#f8f9f6',ink:'#202722',accent:'#517263'},
+    {id:'classic',name:'기존 디자인',note:'이전 초안의 기본 서식',bg:'#f5f0fa',ink:'#251b35',accent:'#6c35a5'}
+  ];
+  function templateControls(){
+    for(const button of $('wkTemplates').children){button.setAttribute('aria-pressed',String(button.dataset.template===(draft?.template||'classic')));button.disabled=busy||!!draft?.jobId;}
+    $('wkTemplateName').textContent=weeklyTemplates.find(t=>t.id===(draft?.template||'classic'))?.name||'기존 디자인';
+  }
+  function initTemplates(){
+    for(const t of weeklyTemplates){
+      const button=el('button',undefined,'wk-template');button.type='button';button.dataset.template=t.id;button.setAttribute('aria-pressed','false');
+      const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
+      const dates=week(today());const sample={title:'이번 주\n공연 모음',subtitle:'공연장에서 만나는 새로운 일주일',week:dates.start,weekEnd:dates.end,closing:'다음 주에도\n공연장에서 만나요.',cards:[]};
+      paintTemplate(canvas.getContext('2d'),t.id,sample,0,[]);
+      const img=el('img');img.src=canvas.toDataURL('image/jpeg',.75);img.alt='';button.append(img,el('strong',t.name),el('span',t.note));
+      button.addEventListener('click',()=>run(async()=>{if(draft?.jobId)return;pull();draft.template=t.id;changed();templateControls();await render();}));$('wkTemplates').append(button);
+    }
+  }
+  // Each template uses the same 1080 × 1350 canvas, uncropped posters and bounded text boxes.
+  function paintTemplate(ctx,id,d,index,posters){
+    const t=weeklyTemplates.find(t=>t.id===id)||weeklyTemplates[0],last=index===d.cards.length+1,cover=index===0,card=!cover&&!last?d.cards[index-1]:null;
+    const rect=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
+    const line=(x,y,x2,y2,color=t.ink,dash=[])=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);};
+    const text=(value,x,y,w,h,size=40,color=t.ink,weight=600,family='system-ui, sans-serif')=>{
+      value=String(value||'');if(!value)return 0;let lines=[],fontSize=size;const min=Math.min(20,size);
+      for(;fontSize>=min;fontSize--){ctx.font=`${weight} ${fontSize}px ${family}`;lines=[];
+        for(const para of value.split('\n')){let row='';for(const char of para){if(row&&ctx.measureText(row+char).width>w){lines.push(row);row='';}row+=char;}lines.push(row);}
+        if(lines.length*fontSize*1.32<=h)break;
+      }
+      if(fontSize<min)throw Error('카드 문구가 너무 깁니다. 제목이나 일시·장소를 짧게 다듬어 주세요.');
+      ctx.fillStyle=color;ctx.textBaseline='top';lines.forEach((row,i)=>ctx.fillText(row,x,y+i*fontSize*1.32));return lines.length*fontSize*1.32;
+    };
+    const poster=(img,x,y,w,h,bg)=>{rect(x,y,w,h,bg);if(img){const scale=Math.min(w/img.width,h/img.height);ctx.drawImage(img,x+(w-img.width*scale)/2,y+(h-img.height*scale)/2,img.width*scale,img.height*scale);}else{ctx.fillStyle=t.accent;ctx.beginPath();ctx.arc(x+w/2,y+h*.4,w*.25,Math.PI,0);ctx.lineTo(x+w*.75,y+h*.78);ctx.lineTo(x+w*.25,y+h*.78);ctx.fill();line(x+w*.12,y+h*.87,x+w*.88,y+h*.87,t.ink);}};
+    const date=d.week.slice(5).replace('-','.')+' — '+d.weekEnd.slice(5).replace('-','.');
+    const title=d.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2');
+    const page=String(index+1).padStart(2,'0')+' / '+String(d.cards.length+2).padStart(2,'0');
+    const info=(x,y,w,color=t.ink)=>{
+      text(card.schedule,x,y,w,94,29,color,500);
+      text(card.venue,x,y+104,w,80,29,color,600);
+      text(card.price,x,y+191,w,66,25,color,500);
+    };
+    rect(0,0,1080,1350,t.bg);
+    if(id==='classic'){
+      rect(0,0,1080,18,t.accent);text('ENTICKET  /  WEEKLY',64,62,950,45,26,t.accent);text(title,64,320,950,380,92,t.ink);text(d.subtitle,64,830,950,150,36,t.ink);text(d.week+' — '+d.weekEnd,64,1130,950,70,36,t.ink);text('en__ticket',64,1295,800,35,20,t.accent);ctx.textBaseline='alphabetic';return;
+    }
+    if(id==='midnight'){
+      const g=ctx.createRadialGradient(1050,480,20,900,570,800);g.addColorStop(0,'#61519b');g.addColorStop(1,'#19162c');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1350);
+      ctx.strokeStyle='#ffffff16';ctx.lineWidth=2;for(const r of [260,420,580]){ctx.beginPath();ctx.arc(1050,540,r,0,Math.PI*2);ctx.stroke();}
+      text('ENTICKET',64,62,500,54,30,t.accent,800);text('WEEKLY / LIVE',750,68,280,40,20,t.ink,500);
+      if(cover){text(title,64,240,920,440,102,t.ink,800);rect(64,718,84,7,t.accent);text(d.subtitle,64,770,830,160,38,t.ink,400);rect(64,1020,952,190,t.accent);text(date,100,1050,800,65,50,'#19162c',700);text(d.cards.length+'개의 공연, 이번 주의 무대',100,1130,830,50,26,'#19162c',500);}
+      else if(last){text('SEE YOU\nON STAGE.',64,240,930,370,118,t.accent,800);text(d.closing,64,800,900,330,44,t.ink,500);}
+      else{ text('공연 '+String(index).padStart(2,'0'),64,128,800,40,22,t.accent);poster(posters[index-1],64,190,952,710,'#100f1e');text(card.title,64,930,940,112,45,t.ink,700);text(card.schedule,64,1063,940,77,27,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1155,940,96,27,t.ink,500);}
+      line(64,1274,1016,1274,'#ffffff45');text('@en__ticket',64,1292,600,32,20,t.ink,500);text(page,890,1292,150,32,20,t.accent,600);
+    }else if(id==='ticket'){
+      rect(48,48,984,1254,'#fff7e7');text('ENTICKET',90,90,600,60,40,t.ink,800);text('ADMIT / WEEKLY',748,105,240,35,19,t.ink,500);line(90,180,990,180);
+      if(cover){text('이번 주의 공연 티켓',90,216,900,50,26,t.ink,500);text(title,90,340,880,390,88,t.ink,800);text(d.subtitle,90,800,880,160,36,t.ink,500);}
+      else if(last){text('다음 무대에서\n또 만나요.',90,270,880,320,92,t.ink,800);text(d.closing,90,710,880,270,38,t.ink,500);}
+      else{poster(posters[index-1],90,220,530,730,'#f1e7d3');text(String(index).padStart(2,'0'),674,236,290,150,112,t.accent,800);text(card.title,674,430,290,300,42,t.ink,700);text(card.venue,674,766,290,174,27,t.ink,500);}
+      line(48,1016,1032,1016,'#b8a993',[12,9]);for(const x of [48,1032]){ctx.fillStyle=t.bg;ctx.beginPath();ctx.arc(x,1016,25,0,Math.PI*2);ctx.fill();}
+      if(card){text(card.schedule,90,1062,900,96,32,t.ink,600);text(card.price,90,1170,900,62,27,t.ink,500);}else{text(date,90,1062,880,70,52,t.ink,700);text(cover?'한 주의 공연을 한 장씩 만나보세요.':'좋아하는 공연을 저장해 두세요.',90,1150,880,60,29,t.ink,500);}
+      text('@en__ticket',90,1250,500,32,20,t.ink,500);text(page,860,1250,150,32,20,t.ink,600);
+    }else if(id==='gallery'){
+      text('ENTICKET',64,62,600,55,34,t.ink,800);text('공연 아카이브 / WEEKLY',690,75,340,35,22,t.ink,400);line(64,142,1016,142);
+      if(cover){text(title,64,220,952,340,90,t.ink,600);text(d.subtitle,64,603,952,112,34,t.ink,400);const count=Math.min(posters.length||3,3);for(let j=0;j<count;j++)poster(posters[j],64+(952-(count*326-26))/2+j*326,795,300,330,j===1?'#e1e8dd':'#eeeee7');text(date,64,1168,900,70,44,t.ink,400);}
+      else if(last){text('공연이 남긴\n여운을 모아.',64,250,952,320,90,t.ink,500);line(64,708,220,708);text(d.closing,64,800,930,330,42,t.ink,400);}
+      else{poster(posters[index-1],64,182,952,770,'#edeee9');text(card.title,64,982,952,102,40,t.ink,700);text(card.schedule,64,1100,952,72,25,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1188,952,62,25,t.ink,400);}
+      line(64,1270,1016,1270);text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.ink,500);
+    }else{
+      // Editorial: warm paper, forest-green typography, generous margins.
+      text('ENTICKET',64,62,500,60,40,t.ink,800);text('THE WEEKLY EDIT',744,78,300,35,21,t.ink,500);line(64,150,1016,150);
+      if(cover){text('이번 주, 당신을 위한 무대',64,214,900,52,27,t.accent,600);text(title,64,335,952,360,96,t.ink,700);text(d.subtitle,64,740,930,120,36,t.ink,400);rect(64,940,952,276,t.ink);text(date,100,985,860,80,60,'#f4f0e7',600);text(d.cards.length+'개의 공연을 만나보세요',100,1106,860,60,30,'#f4f0e7',400);}
+      else if(last){text('이번 주도,\n공연과 함께.',64,270,952,330,98,t.ink,600);rect(64,727,90,7,t.accent);text(d.closing,64,820,930,340,44,t.ink,400);}
+      else{ text(card.title,64,207,952,160,56,t.ink,700);poster(posters[index-1],64,412,550,770,'#e7e3d7');text('ON STAGE',660,428,360,40,23,t.accent,600);text(String(index).padStart(2,'0'),654,506,360,160,120,t.ink,500);line(660,715,1016,715,'#a6aea3');info(660,756,356);}
+      line(64,1270,1016,1270,'#b7bdb1');text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.accent,600);
+    }
+    ctx.textBaseline='alphabetic';
+  }
+
   function textBlock(ctx,text,x,y,width,maxLines,size,min=24,color='#251b35'){
     let lines=[];
     for(;size>=min;size-=2){ctx.font=`600 ${size}px system-ui, sans-serif`;lines=[];for(const paragraph of text.split('\n')){let line='';for(const char of paragraph){if(ctx.measureText(line+char).width>width&&line){lines.push(line);line='';}line+=char;}lines.push(line);}if(lines.length<=maxLines)break;}
@@ -2648,22 +2732,25 @@ window.ICO = {
   }
   async function render(){
     clearRender();pull();
+    try{
     if(draft.jobId){for(let i=0;i<draft.cards.length+2;i++)rendered.push(await api('rendered',{id:draft.id,index:String(i)},true));}
     else{
       await document.fonts.ready;
+      const template=draft.template||'classic';const posters=template==='classic'?[]:await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId))));
       for(let i=0;i<draft.cards.length+2;i++){
-        const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
+        const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');if(template!=='classic'){paintTemplate(ctx,template,draft,i,posters);}else{ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
         textBlock(ctx,'ENTICKET  /  WEEKLY',64,83,950,1,26,26,'#6c35a5');
         if(i===0){textBlock(ctx,draft.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2'),64,390,950,3,92,48);textBlock(ctx,draft.subtitle,64,860,950,3,36,28);textBlock(ctx,draft.week+' — '+draft.weekEnd,64,1160,950,1,36,28);}
         else if(i===draft.cards.length+1){textBlock(ctx,'공연장에서\n만나요',64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
         else{const card=draft.cards[i-1],img=await image(await asset(card.assetId));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
           textBlock(ctx,card.title,64,1040,952,2,38,28);textBlock(ctx,card.schedule,64,1150,952,2,25,22);textBlock(ctx,card.venue+(card.price?' · '+card.price:''),64,1230,952,2,25,22);}
-        textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');
+        textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');}
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));if(!blob)throw Error('이미지 생성에 실패했습니다.');rendered.push(blob);
       }
     }
     for(let i=0;i<rendered.length;i++){const url=URL.createObjectURL(rendered[i]);urls.push(url);const fig=el('figure'),img=el('img');img.src=url;img.alt=(i+1)+'번 실제 게시 이미지';const a=el('a',(i+1)+'번 이미지 내려받기');a.href=url;a.download=String(i+1).padStart(2,'0')+'.jpg';const zoom=el('a');zoom.href=url;zoom.target='_blank';zoom.rel='noopener';zoom.title='원본 크기로 보기';zoom.append(img);fig.append(zoom,a);$('wkPreviews').append(fig);const tab=el('button');tab.type='button';tab.setAttribute('aria-label',(i===0?'표지':i===rendered.length-1?'뒷표지':'공연 '+i)+' 편집');const thumb=el('img');thumb.src=url;thumb.alt='';tab.append(thumb,el('span',i===0?'표지':i===rendered.length-1?'뒷표지':String(i)));tab.addEventListener('click',()=>selectCard(i));$('wkFilmstrip').append(tab);}
     selectCard(selectedCard);$('wkStageState').textContent='미리보기 최신';status('실제 출력 이미지 '+rendered.length+'장을 생성했습니다.');controls();if(draft.jobId)showReview();
+    }catch(e){clearRender();$('wkStageState').textContent='미리보기를 다시 생성해 주세요.';throw e;}
   }
   function showReview(){$('wkReview').hidden=false;$('wkAccount').textContent='게시 계정 @'+(draft.job?.account?.username||'확인 필요')+' · '+(labels[draft.status]||draft.status);$('wkFinalCaption').textContent=draft.caption;const old=$('wkPublishedLink');if(old)old.remove();if(draft.job?.permalink){const a=el('a','인스타그램에서 게시물 보기');a.id='wkPublishedLink';a.href=draft.job.permalink;a.target='_blank';a.rel='noopener noreferrer';$('wkReview').append(a);}$('wkConfirm').checked=false;controls();}
   async function sourceList(more=false){
@@ -2731,7 +2818,7 @@ window.ICO = {
   $('wkToday').addEventListener('click',()=>{$('wkMonth').value=today().slice(0,7);renderCalendar();});
   document.addEventListener('enticket-auth',()=>{generation++;endCalendarDrag();calendarChanges.clear();performances=[];drafts=[];draft=null;dirty=false;pFile=null;assetCache.clear();thumbUrls.forEach(URL.revokeObjectURL);thumbUrls.clear();clearRender();$('wkPerformanceDialog').close();for(const id of ['wkCalendar','wkCandidates','wkCards','wkSources','wkPreviews','wkUnscheduled','wkSessionRows'])$(id).replaceChildren();for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption','wkPTitle','wkPDescription','wkPSessions','wkPVenue','wkPPrice'])$(id).value='';$('wkFinalCaption').textContent='';$('wkStatus').textContent='';renderDraftList();if(window.gdrive?.isAllowed()&&!$('igWeeklyView').hidden)run(load);});
   window.addEventListener('beforeunload',e=>{if(dirty||calendarChanges.size){e.preventDefault();e.returnValue='';}});
-  $('wkMonth').value=today().slice(0,7);$('wkWeek').value=today();
+  initTemplates();$('wkMonth').value=today().slice(0,7);$('wkWeek').value=today();
 })();
 
 </script>

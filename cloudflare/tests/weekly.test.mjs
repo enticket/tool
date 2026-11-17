@@ -55,6 +55,13 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   const draftInput={week:'2026-11-16',title:'2026년 11월 셋째 주 공연',subtitle:'',closing:'엔티켓',caption:'검토한 캡션',version:0,cards:[{performanceId:id,title:'카드 제목',schedule:'11.16 / 11.22 19:00',venue:'극장',price:''}]};
   const make=async()=>{const id=crypto.randomUUID();return (await ok('draft',{id,data:JSON.stringify(draftInput)})).draft;};
   let d=await make();
+  assert.equal(d.template,'classic');
+  assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,template:'invalid'})})).status,400);
+  for(const template of ['editorial','midnight','ticket','gallery']){
+    d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,template})})).draft;
+    assert.equal(d.template,template);assert.equal((await ok('list')).drafts.find(v=>v.id===d.id).template,template);
+  }
+
   connectionFails=true;assert.equal((await call('prepare',{id:d.id,version:d.version,file:[file(),file(),file()]})).status,503);
   d=(await ok('list')).drafts[0];assert.equal(d.status,'draft');assert.equal(d.jobId,undefined);connectionFails=false;
   assert.equal((await call('delete',{id,data:JSON.stringify({version:1})})).status,409);

@@ -1,5 +1,5 @@
 """Weekly editor against synthetic providers; no production account calls."""
-import os,json,io
+import os,json,io,base64
 from pathlib import Path
 from email import policy
 from email.parser import BytesParser
@@ -118,7 +118,33 @@ with sync_playwright() as p:
  page.locator('#wkClosePerformance').click();page.set_viewport_size({'width':1440,'height':1000})
  page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkCalendarView')).to_be_hidden();expect(page.locator('#wkDesignView')).to_be_visible()
  page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('2026년 11월 셋째 주 공연')
- page.locator('#wkCandidates input').check();page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
+ page.locator('#wkCandidates input').check()
+ template_bytes=[]
+ for template in ['editorial','midnight','ticket','gallery']:
+  choice=page.locator(f'#wkTemplates [data-template="{template}"]');expect(choice).to_be_enabled(timeout=20000);choice.click();expect(choice).to_have_attribute('aria-pressed','true');expect(choice).to_be_enabled(timeout=20000)
+  expect(page.locator('#wkPreviews img')).to_have_count(3)
+  for j,label in enumerate(['cover','performance','closing']):
+   page.locator('#wkFilmstrip button').nth(j).click()
+   page.wait_for_function('(i)=>document.querySelectorAll("#wkPreviews img")[i].naturalWidth===1080',arg=j)
+   encoded=page.locator('#wkPreviews img').nth(j).evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
+   (artifact_dir/f'{template}-{label}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
+  data=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
+  template_bytes.append(data)
+ page.locator('#wkTemplates').screenshot(path=str(artifact_dir/'templates.png'))
+ assert len(set(template_bytes))==4
+ # Realistic long copy must fit all styles; excessive copy must not leave a partial export enabled.
+ page.locator('#wkFilmstrip button').nth(1).click()
+ fields=page.locator('#wkCards input');original=[fields.nth(i).input_value() for i in range(4)]
+ stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11.16 14:00 / 11.17 19:30 / 11.18 19:30 / 11.19 19:30 / 11.22 15:00','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
+ for i,value in enumerate(stress):fields.nth(i).fill(value)
+ for template in ['editorial','midnight','ticket','gallery']:
+  choice=page.locator(f'#wkTemplates [data-template="{template}"]');choice.click();expect(choice).to_be_enabled(timeout=20000);expect(page.locator('#wkPreviews img')).to_have_count(3);expect(page.locator('#wkDownload')).to_be_enabled()
+ fields.nth(2).fill('장소가 너무 긴 문구입니다 '*15);page.locator('#wkRender').click();expect(page.locator('#wkStatus')).to_contain_text('너무 깁니다');expect(page.locator('#wkDownload')).to_be_disabled();expect(page.locator('#wkPreviews img')).to_have_count(0)
+ for i,value in enumerate(original):fields.nth(i).fill(value)
+ page.locator('#wkTemplates [data-template="midnight"]').click();expect(page.locator('#wkTemplates [data-template="midnight"]')).to_be_enabled(timeout=20000)
+ page.locator('#wkFilmstrip button').first.click()
+ page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
+ assert db['drafts'][0]['template']=='midnight'
  saved_id=db['drafts'][0]['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkCards input').first).to_have_value('11월의 작은 음악회')
  page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(3);page.locator('#wkFilmstrip button').nth(1).click();expect(page.locator('#wkCards input').first).to_be_visible()
  assert page.locator('#wkPreviews img').evaluate_all('(xs)=>xs.every(i=>i.naturalWidth===1080&&i.naturalHeight===1350)')
@@ -130,7 +156,7 @@ with sync_playwright() as p:
  page.locator('#wkPreviews').screenshot(path=str(artifact_dir/'cards.png'))
  with page.expect_download() as download:page.locator('#wkDownload').click()
  assert download.value.suggested_filename.endswith('.zip')
- page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkPublish')).to_be_disabled();assert state['publishes']==0
+ page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkTemplates button').first).to_be_disabled();expect(page.locator('#wkPublish')).to_be_disabled();assert state['publishes']==0
  for blob in images:
   im=Image.open(io.BytesIO(blob));assert im.size==(1080,1350)
  # Review exactly the archived bytes again after reload.
