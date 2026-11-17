@@ -14,7 +14,7 @@ test('durable scheduling, rescheduling, cancellation, processing and uncertain p
  if(x.crash){j.status='posting';j.attemptedAt=Date.now()-100000;await this.ctx.storage.put('job',j);}
  await this.alarm();return Response.json(await this.ctx.storage.get('job'));}return super.fetch(r);}}
  `;
- const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','weekly.mjs','instagram.mjs','instagram-caption.mjs','instagram-job.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url)),...(name==='instagram-job.mjs'?{contents:source}:{})})),compatibilityDate:'2026-10-13',bindings:env,durableObjects:{INSTAGRAM_JOBS:{className:'InstagramJob',useSQLite:true}},outboundService:async req=>{
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','weekly.mjs','weekly-design.mjs','instagram.mjs','instagram-caption.mjs','instagram-job.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url)),...(name==='instagram-job.mjs'?{contents:source}:{})})),compatibilityDate:'2026-10-13',bindings:env,durableObjects:{INSTAGRAM_JOBS:{className:'InstagramJob',useSQLite:true}},outboundService:async req=>{
  const u=new URL(req.url);if(u.hostname==='oauth2.googleapis.com')return Response.json({aud:'client',email:'staff@test.example',email_verified:true,expires_in:300});
  assert.equal(req.headers.get('Authorization'),'Bearer meta-secret');
  if(u.pathname.endsWith('/media_publish')){publishes++;return lost?new Response('lost',{status:502}):Response.json({id:'777'});}

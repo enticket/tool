@@ -18,7 +18,7 @@ test('Korean Monday weeks, month/year boundaries and real session dates',()=>{
 
 test('persistent library, conflict control, immutable carousel, concurrent publication and lost responses',async()=>{
  let next=100,publishes=0,lost=false,processing=false,connectionFails=false;const remote=[];
- const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','weekly.mjs','instagram-job.mjs','instagram.mjs','instagram-caption.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url))})),compatibilityDate:'2026-10-13',bindings:{GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@test.example',INSTAGRAM_ACCOUNT_ID:'123',INSTAGRAM_ACCESS_TOKEN:'synthetic'},durableObjects:{INSTAGRAM_JOBS:{className:'InstagramJob',useSQLite:true}},outboundService:async r=>{
+ const mf=new Miniflare(convertV4MiniflareOptions({modules:['worker.mjs','weekly.mjs','weekly-design.mjs','instagram-job.mjs','instagram.mjs','instagram-caption.mjs'].map(name=>({type:'ESModule',path:fileURLToPath(new URL('../src/'+name,import.meta.url))})),compatibilityDate:'2026-10-13',bindings:{GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@test.example',INSTAGRAM_ACCOUNT_ID:'123',INSTAGRAM_ACCESS_TOKEN:'synthetic'},durableObjects:{INSTAGRAM_JOBS:{className:'InstagramJob',useSQLite:true}},outboundService:async r=>{
   const u=new URL(r.url);if(u.hostname==='oauth2.googleapis.com')return Response.json({aud:'client',email:'staff@test.example',email_verified:true,expires_in:300});
   assert.equal(u.hostname,'graph.facebook.com');remote.push({path:u.pathname,body:r.method==='POST'?await r.json():null});
   if(u.pathname.endsWith('/media_publish')){publishes++;return lost?new Response('lost',{status:502}):Response.json({id:'777'});}
@@ -57,11 +57,17 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   let d=await make();
   assert.equal(d.template,'classic');
   assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,template:'invalid'})})).status,400);
-  for(const template of ['editorial','midnight','ticket','gallery','poster-news']){
+  for(const template of ['editorial','midnight','ticket','gallery','poster-news','paper-editorial']){
     const title=template==='poster-news'?'이번 주\n인천에서 볼 공연':draftInput.title;
     d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,title,version:d.version,template})})).draft;
     assert.equal(d.template,template);const listed=(await ok('list')).drafts.find(v=>v.id===d.id);assert.equal(listed.template,template);assert.equal(listed.title,title);
   }
+
+  const design={version:1,layers:{title:{fontSize:165,x:80},texture:{opacity:83},handle:{visible:false}}};
+  d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,template:'paper-editorial',design,version:d.version})})).draft;
+  assert.deepEqual(d.design,design);
+  assert.deepEqual((await ok('list')).drafts.find(v=>v.id===d.id).design,design);
+  assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,template:'paper-editorial',design:{version:1,layers:{title:{fontSize:999}}},version:d.version})})).status,400);
 
   connectionFails=true;assert.equal((await call('prepare',{id:d.id,version:d.version,file:[file(),file(),file()]})).status,503);
   d=(await ok('list')).drafts[0];assert.equal(d.status,'draft');assert.equal(d.jobId,undefined);connectionFails=false;

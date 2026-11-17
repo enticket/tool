@@ -1,4 +1,5 @@
 import { InstagramError, instagramConfig, instagramRequest, instagramMedia } from './instagram.mjs';
+import { normalizeDesign } from './weekly-design.mjs';
 
 const fail = (code, status = 400) => { throw new InstagramError('weekly_' + code, status); };
 const reply = data => Response.json({ok:true, ...data}, {headers:{'Cache-Control':'no-store'}});
@@ -207,8 +208,11 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
     const k=key('draft:'),x=getJson(),week=weekOf(x.week);
     if(!Array.isArray(x.cards)||x.cards.length>8||new Set(x.cards.map(c=>c.performanceId)).size!==x.cards.length)fail('invalid_cards');
     const cards=x.cards.map(c=>({performanceId:str(c.performanceId,40),title:str(c.title),schedule:str(c.schedule,600),venue:str(c.venue),price:str(c.price)}));
-    const template=x.template??'classic';if(!['classic','editorial','midnight','ticket','gallery','poster-news'].includes(template))fail('invalid_fields');
+    const template=x.template??'classic';if(!['classic','editorial','midnight','ticket','gallery','poster-news','paper-editorial'].includes(template))fail('invalid_fields');
     const value={id,template,week:week.start,weekEnd:week.end,title:str(x.title),subtitle:str(x.subtitle),closing:str(x.closing,300),caption:str(x.caption,2200),cards};
+    if(x.design!==undefined||template==='paper-editorial') {
+      try {value.design=normalizeDesign(x.design);} catch {fail('invalid_design');}
+    }
     return reply({draft:await store.transaction(async tx=>{
       const old=await tx.get(k);if((old?.version||0)!==x.version)fail('conflict',409);
       if(old?.jobId)fail('locked',409);

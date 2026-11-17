@@ -42,7 +42,7 @@ python3 tests/cloud-browser.py
 
 `browser-smoke.py`는 합성 파일의 XLSX/TXT/JPEG, 정산서 지급금액, 직인 XLSX/PDF, 직인 삭제/새로고침, 모바일 폭, 백엔드 호출 0건을 확인합니다. `cloud-browser.py`는 **모의 Google/API 응답**으로 로그인·세 종류 Drive 버튼·직인·만료/거부 계정을 확인합니다. Worker 테스트도 **모의 Google**을 사용하며 실제 Drive에 파일을 쓰지 않습니다. 실제 Google 연동 검증과 구분해야 합니다.
 
-빌드는 `dist/index.html`, `dist/_headers`만 만듭니다. 예상하지 못한 파일이 있으면 중단합니다. 서버 앱, 사용자 데이터, `.env`, 직인은 공개 파일에 포함되지 않습니다. 저장소 전체를 HTTP 또는 정적 사이트로 배포하지 마세요. 로컬 GitHub 버전 빌드는 `python3 scripts/build-static.py --mode local`입니다.
+빌드는 `dist/index.html`, `dist/_headers`와 `scripts/public_assets.py`에 명시한 공개 디자인 자산만 만듭니다. 현재 자산은 `assets/weekly/`의 종이 질감 PNG, 나눔명조 WOFF2와 OFL 라이선스입니다. 레이어 렌더러와 편집기 코드는 HTML에 포함하고 해당 바이트로 CSP 해시를 다시 계산합니다. 예상하지 못한 파일·디렉터리·심볼릭 링크가 있으면 중단합니다. 서버 앱, 사용자 데이터, `.env`, 직인은 공개 파일에 포함되지 않습니다. 저장소 전체를 HTTP 또는 정적 사이트로 배포하지 마세요. 로컬 GitHub 버전 빌드는 `python3 scripts/build-static.py --mode local`입니다.
 
 ## 기존 Cloudflare 설정 유지
 
