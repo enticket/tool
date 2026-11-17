@@ -11,7 +11,7 @@ PUBLIC_ASSETS = {
 
 
 def public_html():
-    html = (ROOT / 'index.html').read_text()
+    html = (ROOT / 'index.html').read_text().replace('/* WEEKLY_STUDIO_CSS */', (ROOT / 'scripts/weekly-studio.css').read_text())
     module = (ROOT / 'cloudflare/src/weekly-design.mjs').read_text()
     names = re.findall(r'^export (?:const|function) (\w+)', module, re.M)
     code = re.sub(r'^export ', '', module, flags=re.M)

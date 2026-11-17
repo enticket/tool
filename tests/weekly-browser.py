@@ -123,13 +123,17 @@ with sync_playwright() as p:
  expect(page.locator('#wkLayerStage')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  assert page.evaluate("document.fonts.check('800 48px \"Enticket Myeongjo\"', '공연')")
  # A five-point change is stored as a numeric size, not a regenerated bitmap.
+ page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="title"]').click();expect(page.locator('#wkLayerSize')).to_have_value('170')
  before=page.locator('#wkLayerCanvas').evaluate('(c)=>c.toDataURL()')
  page.locator('#wkLayerSize').fill('165');expect(page.locator('#wkDownload')).to_be_disabled()
  page.locator('#wkLayerText').fill('공연이\n있는\n일주일.')
  after=page.locator('#wkLayerCanvas').evaluate('(c)=>c.toDataURL()');assert before!=after
+ page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="texture"]').click();page.locator('#wkLayerOpacity').fill('80');expect(page.locator('#wkLayerOpacityValue')).to_have_text('80%')
+ page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="handle"]').click();page.locator('#wkLayerVisible').uncheck()
+ page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="title"]').click();page.locator('#wkLayerCanvas').focus();page.keyboard.press('ArrowRight');expect(page.locator('#wkLayerX')).to_have_value('73')
  page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다',timeout=20000)
  saved=db['drafts'][0];assert saved['template']=='paper-editorial';assert saved['design']['layers']['title']=={'fontSize':165,'x':73,'y':158}
@@ -149,13 +153,15 @@ with sync_playwright() as p:
  assert state['publishes']==0
  layer_saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=20000);page.locator('#wkDraftList').select_option(layer_saved_id)
  expect(page.locator('#wkLayerSize')).to_have_value('165');expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+ page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="texture"]').click();expect(page.locator('#wkLayerOpacity')).to_have_value('80')
  for width in [390,320]:
   page.set_viewport_size({'width':width,'height':900});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
  page.screenshot(path=str(artifact_dir/'layer-mobile.png'),full_page=True);page.set_viewport_size({'width':1440,'height':1000})
  # Layered carousel details and frozen publication review use the same saved bytes.
+ page.locator('[data-studio-pane="performances"]').click()
  page.locator('#wkCandidates input').check();page.locator('#wkRender').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000);assert page.locator('#wkStatus').get_attribute('data-error')!='true',page.locator('#wkStatus').inner_text();expect(page.locator('#wkPreviews img')).to_have_count(3)
- page.locator('#wkFilmstrip button').nth(1).click();page.locator('#wkPreviews').screenshot(path=str(artifact_dir/'paper-detail.png'))
+ page.locator('#wkFilmstrip button').nth(1).click();page.locator('#wkLayerStage').screenshot(path=str(artifact_dir/'paper-detail.png'))
  page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkLayerPanel')).to_be_hidden();expect(page.locator('#wkLayerDownload')).to_be_disabled();assert state['publishes']==0
  archived=bytes(images[0]);page.locator('#wkRender').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000);assert bytes(images[0])==archived
  page.locator('#wkUnlock').click();expect(page.locator('#wkLayerPanel')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
@@ -166,23 +172,30 @@ with sync_playwright() as p:
   db['performances'].append(sample);assets[sample['id']]=poster_bytes
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(8)
  for n in range(1,8):
+  page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n).check();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
- expect(page.locator('#wkPreviews img')).to_have_count(10);page.locator('#wkFilmstrip button').last.click();page.locator('#wkPreviews').screenshot(path=str(artifact_dir/'paper-eight-index.png'))
+ expect(page.locator('#wkPreviews img')).to_have_count(10);page.locator('#wkFilmstrip button').last.click();page.locator('#wkLayerStage').screenshot(path=str(artifact_dir/'paper-eight-index.png'))
  assert page.locator('#wkStatus').get_attribute('data-error')!='true'
  for n in range(7,0,-1):
+  page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n).uncheck();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  db['performances']=[p for p in db['performances'] if not p['id'].startswith('paper-capacity-')]
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(1)
+ page.locator('[data-studio-pane="performances"]').click()
  page.locator('#wkCandidates input').uncheck()
  # Retain the original templates and posting flow checks below.
+ page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  page.locator('#wkTitle').fill('이번 주\n인천에서 볼 공연');page.locator('#wkSubtitle').fill('이번 주, 공연장에서 만나요')
  expect(page.locator('#wkPreviousTemplates')).not_to_have_attribute('open','')
  page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(2)
+ page.locator('[data-studio-pane="performances"]').click()
  page.locator('#wkCandidates input').check()
+ page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkPreviousTemplates summary').click()
  template_bytes=[]
  for template in ['editorial','midnight','ticket','gallery','poster-news']:
+  page.locator('[data-studio-pane="templates"]').click()
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');expect(choice).to_be_enabled(timeout=20000);choice.click();expect(choice).to_have_attribute('aria-pressed','true');expect(choice).to_be_enabled(timeout=20000)
   expect(page.locator('#wkPreviews img')).to_have_count(3)
   for j,label in enumerate(['cover','performance','closing']):
@@ -192,6 +205,7 @@ with sync_playwright() as p:
    (artifact_dir/f'{template}-{label}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
   data=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
   template_bytes.append(data)
+ page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates').screenshot(path=str(artifact_dir/'templates.png'))
  assert len(set(template_bytes))==5
  # The cover adapts to two and three posters, while extra performances remain in the carousel.
@@ -201,6 +215,7 @@ with sync_playwright() as p:
   db['performances'].append(sample);assets[sample['id']]=poster_bytes
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(4)
  for n in [2,3,4]:
+  page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n-1).check();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
   expect(page.locator('#wkPreviews img')).to_have_count(n+2)
   page.locator('#wkFilmstrip button').first.click()
@@ -208,6 +223,7 @@ with sync_playwright() as p:
   encoded=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
   (artifact_dir/f'poster-news-cover-{n}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
  for n in [4,3,2]:
+  page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n-1).uncheck();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  db['performances']=[p for p in db['performances'] if not p['id'].startswith('cover-fixture-')]
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(1)
@@ -217,10 +233,13 @@ with sync_playwright() as p:
  stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11.16 14:00 / 11.17 19:30 / 11.18 19:30 / 11.19 19:30 / 11.22 15:00','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
  for i,value in enumerate(stress):fields.nth(i).fill(value)
  for template in ['editorial','midnight','ticket','gallery','poster-news']:
+  page.locator('[data-studio-pane="templates"]').click()
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');choice.click();expect(choice).to_be_enabled(timeout=20000);expect(page.locator('#wkPreviews img')).to_have_count(3);expect(page.locator('#wkDownload')).to_be_enabled()
+ page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
  fields.nth(2).fill('장소가 너무 긴 문구입니다 '*15);page.locator('#wkRender').click();expect(page.locator('#wkStatus')).to_contain_text('너무 깁니다');expect(page.locator('#wkDownload')).to_be_disabled();expect(page.locator('#wkPreviews img')).to_have_count(0)
  for i,value in enumerate(original):fields.nth(i).fill(value)
+ page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
  page.locator('#wkFilmstrip button').first.click()
  page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')

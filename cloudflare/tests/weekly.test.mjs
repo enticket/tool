@@ -68,6 +68,9 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   assert.deepEqual(d.design,design);
   assert.deepEqual((await ok('list')).drafts.find(v=>v.id===d.id).design,design);
   assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,template:'paper-editorial',design:{version:1,layers:{title:{fontSize:999}}},version:d.version})})).status,400);
+  const studio={version:2,layers:design.layers,objects:[{id:'object-test',name:'안내',type:'text',x:200,y:500,width:400,height:200,color:'#222222',text:'추가 문구',fontSize:30,angle:15,locked:true}],order:['object-test','title'],pages:{['performance:'+id]:{layers:{poster:{x:80,width:550}},objects:[],order:[]}}};
+  d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,template:'paper-editorial',design:studio,version:d.version})})).draft;
+  assert.deepEqual(d.design,studio);assert.deepEqual((await ok('list')).drafts.find(v=>v.id===d.id).design,studio);
 
   connectionFails=true;assert.equal((await call('prepare',{id:d.id,version:d.version,file:[file(),file(),file()]})).status,503);
   d=(await ok('list')).drafts[0];assert.equal(d.status,'draft');assert.equal(d.jobId,undefined);connectionFails=false;
