@@ -1366,6 +1366,7 @@ td.c { text-align: center; }
 
 .wk-day::before{content:"";grid-area:1/1;padding-top:100%;pointer-events:none}.wk-day-content{grid-area:1/1;min-width:0;padding:6px;display:flex;flex-direction:column;gap:3px}@media(max-width:640px){.wk-day-content{padding:3px}}
 .wk-calendar-savebar{margin-top:16px;font-size:12px;color:var(--txt-black-dark)}.wk-draggable{cursor:grab;touch-action:none;user-select:none}.wk-draggable:active{cursor:grabbing}.wk-dragging{opacity:.35}.wk-moved{box-shadow:inset 0 0 0 1px #9461c4}.wk-drop-target{background:#eee6f8;box-shadow:inset 0 0 0 2px #9461c4}.wk-drag-ghost{position:fixed;z-index:10000;pointer-events:none;opacity:.9;box-shadow:0 5px 18px #0003}
+.wk-event.wk-linked-highlight{background:#eee3fb;border-color:#9461c4;box-shadow:0 0 0 1px #9461c470,0 0 12px #9461c43d;color:var(--txt-black-darkest)}
 </style>
 </head>
 <body>
@@ -2537,7 +2538,8 @@ window.ICO = {
       for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?600:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
     $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
   }
-  function performanceButton(p){const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=[p.title,p.venue].filter(Boolean).join('\n');b.type='button';b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
+  function highlightPerformance(id){id=id||document.activeElement?.closest('#wkCalendar .wk-event, #wkUnscheduled .wk-event')?.dataset.performanceId;for(const button of document.querySelectorAll('#wkCalendar .wk-event, #wkUnscheduled .wk-event'))button.classList.toggle('wk-linked-highlight',!!id&&button.dataset.performanceId===id);}
+  function performanceButton(p){const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=[p.title,p.venue].filter(Boolean).join('\n');b.type='button';b.dataset.performanceId=p.id;b.addEventListener('pointerenter',()=>highlightPerformance(p.id));b.addEventListener('pointerleave',()=>highlightPerformance(null));b.addEventListener('focus',()=>highlightPerformance(p.id));b.addEventListener('blur',()=>highlightPerformance(null));b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
   function renderCalendar(){
     const items=performances.map(p=>calendarChanges.has(p.id)?{...p,sessions:calendarChanges.get(p.id).sessions}:p);
     const month=$('wkMonth').value,first=new Date(month+'-01T00:00:00Z');if(!Number.isFinite(+first))return;
