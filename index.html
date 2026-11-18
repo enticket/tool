@@ -1423,6 +1423,12 @@ td.c { text-align: center; }
 #wkNextMonth::before { transform: rotate(180deg); }
 /* WEEKLY_STUDIO_CSS */
 /* SHARED_CONTROLS_CSS */
+.settlement-results-heading { align-items: center; justify-content: space-between; }
+.price-mode { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+#settleByPrice { width: 30px; height: 18px; border-radius: 12px; background: var(--bg-grey-light); }
+#settleByPrice::before { content: ""; display: block; width: 10px; height: 10px; margin: 3px; border-radius: 50%; background: var(--txt-black-darker); }
+#settleByPrice:checked { background: var(--color-bg-accent); }
+#settleByPrice:checked::before { transform: translateX(12px); background: white; }
 </style>
 </head>
 <body>
@@ -1584,7 +1590,9 @@ window.ICO = {
     </div>
     <div class="connector"></div>
     <!-- 집계 결과 -->
-    <div class="out-head">집계 결과</div>
+    <div class="out-head settlement-results-heading">집계 결과
+      <label class="price-mode"><input type="checkbox" role="switch" id="settleByPrice"><span>금액별 정산</span></label>
+    </div>
     <div class="out-body">
       <div id="output"></div>
       <div id="merge"></div>
@@ -4269,6 +4277,7 @@ function renderValidationCard(result) {
     공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"]
   };
   const SIM_COLORS=["var(--cobalt-400)","var(--teal-400)","var(--orange-400)","var(--pink-400)","var(--olive-400)","var(--green-400)"];
+  const priceMode = document.getElementById("settleByPrice");
   const sessionsEl=document.getElementById("sessions");
   const outputEl=document.getElementById("output");
   const mergeEl=document.getElementById("merge");
@@ -4497,9 +4506,12 @@ function renderValidationCard(result) {
           if(classifyGrade(권종)!=="normal") return;  // 초대·홀딩은 권종 집계에서 제외
           const 가격=d.map.가격>=0?parseNum(r[d.map.가격]):0;
           const 수=d.map.수>=0?parseNum(r[d.map.수]):1;
-          const k=권종+"||"+가격;
-          if(!map.has(k)) map.set(k,{권종,가격,엔티켓:0,예술회관:0,폐쇄몰:0});
-          map.get(k)[ch]+=수;
+          const key = priceMode.checked ? 가격 : 권종+"||"+가격;
+          if (!map.has(key)) {
+            const label = priceMode.checked ? won(가격)+"원권" : 권종;
+            map.set(key, {권종:label, 가격, 엔티켓:0, 예술회관:0, 폐쇄몰:0});
+          }
+          map.get(key)[ch] += 수;
         });
       });
     });
@@ -4552,7 +4564,8 @@ function renderValidationCard(result) {
   function recompute(){
     window.__stRows=aggregate(sessions);
     renderOutput();
-    renderMerge(window.__stRows);
+    mergeEl.hidden = priceMode.checked;
+    if (!priceMode.checked) renderMerge(window.__stRows);
     updateSettlementLive();   // 정산 미리보기 갱신
   }
   function renderOutput(){
@@ -4840,6 +4853,7 @@ function renderValidationCard(result) {
     document.getElementById("suppChev").style.transform=`rotate(${open?90:0}deg)`;
   });
   // 이벤트 바인딩
+  priceMode.addEventListener("change", recompute);
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
   document.getElementById("saveSettlementDrive").addEventListener("click",saveSettlementToDrive);
