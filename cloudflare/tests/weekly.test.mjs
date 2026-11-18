@@ -58,8 +58,10 @@ test('persistent library, conflict control, immutable carousel, concurrent publi
   assert.equal(d.template,'classic');
   draftInput.cards[0].description='카드에 편집한 공연 소개';
   assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,template:'invalid'})})).status,400);
-  for(const template of ['editorial','midnight','ticket','gallery','poster-news','paper-editorial']){
-    const title=template==='poster-news'?'이번 주\n인천에서 볼 공연':draftInput.title;
+  assert.equal((await call('draft',{id:crypto.randomUUID(),data:JSON.stringify({...draftInput,template:'poster-news'})})).status,400);
+  assert.equal((await call('draft',{id:d.id,data:JSON.stringify({...draftInput,version:d.version,template:'poster-news'})})).status,400);
+  for(const template of ['editorial','midnight','ticket','gallery','paper-editorial']){
+    const title=draftInput.title;
     d=(await ok('draft',{id:d.id,data:JSON.stringify({...draftInput,title,version:d.version,template})})).draft;
     assert.equal(d.cards[0].description,'카드에 편집한 공연 소개');
     assert.equal(d.template,template);const listed=(await ok('list')).drafts.find(v=>v.id===d.id);assert.equal(listed.template,template);assert.equal(listed.title,title);

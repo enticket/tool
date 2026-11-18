@@ -216,6 +216,7 @@ export async function weeklyLibrary(owner, request, {jpegSize, validDraftId}) {
     return reply({draft:await store.transaction(async tx=>{
       const old=await tx.get(k);if((old?.version||0)!==x.version)fail('conflict',409);
       if(old?.jobId)fail('locked',409);
+      if(template==='poster-news'&&old?.template!==template)fail('invalid_fields');
       if(!old&&(await tx.list({prefix:'draft:'})).size>=1000)fail('library_full',409);
       for(const c of cards){const p=await tx.get('performance:'+c.performanceId);if(!p)fail('performance_not_found');c.assetId=p.assetId;}
       Object.assign(value,{version:(old?.version||0)+1,status:'draft',updatedAt:new Date().toISOString()});await tx.put(k,value);for(const c of old?.cards||[])if(!cards.some(n=>n.assetId===c.assetId))await pruneAsset(tx,c.assetId);return value;

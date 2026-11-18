@@ -193,7 +193,12 @@ with sync_playwright() as p:
  page.locator('#wkCandidates input').uncheck()
  # Retain the original templates and posting flow checks below.
  page.locator('[data-studio-pane="templates"]').click()
- page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+ expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_have_count(0)
+ legacy={**db['drafts'][0],'id':'prior-curation','template':'poster-news','cards':[]}
+ db['drafts'].append(legacy)
+ page.locator('#wkRefresh').click();page.locator('#wkDraftList').select_option('prior-curation')
+ expect(page.locator('#wkTemplateName')).to_have_text('이전 큐레이션 초안')
+ expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  pane('properties')
  page.locator('#wkTitle').fill('이번 주\n인천에서 볼 공연');page.locator('#wkSubtitle').fill('이번 주, 공연장에서 만나요')
  expect(page.locator('#wkPreviousTemplates')).not_to_have_attribute('open','')
@@ -203,7 +208,7 @@ with sync_playwright() as p:
  page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkPreviousTemplates summary').click()
  template_bytes=[]
- for template in ['editorial','midnight','ticket','gallery','poster-news']:
+ for template in ['editorial','midnight','ticket','gallery']:
   page.locator('[data-studio-pane="templates"]').click()
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');expect(choice).to_be_enabled(timeout=20000);choice.click();expect(choice).to_have_attribute('aria-pressed','true');expect(choice).to_be_enabled(timeout=20000)
   expect(page.locator('#wkPreviews img')).to_have_count(3)
@@ -216,7 +221,7 @@ with sync_playwright() as p:
   template_bytes.append(data)
  page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates').screenshot(path=str(artifact_dir/'templates.png'))
- assert len(set(template_bytes))==5
+ assert len(set(template_bytes))==4
  # The cover adapts to two and three posters, while extra performances remain in the carousel.
  base_performance=next(p for p in db['performances'] if p['title']=='11월의 작은 음악회')
  for n in [2,3,4]:
@@ -230,7 +235,7 @@ with sync_playwright() as p:
   page.locator('#wkFilmstrip button').first.click()
   page.wait_for_function('document.querySelector("#wkPreviews img").naturalWidth===1080')
   encoded=page.locator('#wkPreviews img').first.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL("image/jpeg");}')
-  (artifact_dir/f'poster-news-cover-{n}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
+  (artifact_dir/f'gallery-cover-{n}.jpg').write_bytes(base64.b64decode(encoded.split(',')[1]))
  for n in [4,3,2]:
   page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n-1).uncheck();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
@@ -242,20 +247,20 @@ with sync_playwright() as p:
  fields=page.locator('#wkCards input');original=[fields.nth(i).input_value() for i in range(4)]
  stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11월 16일 (월) 오후 02시 / 11월 17일 (화) 오후 07시 30분 / 11월 18일 (수) 오후 07시 30분 / 11월 19일 (목) 오후 07시 30분 / 11월 22일 (일) 오후 03시','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
  for i,value in enumerate(stress):fields.nth(i).fill(value)
- for template in ['editorial','midnight','ticket','gallery','poster-news']:
+ for template in ['editorial','midnight','ticket','gallery']:
   page.locator('[data-studio-pane="templates"]').click()
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');choice.click();expect(choice).to_be_enabled(timeout=20000);expect(page.locator('#wkPreviews img')).to_have_count(3);expect(page.locator('#wkDownload')).to_be_enabled()
  page.locator('[data-studio-pane="templates"]').click()
- page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
+ page.locator('#wkTemplates [data-template="ticket"]').click();expect(page.locator('#wkTemplates [data-template="ticket"]')).to_be_enabled(timeout=20000)
  pane('properties')
  fields.nth(2).fill('장소가 너무 긴 문구입니다 '*15);page.locator('#wkRender').click();expect(page.locator('#wkStatus')).to_contain_text('너무 깁니다');expect(page.locator('#wkDownload')).to_be_disabled();expect(page.locator('#wkPreviews img')).to_have_count(0)
  for i,value in enumerate(original):fields.nth(i).fill(value)
  page.locator('[data-studio-pane="templates"]').click()
- page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
+ page.locator('#wkTemplates [data-template="ticket"]').click();expect(page.locator('#wkTemplates [data-template="ticket"]')).to_be_enabled(timeout=20000)
  page.locator('#wkFilmstrip button').first.click()
  pane('properties')
  page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
- assert db['drafts'][0]['template']=='poster-news'
+ assert db['drafts'][0]['template']=='ticket'
  assert db['drafts'][0]['title']=='이번 주\n인천에서 볼 공연'
  saved_id=db['drafts'][0]['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkCards input').first).to_have_value('11월의 작은 음악회')
  page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(3);page.locator('#wkFilmstrip button').nth(1).click();pane('properties');expect(page.locator('#wkCards input').first).to_be_visible()
