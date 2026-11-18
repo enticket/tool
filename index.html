@@ -4351,6 +4351,7 @@ function renderValidationCard(result) {
       }
     }
     return { headers, rows, showTitle, map:{
+      좌석등급:headers.findIndex(h=>["좌석등급","등급"].includes(norm(h))),
       권종:findCol(headers,KW.권종), 가격:findCol(headers,KW.가격), 수:findCol(headers,KW.수),
       일:findCol(headers,KW.일), 시:findCol(headers,KW.시)
     }};
@@ -4509,13 +4510,22 @@ function renderValidationCard(result) {
           const key = priceMode.checked ? 가격 : 권종+"||"+가격;
           if (!map.has(key)) {
             const label = priceMode.checked ? won(가격)+"원권" : 권종;
-            map.set(key, {권종:label, 가격, 엔티켓:0, 예술회관:0, 폐쇄몰:0});
+            map.set(key, {권종:label, 가격, 엔티켓:0, 예술회관:0, 폐쇄몰:0, grades:new Set()});
           }
-          map.get(key)[ch] += 수;
+          const group = map.get(key);
+          group[ch] += 수;
+          if (priceMode.checked && d.map.좌석등급 >= 0) {
+            const grade = String(r[d.map.좌석등급] ?? "").trim();
+            if (grade) group.grades.add(grade);
+          }
         });
       });
     });
-    return [...map.values()].map(o=>({...o, 합계:o.엔티켓+o.예술회관+o.폐쇄몰}))
+    return [...map.values()].map(({grades, ...row}) => ({
+      ...row,
+      권종: grades.size ? [...grades].sort().join(" / ") + " · " + row.권종 : row.권종,
+      합계: row.엔티켓 + row.예술회관 + row.폐쇄몰,
+    }))
       .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
   }
   // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
