@@ -116,34 +116,48 @@ with sync_playwright() as p:
  expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
  layer('poster')
  width=float(page.locator('#wkLayerWidth').input_value());height=float(page.locator('#wkLayerHeight').input_value())
- x=float(page.locator('#wkLayerX').input_value());y=float(page.locator('#wkLayerY').input_value())
  assert width>600 and height>736 and abs(width/height-3/4)<.001
- layer('posterReflection')
- expect(page.locator('#wkLayerOpacity')).to_have_value('24')
- # The right-hand blue patch should show faintly on the exposed sheet, with full ink on the front.
- def poster_pixels():
-  return page.locator('#wkLayerCanvas').evaluate("""(canvas,[edge,y])=>{
-   const ctx=canvas.getContext('2d');
-   return [edge-10,edge+35].map(x=>Array.from(ctx.getImageData(x,y,1,1).data));
-  }""",[round(x+width),round(y+height*.5)])
- front,stacked=poster_pixels()
- page.locator('#wkLayerVisible').uncheck()
- same_front,paper=poster_pixels()
- assert front==same_front and front[2]>front[0]+100
- assert paper[0]-stacked[0]>20 and abs(paper[2]-stacked[2])<15
- page.locator('#wkLayerVisible').check()
- assert poster_pixels()==[front,stacked]
- layer('poster')
+ expect(page.locator('#wkLayerList [data-layer^="nextPoster"]')).to_have_count(0)
  page.locator('#wkLayerWidth').fill('560');page.locator('#wkLayerX').fill('80')
  pane('elements');page.locator('[data-add-object="text"]').click();page.locator('#wkInlineText').fill('현장에서 만나요');page.locator('#wkInlineText').press('Control+Enter');page.locator('#wkLayerSize').fill('24');page.locator('#wkLayerX').fill('80');page.locator('#wkLayerY').fill('1200')
  # Page order preserves each performance's scene; deleting a page removes its overrides.
- second={**fixture,'id':'studio-second','assetId':'studio-second','title':'두 번째 공연'};db['performances'].append(second);assets[second['id']]=poster_bytes
+ second={**fixture,'id':'studio-second','assetId':'studio-second','title':'두 번째 공연'}
+ green=io.BytesIO();Image.new('RGB',(640,350),'#27b285').save(green,'JPEG')
+ db['performances'].append(second);assets[second['id']]=green.getvalue()
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(2)
  pane('performances');page.locator('#wkCandidates input').nth(1).check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  layer('poster');page.locator('#wkLayerWidth').fill('500')
  page.locator('#wkFilmstrip [data-page="2"]').drag_to(page.locator('#wkFilmstrip [data-page="1"]'));expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkStageTitle')).to_have_text('두 번째 공연')
  page.locator('#wkFilmstrip [data-page="1"]').drag_to(page.locator('#wkFilmstrip [data-page="2"]'));expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  page.locator('#wkFilmstrip button').nth(1).click();layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('560')
+ layer('nextPoster1')
+ expect(page.locator('#wkLayerOpacity')).to_have_value('100')
+ def exposed_pixel():
+  return page.locator('#wkLayerCanvas').evaluate("(canvas)=>Array.from(canvas.getContext('2d').getImageData(675,480,1,1).data)")
+ pixel=exposed_pixel()
+ assert max(abs(x-y) for x,y in zip(pixel,[39,178,133,255]))<4,pixel
+ page.locator('#wkLayerVisible').uncheck()
+ assert exposed_pixel()!=pixel
+ page.locator('#wkLayerVisible').check()
+ assert exposed_pixel()==pixel
+ expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
+ jpg_pixel=page.locator('#wkPreviews img').nth(1).evaluate("""async img=>{
+  await img.decode();
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
+  const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+  return Array.from(ctx.getImageData(675,480,1,1).data);
+ }""")
+ assert max(abs(x-y) for x,y in zip(jpg_pixel,pixel))<5,jpg_pixel
+ with page.expect_download() as stack_download:page.locator('#wkLayerDownload').click()
+ from xml.etree import ElementTree
+ with zipfile.ZipFile(stack_download.value.path()) as stack_source:
+  groups=ElementTree.fromstring(stack_source.read('02.svg')).findall('{*}g')
+  ids=[g.get('id') for g in groups]
+  back=groups[ids.index('nextPoster1')]
+  assert ids.index('nextPoster1')<ids.index('poster') and float(back.get('opacity'))==1
+  assert back.find('{*}image').get('preserveAspectRatio')=='xMidYMid slice'
+  assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
+  assert b'nextPoster' not in stack_source.read('03.svg')
  page.locator('#wkFilmstrip button').last.click();pane('performances');page.locator('#wkCandidates input').nth(1).uncheck();expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  page.locator('#wkFilmstrip button').last.click();layer('closingTitle');page.locator('#wkLayerText').fill('이번 주, 놓치지 마세요');page.locator('#wkLayerSize').fill('40')
  page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다',timeout=30000)
@@ -166,18 +180,7 @@ with sync_playwright() as p:
  assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
  performance_svg=archive.read('02.svg').decode()
- from xml.etree import ElementTree
- groups=ElementTree.fromstring(performance_svg).findall('{*}g')
- ids=[g.get('id') for g in groups]
- back=groups[ids.index('posterReflection')]
- assert ids.index('posterReflection')<ids.index('poster')
- assert back.get('{http://www.inkscape.org/namespaces/inkscape}label')=='겹친 포스터'
- assert float(back.get('opacity'))==.24 and back.get('transform').startswith('rotate(1.5 ')
- back_image=back.find('{*}image')
- front_image=groups[ids.index('poster')].find('{*}image')
- assert back_image.get('href')==front_image.get('href')
- assert back_image.get('preserveAspectRatio')=='xMidYMid meet'
- assert float(back_image.get('x'))<float(front_image.get('x'))+float(front_image.get('width'))
+ assert 'nextPoster' not in performance_svg and 'posterReflection' not in performance_svg
  assert '세 연주자가 들려주는 실내악 이야기.' not in performance_svg
  assert '11월 16일 (월) 오후 07시 30분' in performance_svg
  assert 'id="date"' not in performance_svg and '@en__ticket' not in performance_svg

@@ -183,49 +183,46 @@ test('poster fills the space left by performance details up to the footer or sid
   assert.equal(edited.poster.y+edited.poster.height+32,850);
 });
 
-test('back sheet follows the painted poster, respects saved layer settings and clears the details',()=>{
-  const card={assetId:'img',performanceId:'show',title:'음악회',schedule:'11.20',venue:'아트홀'};
-  const page={layers:{poster:{width:600,height:560}},order:['paper','texture','poster','number']};
-  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card],design:{...normalizeDesign(),pages:{'performance:show':page}}};
-  const scene=(width=3,height=4)=>pageScene(draft,1,undefined,{img:{width,height}});
-  function bounds(layer){
-    const radians=layer.angle*Math.PI/180,c=Math.abs(Math.cos(radians)),s=Math.abs(Math.sin(radians));
-    const halfWidth=(c*layer.width+s*layer.height)/2,halfHeight=(s*layer.width+c*layer.height)/2;
-    const cx=layer.x+layer.width/2,cy=layer.y+layer.height/2;
-    return {left:cx-halfWidth,right:cx+halfWidth,top:cy-halfHeight,bottom:cy+halfHeight};
+test('upcoming posters follow page order at full opacity and fit even an eight-show week',()=>{
+  const cards=Array.from({length:8},(_,i)=>({performanceId:'show'+i,assetId:'img'+i,title:'공연 '+i,schedule:'11.20',venue:'아트홀'}));
+  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards,design:normalizeDesign()};
+  // Old drafts can have explicit transparency and a full layer order for the retired duplicate.
+  const page={layers:{posterReflection:{opacity:24}},order:['paper','texture','posterReflection','poster','number']};
+  draft.design.pages['performance:show0']=page;
+  const images=Object.fromEntries(cards.map((c,i)=>[c.assetId,i%2?{width:16,height:9}:{width:3,height:4}]));
+  const scene=index=>pageScene(draft,index,undefined,images);
+  for(let index=1;index<=cards.length;index++){
+    const layers=scene(index),front=layers.find(l=>l.id==='poster');
+    const backs=layers.filter(l=>l.id.startsWith('nextPoster')).reverse();
+    assert.deepEqual(backs.map(l=>l.assetId),cards.slice(index).map(c=>c.assetId));
+    let previousEdge=front.x+front.width;
+    for(const layer of backs){
+      const edge=layer.x+layer.width;
+      assert.equal(layer.opacity,100);
+      assert.ok(layer.x<previousEdge&&edge>previousEdge&&edge<=1014.001);
+      assert.ok(layer.y+layer.height<=layers.find(l=>l.id==='title').y);
+      assert.ok(layers.indexOf(layer)<layers.indexOf(front));
+      previousEdge=edge;
+    }
+    assert.ok(!layers.some(l=>l.id==='posterReflection'));
   }
-  const layers=scene(),back=layers.find(l=>l.id==='posterReflection'),front=layers.find(l=>l.id==='poster');
-  assert.equal(back.assetId,front.assetId);
-  assert.equal(back.name,'겹친 포스터');
-  assert.equal(back.opacity,24);
-  assert.equal(back.width,420*.94);
-  assert.equal(back.height,560*.94);
-  assert.equal(layers.indexOf(back)+1,layers.indexOf(front));
-  const box=bounds(back),paintedRight=front.x+420;
-  assert.ok(box.left<paintedRight&&box.right>paintedRight);
-  assert.ok(box.right<=1014&&box.top>front.y&&box.bottom<layers.find(l=>l.id==='title').y);
-
-  page.layers.poster.angle=90;
-  const turned=scene().find(l=>l.id==='posterReflection');
-  assert.equal(turned.angle,91.5);
-  // The painted art is left-aligned inside a 600px frame, including after rotation.
-  assert.ok(Math.abs(bounds(turned).right-(front.x+580+560*.12))<.001);
-  assert.ok(Math.abs(bounds(turned).bottom-(front.y+400+12))<.001);
-  delete page.layers.poster.angle;
-
-  page.layers.posterReflection={opacity:38,visible:false};
-  const saved=scene().find(l=>l.id==='posterReflection');
-  assert.equal(saved.visible,false);
-  assert.equal(saved.opacity,38);
+  assert.ok(![...scene(0),...scene(9)].some(l=>l.id.startsWith('nextPoster')));
+  assert.ok(!pageScene(draft,1).some(l=>l.id.startsWith('nextPoster')));
+  page.layers.nextPoster1={locked:true};
+  [cards[1],cards[2]]=[cards[2],cards[1]];
+  const next=scene(1).find(l=>l.id==='nextPoster1');
+  assert.equal(next.assetId,'img2');
+  assert.equal(next.locked,true);
+  delete images.img2;
+  assert.equal(scene(1).find(l=>l.id==='nextPoster1').assetId,'img1');
+  page.layers.poster={width:948,height:600};
+  images.img0={width:16,height:9};
+  const full=scene(1),front=full.find(l=>l.id==='poster');
+  const frontsBottom=front.y+front.width*9/16;
+  const edges=full.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.y+l.height);
+  assert.ok(edges.every((edge,i)=>edge>(edges[i-1]??frontsBottom)&&edge<full.find(l=>l.id==='title').y));
   page.layers.poster.visible=false;
-  assert.ok(!scene().some(l=>l.id==='posterReflection'));
-  delete page.layers.poster;
-  delete page.layers.posterReflection;
-  const wide=scene(16,9),wideBack=bounds(wide.find(l=>l.id==='posterReflection'));
-  assert.ok(wideBack.right<=1014.001&&wideBack.bottom<wide.find(l=>l.id==='title').y);
-  assert.ok(!pageScene(draft,1).some(l=>l.id==='posterReflection'));
-  assert.ok(!pageScene(draft,0).some(l=>l.id==='posterReflection'));
-  assert.ok(!pageScene(draft,2).some(l=>l.id==='posterReflection'));
+  assert.ok(!scene(1).some(l=>l.id.startsWith('nextPoster')));
 });
 test('weekly dates include the weekday, distinguish noon and midnight, and retain every session',()=>{
   const schedule=weeklyScheduleText([

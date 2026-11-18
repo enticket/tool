@@ -42,8 +42,8 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(ticketStock|poster|posterReflection|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
-  ? {type:id==='ticketStock'?'ticket':['poster','posterReflection','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
+const extraSpec=id=> /^(ticketStock|poster|posterReflection|nextPoster[1-7]|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+  ? {type:id==='ticketStock'?'ticket':(['poster','posterReflection','profilePhoto'].includes(id)||id.startsWith('nextPoster'))?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
   for(const [key,value]of Object.entries(values)) {
@@ -236,8 +236,10 @@ function performanceScene(d,index,theme,page,ctx,images){
     return layer;
   }
 
+  const upcoming=image?d.cards.slice(index).filter(next=>images[next.assetId]):[];
+  const reservedWidth=Math.min(270,upcoming.length*52);
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,
-    x:left,y:60,width:right-left,height:ruleY});
+    x:left,y:60,width:right-left-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
   const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
@@ -276,26 +278,33 @@ function performanceScene(d,index,theme,page,ctx,images){
   if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
   const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
   const imageWidth=imageHeight*ratio;
-  if(image&&imageHeight>0){
-    // Anchor the back sheet to the painted image, even inside a larger rotated frame.
+  const stack=[];
+  if(imageHeight>0&&upcoming.length){
+    // A resized or rotated frame can contain empty space around the front image.
     const radians=(poster.angle||0)*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     const dx=(imageWidth-poster.width)/2,dy=(imageHeight-poster.height)/2;
     const centerX=poster.x+poster.width/2+cos*dx-sin*dy;
     const centerY=poster.y+poster.height/2+sin*dx+cos*dy;
     const frontWidth=Math.abs(cos)*imageWidth+Math.abs(sin)*imageHeight;
     const frontHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
-    const edgeX=centerX+frontWidth/2;
-    const reveal=Math.min(86,frontWidth*.12,Math.max(0,right-edgeX));
-    const width=imageWidth*.94,height=imageHeight*.94;
-    const angle=((poster.angle||0)+1.5+180)%360-180;
-    const backRadians=angle*Math.PI/180;
-    const backWidth=Math.abs(Math.cos(backRadians))*width+Math.abs(Math.sin(backRadians))*height;
-    const backHeight=Math.abs(Math.sin(backRadians))*width+Math.abs(Math.cos(backRadians))*height;
-    // Keep the layer ID used by saved drafts. Both sheets use the original artwork.
-    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'겹친 포스터',type:'image',assetId:card.assetId,
-      x:edgeX+reveal-(backWidth+width)/2,
-      y:centerY+frontHeight/2+Math.min(12,imageHeight*.025)-(backHeight+height)/2,
-      width,height,angle,opacity:Math.round((poster.opacity??100)*.24)});
+    const edge=centerX+frontWidth/2;
+    const step=Math.min(148,frontWidth*.35,Math.max(0,right-edge)/upcoming.length);
+    const numberBottom=number.visible===false?0:number.y+height(number)+14;
+    const top=Math.max(centerY-frontHeight/2,numberBottom);
+    const bottom=Math.min(centerY+frontHeight/2,poster.y+imageHeight);
+    const span=Math.max(8,bottom-top);
+    for(const [i,next] of upcoming.entries()){
+      const slot=i+1,depth=slot/upcoming.length;
+      const width=Math.max(8,frontWidth*(.88-.12*depth));
+      const height=Math.max(8,span*(.95-.17*depth));
+      const x=edge+step*slot-width;
+      // A full-width saved poster can still reveal the lineup along its bottom edge.
+      const y=step<8?bottom-height+18*depth:top+(span-height)/2;
+      stack.push({id:'nextPoster'+slot,name:'다음 공연 · '+next.title,type:'image',assetId:next.assetId,
+        crop:true,x,y,width,height});
+    }
+    // Paint from the last page back to the current one.
+    base.splice(base.indexOf(poster),0,...stack.slice().reverse());
   }
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){
@@ -310,8 +319,12 @@ function performanceScene(d,index,theme,page,ctx,images){
   add({id:'bottomRule',name:'하단 구분선',type:'line',x:left,y:ruleY,width:right-left,height:2,color:red});
   if(page?.order?.length){
     const order=[...page.order];
-    const posterIndex=order.indexOf('poster');
-    if(posterIndex>=0&&!order.includes('posterReflection'))order.splice(posterIndex,0,'posterReflection');
+    let previous='poster';
+    for(const layer of stack){
+      const anchor=order.indexOf(previous);
+      if(anchor>=0&&!order.includes(layer.id))order.splice(anchor,0,layer.id);
+      previous=layer.id;
+    }
     if(order.includes('paper')&&!order.includes('priceLabel'))order.push('priceLabel');
     page={...page,order};
   }
@@ -375,7 +388,12 @@ export function paintScene(ctx,scene,texture,images={}) {
     } else if(['line','rect'].includes(layer.type))ctx.fillRect(layer.x,layer.y,layer.width,layer.height||3);
     else if(layer.type==='ellipse'){ctx.beginPath();ctx.ellipse(layer.x+layer.width/2,layer.y+layer.height/2,layer.width/2,layer.height/2,0,0,2*Math.PI);ctx.fill();}
     else if(layer.type==='image'&&images[layer.assetId]){
-      const img=images[layer.assetId],scale=Math.min(layer.width/img.width,layer.height/img.height);
+      const img=images[layer.assetId];
+      const fit=layer.crop?Math.max:Math.min;
+      const scale=fit(layer.width/img.width,layer.height/img.height);
+      if(layer.crop){
+        ctx.beginPath();ctx.rect(layer.x,layer.y,layer.width,layer.height);ctx.clip();
+      }
       if(layer.round){
         ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
       }
@@ -412,7 +430,7 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='ellipse')out.push(`<ellipse cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" rx="${l.width/2}" ry="${l.height/2}" fill="${l.color}"/>`);
     else if(l.type==='image'&&imageData[l.assetId]){
       if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
-      const aspect=l.topLeft?'xMinYMin meet':'xMidYMid meet';
+      const aspect=l.crop?'xMidYMid slice':l.topLeft?'xMinYMin meet':'xMidYMid meet';
       out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${aspect}"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
     }
     else if(l.type==='text') {
