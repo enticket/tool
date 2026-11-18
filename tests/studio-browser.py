@@ -146,8 +146,10 @@ with sync_playwright() as p:
  closing_svg=archive.read('03.svg').decode()
  assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
- assert '세 연주자가 들려주는 실내악 이야기.' not in archive.read('02.svg').decode()
- assert '11월 16일 (월) 오후 07시 30분' in archive.read('02.svg').decode()
+ performance_svg=archive.read('02.svg').decode()
+ assert '세 연주자가 들려주는 실내악 이야기.' not in performance_svg
+ assert '11월 16일 (월) 오후 07시 30분' in performance_svg
+ assert 'id="date"' not in performance_svg and '@en__ticket' not in performance_svg
  assert 'description' not in saved['cards'][0]
  assert 'enticket.com' in closing_svg and 'clip-profilePhoto' in closing_svg
  assert base64.b64encode(profile).decode() in closing_svg and 'profilePhoto' not in archive.read('cover.svg').decode()

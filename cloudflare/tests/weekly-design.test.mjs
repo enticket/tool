@@ -134,7 +134,8 @@ test('editable closing copy adopts the follow invitation and the public ticketin
 test('legacy introductions take up no space between the poster, title and details',()=>{
   const card={performanceId:'p',assetId:'img',title:'작은 음악회',schedule:'11.20 19:30',venue:'아트홀',price:''};
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card]};
-  const oldPage={layers:{description:{text:'편집한 소개',visible:true}},order:['paper','description']};
+  const oldPage={layers:{description:{text:'편집한 소개',visible:true},date:{visible:true},handle:{text:'@en__ticket'}},
+    order:['paper','description','date','handle']};
   const legacy={...draft,cards:[{...card,description:'저장된 소개'}],design:{...normalizeDesign(),pages:{'performance:p':oldPage}}};
   const ctx={measureText(s){return {width:s.length*parseFloat(this.font.match(/([\d.]+)px/)[1])};}};
   for(const [width,height] of [[450,800],[800,450],[600,600]]){
@@ -146,7 +147,7 @@ test('legacy introductions take up no space between the poster, title and detail
     assert.equal(layer('title').y,poster.y+Math.min(poster.height,poster.width*height/width)+32);
     assert.equal(layer('description'),undefined);
     const older=pageScene(legacy,1,ctx,{img:{width,height}});
-    assert.ok(older.every(l=>l.id!=='description'));
+    assert.ok(older.every(l=>!['description','date','handle'].includes(l.id)));
     for(const id of ['poster','title','topRule','schedule','venue']){
       assert.deepEqual(older.find(l=>l.id===id),layer(id));
     }

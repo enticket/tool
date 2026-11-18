@@ -208,7 +208,7 @@ function closingScene(draft,theme,page,ctx){
 
 function performanceScene(d,index,theme,page,ctx,images){
   const card=d.cards[index-1],image=images?.[card.assetId];
-  const left=66,right=1014,ruleY=1260;
+  const left=66,right=1014,ruleY=1288;
   const coverColor=id=>theme.find(layer=>layer.id===id).color;
   const ink=coverColor('subtitle'),red=coverColor('title');
   const overrides=page?.layers||{};
@@ -248,7 +248,7 @@ function performanceScene(d,index,theme,page,ctx,images){
     const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,23,red,'sans',{width:154,weight:650});
     rows.push({layers:[heading,value],gap:14});
   }
-  // Work up from the footer, reserving room for wrapped rows and any saved text positions.
+  // Work up from the bottom rule, reserving room for wrapped rows and saved text positions.
   let bodyTop=(overrides.bottomRule?.y??ruleY)-24;
   for(const row of [...rows].reverse()){
     row.height=Math.max(...row.layers.map(height));
@@ -283,8 +283,6 @@ function performanceScene(d,index,theme,page,ctx,images){
     }
   }
   add({id:'bottomRule',name:'하단 구분선',type:'line',x:left,y:ruleY,width:right-left,height:2,color:red});
-  text('date','기간',d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.'),left,18.75,ink,'sans',{y:1283});
-  text('handle','인스타 계정','@en__ticket',right,18.75,ink,'sans',{align:'right',width:400,y:1283});
   if(page?.order?.includes('paper')&&!page.order.includes('priceLabel')){
     page={...page,order:page.order.concat('priceLabel')};
   }
