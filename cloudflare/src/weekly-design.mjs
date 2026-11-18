@@ -4,6 +4,7 @@ export const DESIGN_VERSION = 2;
 export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
+export const reflectionAssetId=id=>'reflection:'+id;
 export const MAX_SCHEDULE_LENGTH=3000;
 export const DEFAULT_CLOSING_COPY='팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com';
 const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
@@ -39,8 +40,8 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(ticketStock|poster|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
-  ? {type:id==='ticketStock'?'ticket':['poster','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
+const extraSpec=id=> /^(ticketStock|poster|posterReflection|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+  ? {type:id==='ticketStock'?'ticket':['poster','posterReflection','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
   for(const [key,value]of Object.entries(values)) {
@@ -272,6 +273,15 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
   if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
   const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
+  const angle=(poster.angle||0)*Math.PI/180;
+  const posterRight=angle?poster.x+(poster.width+Math.abs(poster.width*Math.cos(angle))+Math.abs(poster.height*Math.sin(angle)))/2:poster.x+imageHeight*ratio;
+  const reflectionX=posterRight+8;
+  const reflectionWidth=Math.min(right-reflectionX,imageHeight*ratio*.85);
+  if(image&&imageHeight>0&&reflectionWidth>=40){
+    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'물결 반사',type:'image',
+      assetId:reflectionAssetId(card.assetId),stretch:true,x:reflectionX,y:poster.y,width:reflectionWidth,height:imageHeight,
+      opacity:Math.round((poster.opacity??100)*.68)});
+  }
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){
     if(row.height)y+=row.gap;
@@ -283,8 +293,12 @@ function performanceScene(d,index,theme,page,ctx,images){
     }
   }
   add({id:'bottomRule',name:'하단 구분선',type:'line',x:left,y:ruleY,width:right-left,height:2,color:red});
-  if(page?.order?.includes('paper')&&!page.order.includes('priceLabel')){
-    page={...page,order:page.order.concat('priceLabel')};
+  if(page?.order?.length){
+    const order=[...page.order];
+    const posterIndex=order.indexOf('poster');
+    if(posterIndex>=0&&!order.includes('posterReflection'))order.splice(posterIndex,0,'posterReflection');
+    if(order.includes('paper')&&!order.includes('priceLabel'))order.push('priceLabel');
+    page={...page,order};
   }
   return applyPage(base,page);
 }
@@ -327,6 +341,37 @@ export function hitLayer(ctx,layer,x,y){
   if(layer.type==='corner')return px>=layer.x+535&&py>=layer.y+1010&&(px-layer.x-535)/545+(py-layer.y-1010)/340>1;
   const pad=layer.type==='line'?10:0;return px>=b.x-pad&&px<=b.x+b.width+pad&&py>=b.y-pad&&py<=b.y+b.height+pad;
 }
+
+export function createPosterReflection(image){
+  // Sample the mirror in horizontal strips so lettering breaks into ripples of ink.
+  const width=320,height=720;
+  const mirror=document.createElement('canvas');
+  mirror.width=width;mirror.height=height;
+  const source=mirror.getContext('2d');
+  source.translate(width,0);source.scale(-1,1);
+  source.drawImage(image,0,0,width,height);
+  const reflection=document.createElement('canvas');
+  reflection.width=width;reflection.height=height;
+  const ctx=reflection.getContext('2d');
+  for(let y=0;y<height;y+=2){
+    const swell=Math.sin(y*.047+1.8*Math.sin(y*.016));
+    const ripple=Math.sin(y*.21+2.4*swell+.8*Math.sin(y*.067));
+    const dx=16*swell+11*ripple+3*Math.sin(y*.53);
+    const sampleY=Math.min(height-2,Math.max(0,y+9*swell+3*ripple));
+    ctx.globalAlpha=.8+.18*ripple;
+    ctx.drawImage(mirror,0,sampleY,width,2,dx-38,y,width+76,2);
+  }
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='destination-in';
+  const side=ctx.createLinearGradient(0,0,width,0);
+  side.addColorStop(0,'rgba(0,0,0,.38)');side.addColorStop(.07,'rgba(0,0,0,.9)');
+  side.addColorStop(.35,'rgba(0,0,0,.76)');side.addColorStop(1,'transparent');
+  ctx.fillStyle=side;ctx.fillRect(0,0,width,height);
+  const ends=ctx.createLinearGradient(0,0,0,height);
+  ends.addColorStop(0,'transparent');ends.addColorStop(.14,'#000');ends.addColorStop(.83,'#000');ends.addColorStop(1,'transparent');
+  ctx.fillStyle=ends;ctx.fillRect(0,0,width,height);
+  return reflection;
+}
+
 export function paintScene(ctx,scene,texture,images={}) {
   ctx.clearRect(0,0,1080,1350);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1080,1350);
   for(const layer of scene) {
@@ -349,9 +394,10 @@ export function paintScene(ctx,scene,texture,images={}) {
       if(layer.round){
         ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
       }
-      const x=layer.topLeft?layer.x:layer.x+(layer.width-img.width*scale)/2;
-      const y=layer.topLeft?layer.y:layer.y+(layer.height-img.height*scale)/2;
-      ctx.drawImage(img,x,y,img.width*scale,img.height*scale);
+      const width=layer.stretch?layer.width:img.width*scale,height=layer.stretch?layer.height:img.height*scale;
+      const x=layer.topLeft?layer.x:layer.x+(layer.width-width)/2;
+      const y=layer.topLeft?layer.y:layer.y+(layer.height-height)/2;
+      ctx.drawImage(img,x,y,width,height);
     }
     else if(layer.type==='text') {
       const rows=textRows(ctx,layer);ctx.textBaseline='top';ctx.textAlign=layer.align||'left';
@@ -381,7 +427,8 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='ellipse')out.push(`<ellipse cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" rx="${l.width/2}" ry="${l.height/2}" fill="${l.color}"/>`);
     else if(l.type==='image'&&imageData[l.assetId]){
       if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
-      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${l.topLeft?'xMinYMin':'xMidYMid'} meet"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
+      const aspect=l.stretch?'none':l.topLeft?'xMinYMin meet':'xMidYMid meet';
+      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${aspect}"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
     }
     else if(l.type==='text') {
       // Canvas top baseline is the font em box, represented explicitly in SVG.

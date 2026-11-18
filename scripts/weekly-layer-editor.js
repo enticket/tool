@@ -20,7 +20,10 @@ async function paperPosters(cards){
   const epoch=generation;
   const posters=await Promise.all(cards.map(async card=>paperImages[card.assetId]||image(await asset(card.assetId))));
   if(epoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
-  cards.forEach((card,i)=>{paperImages[card.assetId]=posters[i];});
+  cards.forEach((card,i)=>{
+    paperImages[card.assetId]=posters[i];
+    paperImages[WD.reflectionAssetId(card.assetId)]??=WD.createPosterReflection(posters[i]);
+  });
   return posters;
 }
 function currentScene(){return draft?WD.pageScene(draft,Math.min(selectedCard,draft.cards.length+1),canvasContext(),paperImages):[];}
@@ -200,7 +203,11 @@ async function downloadLayerSource(){
   const get=async path=>{const r=await fetch(path);if(!r.ok)throw Error('원본 파일을 불러오지 못했습니다.');return r.blob();};
   const [font,texture,license,profile]=await Promise.all([get('/assets/weekly/NanumMyeongjo-ExtraBold.woff2'),get('/assets/weekly/paper-grain.png'),get('/assets/weekly/OFL.txt'),get(WD.PROFILE_PHOTO)]);
   const [fontData,textureData,profileData]=await Promise.all([dataUrl(font),dataUrl(texture),dataUrl(profile)]),imageData={[WD.PROFILE_PHOTO]:profileData};
-  for(const c of draft.cards)imageData[c.assetId]=await dataUrl(await asset(c.assetId));
+  for(const c of draft.cards){
+    imageData[c.assetId]=await dataUrl(await asset(c.assetId));
+    const reflection=WD.reflectionAssetId(c.assetId);
+    imageData[reflection]=paperImages[reflection].toDataURL('image/png');
+  }
   const manifest={format:'enticket-weekly-design',version:2,width:1080,height:1350,template:'paper-editorial',title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards,week:draft.week,weekEnd:draft.weekEnd,design:WD.normalizeDesign(draft.design)};
   const files={'design.json':new TextEncoder().encode(JSON.stringify(manifest,null,2)),'NanumMyeongjo-ExtraBold.woff2':new Uint8Array(await font.arrayBuffer()),'OFL.txt':new Uint8Array(await license.arrayBuffer()),'paper-grain.png':new Uint8Array(await texture.arrayBuffer()),'README.txt':new TextEncoder().encode('엔티켓 디자인 원본\n각 SVG는 편집 가능한 텍스트·도형·이미지 레이어입니다. 폰트와 이미지가 포함되어 있습니다.\ndesign.json에는 각 페이지의 요소와 배치가 저장됩니다.\n글꼴: 나눔명조 ExtraBold (SIL OFL 1.1). 외부 편집기의 웹폰트 지원에 따라 표시가 달라질 수 있습니다. 게시에는 사이트의 JPG 출력을 사용하세요.\n사이트에서는 저장한 디자인을 선택해 이어서 편집합니다. 원본 ZIP 가져오기는 지원하지 않습니다.\n')};
   files['enticket-instagram-profile.jpg']=new Uint8Array(await profile.arrayBuffer());

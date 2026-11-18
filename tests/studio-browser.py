@@ -112,6 +112,14 @@ with sync_playwright() as p:
  pane('performances');page.locator('#wkCandidates input').check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_visible()
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
  expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
+ layer('posterReflection')
+ def reflection_pixel():
+  return page.locator('#wkLayerCanvas').evaluate("(c)=>Array.from(c.getContext('2d').getImageData(825,500,1,1).data)")
+ visible_pixel=reflection_pixel()
+ page.locator('#wkLayerVisible').uncheck()
+ assert reflection_pixel()!=visible_pixel
+ page.locator('#wkLayerVisible').check()
+ assert reflection_pixel()==visible_pixel
  layer('poster')
  width=float(page.locator('#wkLayerWidth').input_value());height=float(page.locator('#wkLayerHeight').input_value())
  assert width>600 and height>736 and abs(width/height-3/4)<.001
@@ -147,6 +155,10 @@ with sync_playwright() as p:
  assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
  performance_svg=archive.read('02.svg').decode()
+ from xml.etree import ElementTree
+ reflection=ElementTree.fromstring(performance_svg).find('.//{*}g[@id="posterReflection"]/{*}image')
+ assert reflection is not None and reflection.get('href').startswith('data:image/png;base64,')
+ assert reflection.get('preserveAspectRatio')=='none'
  assert '세 연주자가 들려주는 실내악 이야기.' not in performance_svg
  assert '11월 16일 (월) 오후 07시 30분' in performance_svg
  assert 'id="date"' not in performance_svg and '@en__ticket' not in performance_svg

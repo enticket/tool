@@ -181,6 +181,30 @@ test('poster fills the space left by performance details up to the footer or sid
   assert.equal(edited.title.y,850);
   assert.equal(edited.poster.y+edited.poster.height+32,850);
 });
+
+test('water reflection follows the painted edge, preserves saved stacking and only uses spare space',()=>{
+  const card={assetId:'img',performanceId:'show',title:'음악회',schedule:'11.20',venue:'아트홀'};
+  const page={layers:{poster:{width:600,height:560}},order:['paper','texture','poster','number']};
+  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card],design:{...normalizeDesign(),pages:{'performance:show':page}}};
+  const scene=()=>pageScene(draft,1,undefined,{img:{width:3,height:4}});
+  let layers=scene();
+  const reflection=layers.find(l=>l.id==='posterReflection'),poster=layers.find(l=>l.id==='poster');
+  assert.equal(reflection.x,poster.x+560*3/4+8);
+  assert.equal(reflection.y,poster.y);
+  assert.equal(reflection.height,560);
+  assert.ok(reflection.x+reflection.width<=1014);
+  assert.equal(layers.indexOf(reflection)+1,layers.indexOf(poster));
+  page.layers.posterReflection={opacity:38,visible:false};
+  layers=scene();
+  assert.equal(layers.find(l=>l.id==='posterReflection').visible,false);
+  assert.equal(layers.find(l=>l.id==='posterReflection').opacity,38);
+  page.layers.poster.visible=false;
+  assert.ok(!scene().some(l=>l.id==='posterReflection'));
+  delete page.layers.poster;
+  assert.ok(!pageScene(draft,1,undefined,{img:{width:16,height:9}}).some(l=>l.id==='posterReflection'));
+  assert.ok(!pageScene(draft,0).some(l=>l.id==='posterReflection'));
+  assert.ok(!pageScene(draft,2).some(l=>l.id==='posterReflection'));
+});
 test('weekly dates include the weekday, distinguish noon and midnight, and retain every session',()=>{
   const schedule=weeklyScheduleText([
     {date:'2026-12-31',time:'09:05'},{date:'2026-12-31',time:'12:00'},
