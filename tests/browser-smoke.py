@@ -103,8 +103,10 @@ with sync_playwright() as p:
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
         ['공연명','공연일','공연시간','권종','판매가격','수량','좌석등급'],
-        ['이관검증','2026-10-14','19:00','일반',10000,2,'R석'],
-        ['이관검증','2026-10-14','19:00','단체',10000,1,'S석']
+        ...[
+          ['일반',6000,'A석'], ['일반',4000,'S석'], ['일반',3000,'R석'],
+          ['일반',4000,'R석'], ['단체',4000,'R석'], ['할인',1000,'VIP'], ['일반',8000,'일반석']
+        ].map(([type,price,grade])=>['이관검증','2026-10-14','19:00',type,price,1,grade])
       ]), '판매');
       return XLSX.write(wb, {type:'base64', bookType:'xlsx'});
     }""")
@@ -115,19 +117,30 @@ with sync_playwright() as p:
     table = page.locator('#output table')
     headers = table.locator('thead tr').first.locator('th')
     assert headers.all_text_contents()[1:5] == ['공연일시', '등급', '권종', '판매(원)']
-    regular_row = table.get_by_role('row').filter(has=page.get_by_role('cell', name='R석', exact=True))
-    expect(regular_row.get_by_role('cell', name='일반', exact=True)).to_be_visible()
+    expected_order = [
+        ['VIP','할인',1000], ['R석','단체',4000], ['R석','일반',4000], ['R석','일반',3000],
+        ['S석','일반',4000], ['A석','일반',6000], ['일반석','일반',8000],
+    ]
+    detail_rows = table.locator('tbody tr:not(.total)')
+    def preview_order():
+        return detail_rows.evaluate_all("""rows => rows.map(row => {
+          const type = row.querySelector('td.l');
+          return [type.previousElementSibling.textContent, type.textContent,
+                  Number(type.nextElementSibling.textContent.replace(/[₩,]/g,''))];
+        })""")
+    assert preview_order() == expected_order
     price_mode.check()
     assert headers.all_text_contents()[1:3] == ['공연일시', '판매(원)']
     expect(table.get_by_role('columnheader', name='등급', exact=True)).to_have_count(0)
     expect(table.get_by_role('columnheader', name='권종', exact=True)).to_have_count(0)
-    expect(table.locator('tbody tr:not(.total)')).to_have_count(1)
-    expect(table.locator('tbody tr').first.locator('td').nth(2)).to_have_text('₩10,000')
+    expect(detail_rows).to_have_count(5)
+    expect(detail_rows.first.locator('td').nth(2)).to_have_text('₩8,000')
+    expect(detail_rows.nth(2).locator('td').first).to_have_text('₩4,000')
+    expect(detail_rows.nth(2).locator('td').nth(1)).to_have_text('3')
     expect(table).not_to_contain_text('R석')
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     price_mode.uncheck()
-    group_row = table.get_by_role('row').filter(has=page.get_by_role('cell', name='S석', exact=True))
-    expect(group_row.get_by_role('cell', name='단체', exact=True)).to_be_visible()
+    assert preview_order() == expected_order
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     expect(page.locator('#saveSettlementDrive')).to_be_hidden()
     page.evaluate('''()=>{
@@ -139,6 +152,12 @@ with sync_playwright() as p:
     settlement_path = ROOT / 'settlement.xlsx'
     event.value.save_as(settlement_path)
     assert zipfile.is_zipfile(settlement_path)
+    encoded = base64.b64encode(settlement_path.read_bytes()).decode()
+    exported_order = page.evaluate("""([encoded,count])=>{
+      const wb = XLSX.read(encoded,{type:'base64'}), sheet = wb.Sheets[wb.SheetNames[0]];
+      return Array.from({length:count},(_,i)=>['H','J','M'].map(col=>sheet[col+(16+i)].v));
+    }""", [encoded,len(expected_order)])
+    assert exported_order == expected_order
     assert_settlement_styles(settlement_path, page.evaluate('window.__expectedSettlement'))
     print('PASS: settlement 30,000 gross / 28,020 payout, XLSX generation')
 

@@ -4278,6 +4278,7 @@ function renderValidationCard(result) {
 /* ===== 도구 3: 정산서 도구 (통합: 집계 + 정산서 생성) ===== */
 (function(){
   const CHANNELS=["엔티켓","예술회관","폐쇄몰"];
+  const SEAT_GRADE_RANK = new Map([["VIP", 0], ["R", 1], ["S", 2], ["A", 3]]);
   const KW={
     권종:["권종","종류","구분","티켓명"],
     가격:["구매가격","판매가격","권종가격","단가","가격","금액"],
@@ -4507,6 +4508,7 @@ function renderValidationCard(result) {
   }
   function aggregate(list){
     const map=new Map();
+    const priceOnly=priceMode.checked;
     list.forEach(s=>{
       CHANNELS.forEach(ch=>{
         const d=s.channels[ch];
@@ -4517,25 +4519,23 @@ function renderValidationCard(result) {
           if(classifyGrade(권종)!=="normal") return;  // 초대·홀딩은 권종 집계에서 제외
           const 가격=d.map.가격>=0?parseNum(r[d.map.가격]):0;
           const 수=d.map.수>=0?parseNum(r[d.map.수]):1;
-          const key = priceMode.checked ? 가격 : 권종+"||"+가격;
+          const 등급 = priceOnly ? "" : String(r[d.map.좌석등급] ?? "").trim();
+          const gradeCode = norm(등급.normalize("NFKC")).toUpperCase().replace(/(?:좌석|등급|석)$/, "");
+          const gradeRank = SEAT_GRADE_RANK.get(gradeCode);
+          const key = priceOnly ? 가격 : JSON.stringify([gradeRank ?? 등급, 권종, 가격]);
           if (!map.has(key)) {
-            map.set(key, {권종:priceMode.checked ? "" : 권종, 가격, 엔티켓:0, 예술회관:0, 폐쇄몰:0, grades:new Set()});
+            map.set(key, {등급, 권종:priceOnly ? "" : 권종, 가격, gradeRank:gradeRank ?? SEAT_GRADE_RANK.size,
+              엔티켓:0, 예술회관:0, 폐쇄몰:0, 합계:0});
           }
           const group = map.get(key);
           group[ch] += 수;
-          if (!priceMode.checked && d.map.좌석등급 >= 0) {
-            const grade = String(r[d.map.좌석등급] ?? "").trim();
-            if (grade) group.grades.add(grade);
-          }
+          group.합계 += 수;
         });
       });
     });
-    return [...map.values()].map(({grades, ...row}) => ({
-      ...row,
-      등급: [...grades].sort().join(" / "),
-      합계: row.엔티켓 + row.예술회관 + row.폐쇄몰,
-    }))
-      .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
+    return [...map.values()].sort((a,b)=>
+      a.gradeRank-b.gradeRank || b.가격-a.가격 ||
+      a.권종.localeCompare(b.권종,"ko") || a.등급.localeCompare(b.등급,"ko"));
   }
   // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
   // 초대좌석권 = 초대 + 홀딩 수량 합 (둘 다 권종 행 집계에선 빠지지만 초대좌석권으로 모음)
