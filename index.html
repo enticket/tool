@@ -2651,7 +2651,7 @@ window.ICO = {
     const canonical=s=>JSON.stringify([...s].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)));
     if(canonical(sessions)===canonical(original.sessions))calendarChanges.delete(id);
     else calendarChanges.set(id,{id,version:original.version,sessions});
-    renderCalendar();status('일정을 옮겼습니다. 변경 저장을 눌러 반영해 주세요.');
+    renderCalendar();status('');
   }
   function endCalendarDrag(commit=false){
     const d=calendarDrag;if(!d)return;calendarDrag=null;
