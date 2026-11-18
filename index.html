@@ -341,7 +341,7 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
   .nav-collapsed .submenu-items { gap:0; padding:0; border:0; }
   .nav-collapsed .ig-subtab { min-height:30px; padding:0; font-size:0; background:transparent; }
   .nav-collapsed .ig-subtab::after { content:""; position:absolute; inset:0 auto 0 50%; width:1px; background:var(--color-border-neutral-strong); }
-  .nav-collapsed .ig-subtab:is(.active,:hover,:focus-visible)::before { content:""; position:absolute; left:50%; top:7px; bottom:7px; width:2px; background:var(--color-bg-accent); z-index:1; }
+  .nav-collapsed .ig-subtab.active::before { content:""; position:absolute; left:50%; top:7px; bottom:7px; width:2px; background:var(--color-bg-accent); z-index:1; }
   .nav-collapsed .ig-subtab:focus-visible { outline-offset:-2px; }
   .nav-collapsed .gauth { justify-content:center; }
   .nav-collapsed #gUser { display:none !important; }

@@ -22,6 +22,11 @@ with sync_playwright() as p:
     page.locator('[data-tab=settlement]').click()
     expect(page.locator('#panel-settlement')).to_be_visible()
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
+    other = page.locator('[data-tab=oseal]')
+    other.hover()
+    assert other.evaluate("el=>getComputedStyle(el,'::before').content") == 'none'
+    assert other.evaluate("el=>getComputedStyle(el).backgroundColor") != 'rgba(0, 0, 0, 0)'
+    assert page.locator('[data-subtab=settlement]').evaluate("el=>getComputedStyle(el,'::before').width") == '2px'
     page.locator('[data-tab=oseal]').click()
     expect(page.locator('#panel-oseal')).to_be_visible()
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
