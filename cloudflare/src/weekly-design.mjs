@@ -183,8 +183,8 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
 
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,
-    x:left,y:60,width:image?.width>image?.height?780:600,height:736});
-  text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
+    x:left,y:60,width:right-left,height:ruleY});
+  const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
   const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
   const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:2,color:ink});
@@ -197,14 +197,29 @@ function performanceScene(d,index,theme,page,ctx,images){
     const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,23,red,'sans',{width:154,weight:650});
     rows.push({layers:[heading,value],gap:14});
   }
-  const bodyHeight=rows.reduce((total,row)=>{
+  // Work up from the footer, reserving room for wrapped rows and any saved text positions.
+  let bodyTop=(overrides.bottomRule?.y??ruleY)-24;
+  for(const row of [...rows].reverse()){
     row.height=Math.max(...row.layers.map(height));
-    return total+(row.height?row.height+row.gap:0);
-  },0);
-  const ratio=image?.width&&image.height?image.width/image.height:.8;
-  if(overrides.poster?.height===undefined){
-    poster.height=Math.min(poster.height,poster.width/ratio,Math.max(160,ruleY-24-bodyHeight-32-poster.y));
+    if(!row.height)continue;
+    bodyTop-=row.height;
+    for(const layer of row.layers){
+      if(overrides[layer.id]?.y!==undefined&&height(layer))bodyTop=Math.min(bodyTop,layer.y);
+    }
+    bodyTop-=row.gap;
   }
+  const ratio=image?.width&&image.height?image.width/image.height:.8;
+  const roomHeight=()=>Math.max(8,bodyTop-32-poster.y);
+  // Wide artwork can use the full column below the page number.
+  const numberLeft=ctx?layerBounds(ctx,number).x:number.x-number.width;
+  const drawnWidth=Math.min(poster.width,(overrides.poster?.height??roomHeight())*ratio);
+  if(overrides.poster?.y===undefined&&overrides.number?.y===undefined&&number.visible!==false&&poster.x+drawnWidth+16>numberLeft){
+    poster.y=number.y+height(number)+16;
+  }
+  if(overrides.poster?.height===undefined){
+    poster.height=Math.min(poster.width/ratio,roomHeight());
+  }
+  if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
   const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){

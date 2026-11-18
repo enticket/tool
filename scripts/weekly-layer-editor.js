@@ -110,8 +110,9 @@ function fillLayerProperties(){
   $('wkLayerFontField').hidden=!text;$('wkLayerFont').value=l.family||'serif';
   $('wkLayerAlignField').hidden=!text;$('wkLayerAlign').value=l.align||'left';
   $('wkLayerColorField').hidden=!l.color;$('wkLayerColor').value=l.color||'#000000';
-  $('wkLayerGeometry').hidden=l.x===undefined;$('wkLayerX').value=l.x??0;$('wkLayerY').value=l.y??0;
-  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text','ticket'].includes(l.type);$('wkLayerWidth').value=l.width||950;$('wkLayerHeight').value=l.height||3;$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
+  const hundredths=value=>Math.round(value*100)/100;
+  $('wkLayerGeometry').hidden=l.x===undefined;$('wkLayerX').value=hundredths(l.x??0);$('wkLayerY').value=hundredths(l.y??0);
+  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text','ticket'].includes(l.type);$('wkLayerWidth').value=hundredths(l.width||950);$('wkLayerHeight').value=hundredths(l.height||3);$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
   $('wkLayerRotationField').hidden=l.x===undefined;$('wkLayerRotation').value=l.angle||0;
   $('wkLayerOpacity').value=l.opacity??100;$('wkLayerOpacityValue').value=(l.opacity??100)+'%';
   $('wkLayerOpacityLabel').textContent=l.type==='texture'?'질감 강도':'불투명도';

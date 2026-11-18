@@ -111,7 +111,10 @@ with sync_playwright() as p:
  # Every slide uses the same canvas editor, including the poster and closing page.
  pane('performances');page.locator('#wkCandidates input').check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_visible()
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
- layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('600');page.locator('#wkLayerWidth').fill('560');page.locator('#wkLayerX').fill('80')
+ layer('poster')
+ width=float(page.locator('#wkLayerWidth').input_value());height=float(page.locator('#wkLayerHeight').input_value())
+ assert width>600 and height>736 and abs(width/height-3/4)<.001
+ page.locator('#wkLayerWidth').fill('560');page.locator('#wkLayerX').fill('80')
  pane('elements');page.locator('[data-add-object="text"]').click();page.locator('#wkInlineText').fill('현장에서 만나요');page.locator('#wkInlineText').press('Control+Enter');page.locator('#wkLayerSize').fill('24');page.locator('#wkLayerX').fill('80');page.locator('#wkLayerY').fill('1200')
  # Page order preserves each performance's scene; deleting a page removes its overrides.
  second={**fixture,'id':'studio-second','assetId':'studio-second','title':'두 번째 공연'};db['performances'].append(second);assets[second['id']]=poster_bytes

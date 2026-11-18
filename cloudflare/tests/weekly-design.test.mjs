@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
+import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,layerBounds,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
 
 test('layer settings preserve exact point sizes and reject executable or unbounded fields',()=>{
   const design={version:1,layers:{title:{fontSize:165,x:90,color:'#ac1010'},texture:{opacity:81},handle:{visible:false}}};
@@ -153,4 +153,29 @@ test('legacy introductions take up no space between the poster, title and detail
     assert.equal(layer('priceLabel').text,'');
     assert.match(coverSvg(ctx,scene,{imageData:{img:'data:image/jpeg;base64,AA=='}}),/xMinYMin meet/);
   }
+});
+
+test('poster fills the space left by performance details up to the footer or side margin',()=>{
+  const ctx={measureText(s){return {width:s.length*20};}};
+  const card={assetId:'img',performanceId:'show',title:'음악회',schedule:'11.20 19:30',venue:'아트홀'};
+  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card]};
+  function layout(card,width,height){
+    const scene=pageScene({...draft,cards:[card]},1,ctx,{img:{width,height}});
+    return Object.fromEntries(scene.map(layer=>[layer.id,layerBounds(ctx,layer)]));
+  }
+  const portrait=layout(card,3,4);
+  assert.ok(portrait.poster.height>900);
+  assert.equal(portrait.poster.width,portrait.poster.height*3/4);
+  assert.equal(Math.round(portrait.bottomRule.y-portrait.venue.y-portrait.venue.height),24);
+  const busy=layout({...card,schedule:Array(10).fill('11.20 19:30').join(' / '),price:'전석 20,000원'},3,4);
+  assert.ok(busy.poster.height<portrait.poster.height);
+  assert.equal(Math.round(busy.bottomRule.y-busy.price.y-busy.price.height),24);
+  const wide=layout(card,16,9);
+  assert.equal(wide.poster.width,wide.topRule.width);
+  assert.equal(wide.poster.height,wide.poster.width*9/16);
+  assert.ok(wide.poster.y>=wide.number.y+wide.number.height);
+  draft.design={...normalizeDesign(),pages:{'performance:show':{layers:{title:{y:850}}}}};
+  const edited=layout(card,3,4);
+  assert.equal(edited.title.y,850);
+  assert.equal(edited.poster.y+edited.poster.height+32,850);
 });
