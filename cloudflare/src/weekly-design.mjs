@@ -1,3 +1,5 @@
+import { weeklyStyles, weeklyMotifs } from './weekly-styles.mjs';
+
 // Shared, versioned scene model. The public build embeds this module verbatim
 // (without export keywords); the Worker validates the same allowlisted fields.
 export const DESIGN_VERSION = 2;
@@ -9,6 +11,9 @@ const posterShadow={offset:9,deviation:6,rgb:'55,39,28',opacity:.30};
 export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
 export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
 const oldClosingFooters=['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
+
+function printStyle(id){return typeof id==='string'&&Object.hasOwn(weeklyStyles,id)?weeklyStyles[id]:null;}
+export function isLayerTemplate(id){return id==='paper-editorial'||Boolean(printStyle(id));}
 
 export function refreshClosingCopy(draft){
   if(draft.jobId)return false;
@@ -41,6 +46,7 @@ export const LAYERS = [
   {id:'count', name:'공연 수', type:'text', color:'#111111', x:72, y:1014, fontSize:43, width:950},
   {id:'date', name:'기간', type:'text', color:'#b80808', x:72, y:1175, fontSize:76, width:950},
 ];
+const motifSpec={id:'motif',type:'motif',x:0,y:0,width:600,height:600,color:'#111111'};
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const extraSpec=id=> /^(ticketStock|poster|posterReflection|nextPoster[1-7]|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
@@ -67,8 +73,9 @@ function settings(values,spec,legacy=false,id='') {
 function pageInput(input,cover=false,legacy=false){
   if(!record(input)||!record(input.layers))invalid();
   const layers={};
+  function specFor(id){return LAYERS.find(l=>l.id===id)||(!legacy&&id==='motif'&&motifSpec)||(!cover&&extraSpec(id));}
   for(const [id, values] of Object.entries(input.layers)) {
-    const spec=LAYERS.find(l=>l.id===id)||(!cover&&extraSpec(id));if(!spec)invalid();
+    const spec=specFor(id);if(!spec)invalid();
     layers[id]=settings(values,spec,legacy,id);
   }
   if(legacy)return {layers};
@@ -81,7 +88,7 @@ function pageInput(input,cover=false,legacy=false){
     if(typeof name!=='string'||name.length>80)invalid();
     return {id,type,name,x:80,y:80,width:400,height:type==='line'?3:200,color:'#222222',...(type==='text'?{text:'',fontSize:30}:{}),...settings(values,{type,x:0,y:0,color:'#111111',width:400,height:200})};
   });
-  const known=id=>LAYERS.some(l=>l.id===id)||(!cover&&extraSpec(id))||seen.has(id);
+  const known=id=>specFor(id)||seen.has(id);
   if(new Set(order).size!==order.length||order.some(id=>typeof id!=='string'||!known(id)))invalid();
   return {layers,objects:cleanObjects,order:[...order]};
 }
@@ -171,17 +178,59 @@ export function refreshWeeklySchedules(draft){
   }
   return changed;
 }
+// Insert newly introduced artwork in its printed position when a saved full order predates it.
+function applyPrintPage(base,page){
+  if(!page?.order?.includes('paper'))return applyPage(base,page);
+  const order=[...page.order];
+  for(let i=1;i<base.length;i++){
+    const id=base[i].id;
+    if(!order.includes(id))order.splice(order.indexOf(base[i-1].id)+1,0,id);
+  }
+  return applyPage(base,{...page,order});
+}
+function motifLayer(template,layout,color){
+  return {...motifSpec,name:weeklyStyles[template].motifName,motif:template,color,...layout.motif};
+}
 export function coverScene(draft) {
-  const design=normalizeDesign(draft.design);
-  const content={title:draft.title,subtitle:draft.subtitle,count:`이번 주 공연 ${draft.cards.length}편`,
+  const design=normalizeDesign(draft.design),style=printStyle(draft.template);
+  const title=style?.defaultTitle&&draft.title==='공연이\n있는\n일주일.'?style.defaultTitle:draft.title;
+  const content={title,subtitle:draft.subtitle,count:`이번 주 공연 ${draft.cards.length}편`,
     date:draft.week.slice(5).replace('-','.')+'—'+draft.weekEnd.slice(5).replace('-','.')};
-  return applyPage(LAYERS.map(base=>({...base,...(content[base.id]!==undefined?{text:content[base.id]}:{})})),design);
+  const base=LAYERS.map(layer=>({...layer,...(content[layer.id]!==undefined?{text:content[layer.id]}:{})}));
+  if(!style)return design.order?.includes('motif')?applyPrintPage(base,design):applyPage(base,design);
+  const colors={paper:style.paper,handle:style.ink,title:style.headline,subtitle:style.ink,
+    count:style.ink,date:style.headline,topRule:style.ink,bottomRule:style.accent};
+  return applyPrintPage(base.map(layer=>{
+    if(layer.id==='corner')return motifLayer(draft.template,style.cover,style.accent);
+    if(layer.id==='texture')return {...layer,opacity:style.grain};
+    return {...layer,color:colors[layer.id],...style.cover[layer.id]};
+  }),design);
 }
 // One die line for the paper outline and perforations in both export formats.
 const ticketPath = 'M18 0 H942 L960 18 V868 A32 32 0 0 0 960 932 V1182 L942 1200 H18 L0 1182 V932 A32 32 0 0 0 0 868 V18 Z '+
   Array.from({length:36},(_,i)=>`M${54+i*24} 899h12v2h-12Z`).join(' ');
 
+function printClosingScene(draft,style,theme,page,ctx){
+  const layout=style.closing;
+  const cover=id=>theme.find(layer=>layer.id===id);
+  const ink=cover('subtitle').color,headline=cover('title').color,accent=cover('motif').color;
+  const footer={id:'closingCopy',name:'팔로우 안내 · 주소',type:'text',text:draft.closing,
+    family:'sans',leading:1.5,weight:550,color:ink,...layout.closingCopy};
+  if(ctx){
+    while(footer.fontSize>12&&layerBounds(ctx,footer).height>1308-footer.y)footer.fontSize--;
+  }
+  return applyPrintPage([
+    cover('paper'),cover('texture'),motifLayer(draft.template,layout,accent),
+    {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,...layout.profilePhoto},
+    {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',family:'sans',weight:750,color:ink,...layout.handle},
+    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:DEFAULT_CLOSING_TITLE,family:'serif',leading:1.07,color:headline,...layout.closingTitle},
+    {id:'bottomRule',name:'하단 구분선',type:'line',color:accent,...layout.bottomRule},footer
+  ],page);
+}
+
 function closingScene(draft,theme,page,ctx){
+  const style=printStyle(draft.template);
+  if(style)return printClosingScene(draft,style,theme,page,ctx);
   const stock=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
   const coverColor=id=>theme.find(l=>l.id===id).color;
   const footer={id:'closingCopy',name:'팔로우 안내 · 주소',type:'text',text:draft.closing,
@@ -211,7 +260,7 @@ function closingScene(draft,theme,page,ctx){
 }
 
 function performanceScene(d,index,theme,page,ctx,images){
-  const card=d.cards[index-1],image=images?.[card.assetId];
+  const card=d.cards[index-1],image=images?.[card.assetId],style=printStyle(d.template);
   const left=66,right=1014,ruleY=1308;
   const coverColor=id=>theme.find(layer=>layer.id===id).color;
   const ink=coverColor('subtitle'),red=coverColor('title');
@@ -243,8 +292,8 @@ function performanceScene(d,index,theme,page,ctx,images){
     x:left,y:38,width:right-left-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
-  const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
-  const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:2,color:ink});
+  const title=fit(text('title','공연명',card.title,left,46,red,style?.performance.titleFamily||'serif'),150);
+  const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:style?.performance.ruleHeight||2,color:ink});
   const rows=[
     {layers:[title],gap:0},
     {layers:[divider],gap:26}
@@ -368,7 +417,7 @@ export function layerBounds(ctx,layer) {
     return {x:layer.x-(layer.align==='right'?width:layer.align==='center'?width/2:0),y:layer.y,width,height:rows.length*layer.fontSize*PT*(layer.leading||1.2)};
   }
   if(layer.type==='line')return {x:layer.x,y:layer.y,width:layer.width,height:layer.height||3};
-  if(['image','rect','ellipse','ticket'].includes(layer.type))return {x:layer.x,y:layer.y,width:layer.width,height:layer.height};
+  if(['image','rect','ellipse','ticket','motif'].includes(layer.type))return {x:layer.x,y:layer.y,width:layer.width,height:layer.height};
   return {x:0,y:0,width:1080,height:1350};
 }
 export function hitLayer(ctx,layer,x,y){
@@ -386,6 +435,18 @@ export function paintScene(ctx,scene,texture,images={}) {
     ctx.globalAlpha=(layer.opacity??100)/100;
     if(layer.angle){const b=layerBounds(ctx,layer);ctx.translate(b.x+b.width/2,b.y+b.height/2);ctx.rotate(layer.angle*Math.PI/180);ctx.translate(-b.x-b.width/2,-b.y-b.height/2);}
     if(layer.type==='background')ctx.fillRect(0,0,1080,1350);
+    else if(layer.type==='motif'){
+      const art=weeklyMotifs[layer.motif];
+      ctx.translate(layer.x,layer.y);ctx.scale(layer.width/art.width,layer.height/art.height);
+      for(const path of art.paths){
+        const shape=new Path2D(path.d);
+        ctx.globalAlpha=(layer.opacity??100)/100*(path.opacity??1);
+        if(path.fill){ctx.fillStyle=path.fill==='accent'?layer.color:path.fill;ctx.fill(shape);}
+        if(path.stroke){
+          ctx.strokeStyle=path.stroke==='accent'?layer.color:path.stroke;ctx.lineWidth=path.strokeWidth;ctx.stroke(shape);
+        }
+      }
+    }
     else if(layer.type==='ticket'){
       ctx.translate(layer.x,layer.y);ctx.scale(layer.width/960,layer.height/1200);
       ctx.fill(new Path2D(ticketPath),'evenodd');
@@ -442,6 +503,15 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     const rotation=l.angle?` transform="rotate(${l.angle} ${b.x+b.width/2} ${b.y+b.height/2})"`:'';
     out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.posterShadow?' filter="url(#poster-shadow)"':rotation}>`);
     if(l.type==='background')out.push(`<rect width="1080" height="1350" fill="${l.color}"/>`);
+    else if(l.type==='motif'){
+      const art=weeklyMotifs[l.motif];
+      out.push(`<g transform="translate(${l.x} ${l.y}) scale(${l.width/art.width} ${l.height/art.height})">`);
+      for(const path of art.paths){
+        const fill=path.fill==='accent'?l.color:path.fill,stroke=path.stroke==='accent'?l.color:path.stroke;
+        out.push(`<path d="${path.d}" fill="${fill||'none'}"${stroke?` stroke="${stroke}" stroke-width="${path.strokeWidth}"`:''} opacity="${path.opacity??1}"/>`);
+      }
+      out.push('</g>');
+    }
     else if(l.type==='ticket')out.push(`<path d="${ticketPath}" transform="translate(${l.x} ${l.y}) scale(${l.width/960} ${l.height/1200})" fill="${l.color}" fill-rule="evenodd"/>`);
     else if(l.type==='corner')out.push(`<path transform="translate(${l.x} ${l.y})" d="M535 1350 C740 1280 950 1135 1080 1010 L1080 1350 Z" fill="${l.color}"/>`);
     else if(l.type==='texture')out.push(`<image width="1080" height="1350" href="${textureData}" opacity="${l.opacity/100}" style="mix-blend-mode:multiply" preserveAspectRatio="none"/>`);

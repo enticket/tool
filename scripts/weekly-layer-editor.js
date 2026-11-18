@@ -2,8 +2,8 @@
 const WD=window.EnticketWeeklyDesign;
 let paperAssetsPromise,paperTexture=null,paperImages={},selectedLayer=null,layerDrag=null,inlineEdit=null;
 let historyKey='',past=[],future=[],historyGroup='',historyTime=0,zoom='fit';
-const isPaper=()=>draft?.template==='paper-editorial';
-const canEdit=()=>isPaper()&&!busy&&!draft.jobId;
+const isLayerDraft=()=>WD.isLayerTemplate(draft?.template);
+const canEdit=()=>isLayerDraft()&&!busy&&!draft.jobId;
 const canvasContext=()=>$('wkLayerCanvas').getContext('2d');
 async function ensurePaperAssets(){
   if(!paperAssetsPromise)paperAssetsPromise=(async()=>{
@@ -26,6 +26,35 @@ async function paperPosters(cards){
   return posters;
 }
 function currentScene(){return draft?WD.pageScene(draft,Math.min(selectedCard,draft.cards.length+1),canvasContext(),paperImages):[];}
+function preserveTemplateAnchors(nextTemplate){
+  if(!draft.design||draft.template===nextTemplate)return;
+  const layeredTarget=WD.isLayerTemplate(nextTemplate);
+  if(!isLayerDraft()&&!layeredTarget)return;
+  const sourceTemplate=isLayerDraft()?draft.template:'paper-editorial';
+  if(sourceTemplate===nextTemplate)return;
+  const design=WD.upgradeDesign(draft.design);
+  const source={...draft,design,template:sourceTemplate},target={...source,template:nextTemplate};
+  let adjusted=false;
+  for(let index=0;index<draft.cards.length+2;index++){
+    const page=index===0?design:design.pages[WD.pageKey(draft,index)];
+    if(!page)continue;
+    const partial=Object.entries(page.layers).filter(([,l])=>(l.x!==undefined)!==(l.align!==undefined));
+    if(!partial.length)continue;
+    const before=WD.pageScene(source,index,canvasContext(),paperImages);
+    const after=layeredTarget?WD.pageScene(target,index,canvasContext(),paperImages):null;
+    for(const [id,override] of partial){
+      const from=before.find(l=>l.id===id),to=after?.find(l=>l.id===id);
+      if(from?.type!=='text'||(layeredTarget&&to?.type!=='text'))continue;
+      const fromAlign=from.align||'left';
+      if(override.align===undefined&&(!layeredTarget||fromAlign!==(to.align||'left'))){
+        override.align=fromAlign;adjusted=true;
+      }else if(override.x===undefined&&(!layeredTarget||from.x!==to.x)){
+        override.x=from.x;adjusted=true;
+      }
+    }
+  }
+  if(adjusted)draft.design=design;
+}
 function currentLayer(){return currentScene().find(l=>l.id===selectedLayer);}
 function pageModel(){
   const key=WD.pageKey(draft,selectedCard);
@@ -68,7 +97,7 @@ function undoStudio(redo=false){
 }
 function syncLayerEditor(){
   if(inlineEdit)commitInline();
-  const active=isPaper()&&!draft.jobId;
+  const active=isLayerDraft()&&!draft.jobId;
   $('wkLayerPanel').hidden=!active;$('wkLayerStage').hidden=!active;$('wkPreviews').hidden=active;
   $('wkCards').hidden=active;$('wkStudioTools').hidden=!active;$('wkLayerEmpty').hidden=!active;
   $('wkStudio').classList.toggle('is-editable',active);
@@ -82,7 +111,7 @@ function syncLayerEditor(){
   studioControls();requestAnimationFrame(fitCanvas);
 }
 function renderLayerList(){
-  if(!isPaper())return;
+  if(!isLayerDraft())return;
   $('wkLayerList').replaceChildren();
   for(const l of currentScene().slice().reverse()){
     const b=el('button');b.type='button';b.dataset.layer=l.id;b.setAttribute('aria-pressed',String(l.id===selectedLayer));
@@ -114,7 +143,7 @@ function fillLayerProperties(){
   $('wkLayerColorField').hidden=!l.color;$('wkLayerColor').value=l.color||'#000000';
   const hundredths=value=>Math.round(value*100)/100;
   $('wkLayerGeometry').hidden=l.x===undefined;$('wkLayerX').value=hundredths(l.x??0);$('wkLayerY').value=hundredths(l.y??0);
-  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text','ticket'].includes(l.type);$('wkLayerWidth').value=hundredths(l.width||950);$('wkLayerHeight').value=hundredths(l.height||3);$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
+  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text','ticket','motif'].includes(l.type);$('wkLayerWidth').value=hundredths(l.width||950);$('wkLayerHeight').value=hundredths(l.height||3);$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
   $('wkLayerRotationField').hidden=l.x===undefined;$('wkLayerRotation').value=l.angle||0;
   $('wkLayerOpacity').value=l.opacity??100;$('wkLayerOpacityValue').value=(l.opacity??100)+'%';
   $('wkLayerOpacityLabel').textContent=l.type==='texture'?'질감 강도':'불투명도';
@@ -126,7 +155,7 @@ function fillLayerProperties(){
 }
 function refreshStudio(){renderLayerList();fillLayerProperties();paintLayerPreview();}
 function studioControls(){
-  const enabled=canEdit(),l=isPaper()?currentLayer():null,mutable=enabled&&l&&!l.locked;
+  const enabled=canEdit(),l=isLayerDraft()?currentLayer():null,mutable=enabled&&l&&!l.locked;
   for(const b of document.querySelectorAll('[data-add-object]'))b.disabled=!enabled;
   $('wkUndo').disabled=!enabled||!past.length;$('wkRedo').disabled=!enabled||!future.length;
   for(const id of ['wkDelete','wkForward','wkBackward','wkAlignCenter'])$(id).disabled=!mutable;
@@ -147,7 +176,7 @@ function fitCanvas(){
   paintLayerPreview();
 }
 function paintLayerPreview(){
-  if(!isPaper()||draft.jobId)return;
+  if(!isLayerDraft()||draft.jobId)return;
   const ctx=canvasContext(),scene=currentScene();
   WD.paintScene(ctx,inlineEdit?scene.map(l=>l.id===inlineEdit.id?{...l,visible:false}:l):scene,paperTexture,paperImages);
   const l=scene.find(n=>n.id===selectedLayer),selection=$('wkLayerSelection');
@@ -155,7 +184,7 @@ function paintLayerPreview(){
   const b=WD.layerBounds(ctx,l);
   Object.assign(selection.style,{left:b.x/1080*100+'%',top:b.y/1350*100+'%',width:b.width/1080*100+'%',height:Math.max(b.height,3)/1350*100+'%',transform:`rotate(${l.angle||0}deg)`});
   selection.classList.toggle('is-locked',!!l.locked);
-  const transformable=!l.locked&&['text','rect','ellipse','line','image','ticket'].includes(l.type);
+  const transformable=!l.locked&&['text','rect','ellipse','line','image','ticket','motif'].includes(l.type);
   for(const n of selection.querySelectorAll('button'))n.hidden=!transformable;
   if(inlineEdit){const scale=$('wkLayerStage').clientWidth/1080;Object.assign($('wkInlineText').style,{left:b.x/1080*100+'%',top:b.y/1350*100+'%',width:Math.max(b.width+20,120)/1080*100+'%',height:(b.height+40)/1350*100+'%',font:WD.fontFor({...l,fontSize:l.fontSize*scale}),lineHeight:String(l.leading||1.2),color:l.color,transform:`rotate(${l.angle||0}deg)`,textAlign:l.align||'left'});}
   const thumb=$('wkFilmstrip').children[selectedCard]?.querySelector('img');
@@ -203,7 +232,7 @@ async function downloadLayerSource(){
   const [font,texture,license,profile]=await Promise.all([get('/assets/weekly/NanumMyeongjo-ExtraBold.woff2'),get('/assets/weekly/paper-grain.png'),get('/assets/weekly/OFL.txt'),get(WD.PROFILE_PHOTO)]);
   const [fontData,textureData,profileData]=await Promise.all([dataUrl(font),dataUrl(texture),dataUrl(profile)]),imageData={[WD.PROFILE_PHOTO]:profileData};
   for(const c of draft.cards)imageData[c.assetId]=await dataUrl(await asset(c.assetId));
-  const manifest={format:'enticket-weekly-design',version:2,width:1080,height:1350,template:'paper-editorial',title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards,week:draft.week,weekEnd:draft.weekEnd,design:WD.normalizeDesign(draft.design)};
+  const manifest={format:'enticket-weekly-design',version:2,width:1080,height:1350,template:draft.template,title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards,week:draft.week,weekEnd:draft.weekEnd,design:WD.normalizeDesign(draft.design)};
   const files={'design.json':new TextEncoder().encode(JSON.stringify(manifest,null,2)),'NanumMyeongjo-ExtraBold.woff2':new Uint8Array(await font.arrayBuffer()),'OFL.txt':new Uint8Array(await license.arrayBuffer()),'paper-grain.png':new Uint8Array(await texture.arrayBuffer()),'README.txt':new TextEncoder().encode('엔티켓 디자인 원본\n각 SVG는 편집 가능한 텍스트·도형·이미지 레이어입니다. 폰트와 이미지가 포함되어 있습니다.\ndesign.json에는 각 페이지의 요소와 배치가 저장됩니다.\n글꼴: 나눔명조 ExtraBold (SIL OFL 1.1). 외부 편집기의 웹폰트 지원에 따라 표시가 달라질 수 있습니다. 게시에는 사이트의 JPG 출력을 사용하세요.\n사이트에서는 저장한 디자인을 선택해 이어서 편집합니다. 원본 ZIP 가져오기는 지원하지 않습니다.\n')};
   files['enticket-instagram-profile.jpg']=new Uint8Array(await profile.arrayBuffer());
   for(let i=0;i<draft.cards.length+2;i++){
@@ -221,6 +250,7 @@ function setStudioPane(name){
     button.tabIndex=selected?0:-1;
   }
   for(const panel of document.querySelectorAll('[data-studio-content]'))panel.hidden=panel.dataset.studioContent!==name;
+  if(name==='templates')renderTemplatePreviews().catch(e=>status(e.message,true));
 }
 function initLayerEditor(){
   const tabs=[...document.querySelectorAll('[data-studio-pane]')];

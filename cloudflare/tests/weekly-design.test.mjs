@@ -34,6 +34,7 @@ test('studio model limits reject unknown layer types, URLs, malformed objects an
   for(const bad of [
     {...base,objects:[{id:'object-a',name:'bad',type:'script',x:0,y:0}]},
     {...base,objects:[{id:'object-a',name:'bad',type:'rect',url:'https://evil.test'}]},
+    {...base,layers:{motif:{motif:'alternate-shape'}}},
     {...base,layers:{title:{angle:181}}},
     {...base,layers:{title:{family:'url(evil)'}}},
     {...base,order:['title','title']},
@@ -228,6 +229,32 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
   assert.ok(edges.at(-1)<full.find(l=>l.id==='title').y);
   page.layers.poster.visible=false;
   assert.ok(!scene(1).some(l=>l.id.startsWith('nextPoster')));
+});
+test('featured templates have distinct covers and keep the weekly lineup on the performance pages',()=>{
+  const cards=Array.from({length:8},(_,i)=>({performanceId:'p'+i,assetId:'img'+i,title:'공연 '+i,schedule:'11.18',venue:'극장',price:'무료'}));
+  const images=Object.fromEntries(cards.map(c=>[c.assetId,{width:700,height:1000}]));
+  const draft={title:'공연이\n있는\n일주일.',subtitle:'11월 셋째 주 · 인천',closing:'엔티켓을 팔로우해 주세요.\nenticket.com',week:'2026-11-16',weekEnd:'2026-11-22',cards};
+  const coverLayouts=new Set();
+  for(const template of ['paper-editorial','blue-score','stage-marquee','matinee-program']){
+    const scene=index=>pageScene({...draft,template},index,undefined,images);
+    const cover=scene(0),closing=scene(cards.length+1);
+    coverLayouts.add(JSON.stringify(cover.filter(l=>l.visible).map(l=>[l.id,l.type,l.x,l.y,l.width,l.height,l.fontSize])));
+    assert.ok(cover.every(l=>!images[l.assetId]),template);
+    assert.equal(closing.find(l=>l.id==='profilePhoto').assetId,PROFILE_PHOTO);
+    if(template!=='paper-editorial'){
+      const design=normalizeDesign({version:2,layers:{motif:{x:100,opacity:70,color:'#184634'}}});
+      const edited=coverScene({...draft,template,design}).find(l=>l.id==='motif');
+      assert.deepEqual([edited.x,edited.opacity,edited.color],[100,70,'#184634']);
+      assert.equal(edited.motif,template);
+      assert.equal(closing.find(l=>l.id==='motif').motif,template);
+    }
+    for(const index of [1,4,8]){
+      const detail=scene(index);
+      assert.equal(detail.find(l=>l.id==='poster').assetId,cards[index-1].assetId);
+      assert.deepEqual(detail.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.assetId),cards.slice(index).map(c=>c.assetId));
+    }
+  }
+  assert.equal(coverLayouts.size,4);
 });
 test('weekly dates include the weekday, distinguish noon and midnight, and retain every session',()=>{
   const schedule=weeklyScheduleText([

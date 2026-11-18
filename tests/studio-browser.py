@@ -1,6 +1,7 @@
 from browser_support import accept_app_messages
 """Weekly editor against synthetic providers; no production account calls."""
 import os,json,io,base64,zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from email import policy
 from email.parser import BytesParser
@@ -84,6 +85,81 @@ with sync_playwright() as p:
  expect(page.locator('[data-studio-pane="templates"]')).to_be_focused()
  expect(page.locator('#wkTemplatesPane')).to_be_visible()
  page.keyboard.press('Home');expect(active_tool).to_be_focused()
+ # Featured templates should render distinct covers and expose the editable performance layers.
+ layer('title')
+ page.locator('#wkLayerX').fill('80')
+ pane('performances')
+ page.locator('#wkCandidates input').check()
+ expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000)
+ covers=set()
+ thumbnails=set()
+ for template in ['blue-score','stage-marquee','matinee-program']:
+  pane('templates')
+  choice=page.locator(f'#wkFeaturedTemplate [data-template="{template}"]')
+  expect(choice.locator('img[src]')).to_have_count(1,timeout=30000)
+  thumbnail=choice.locator('img').get_attribute('src')
+  assert thumbnail not in thumbnails,template
+  thumbnails.add(thumbnail)
+  choice.click()
+  expect(choice).to_have_attribute('aria-pressed','true')
+  expect(choice).to_be_enabled(timeout=30000)
+  expect(page.locator('#wkPreviews img')).to_have_count(3)
+  cover=page.locator('#wkPreviews img').first.evaluate("""async img=>{
+   await img.decode();
+   const canvas=document.createElement('canvas');canvas.width=32;canvas.height=40;
+   canvas.getContext('2d').drawImage(img,0,0,32,40);
+   return canvas.toDataURL();
+  }""")
+  assert cover not in covers,template
+  covers.add(cover)
+  if template=='stage-marquee':
+   page.locator('#wkFilmstrip button').first.click()
+   layer('title')
+   expect(page.locator('#wkLayerX')).to_have_value('80')
+   expect(page.locator('#wkLayerAlign')).to_have_value('left')
+  page.locator('#wkFilmstrip button').nth(1).click()
+  layer('poster')
+  expect(page.locator('#wkLayerX')).to_be_editable()
+  expect(page.locator('#wkLayerDownload')).to_be_visible()
+ page.locator('#wkLayerX').fill('72')
+ page.locator('#wkFilmstrip button').first.click()
+ layer('motif')
+ page.locator('#wkLayerOpacity').fill('83')
+ page.locator('#wkSave').click()
+ expect(page.locator('#wkStatus')).to_contain_text('저장했습니다',timeout=30000)
+ sample=db['drafts'][0]
+ assert sample['template']=='matinee-program'
+ assert sample['design']['layers']['motif']['opacity']==83
+ assert sample['design']['pages']['performance:studio-performance']['layers']['poster']['x']==72
+ page.reload(wait_until='networkidle')
+ page.locator('[data-tab="instagram"]').click()
+ page.locator('[data-ig-view="weekly"]').click()
+ page.locator('#wkDraftList').select_option(sample['id'])
+ expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000)
+ expect(page.locator('#wkTemplates [data-template="matinee-program"]')).to_have_attribute('aria-pressed','true')
+ page.locator('#wkFilmstrip button').first.click()
+ layer('title')
+ expect(page.locator('#wkLayerX')).to_have_value('80')
+ expect(page.locator('#wkLayerAlign')).to_have_value('left')
+ page.locator('#wkFilmstrip button').nth(1).click()
+ layer('poster')
+ expect(page.locator('#wkLayerX')).to_have_value('72')
+ with page.expect_download() as template_download:
+  page.locator('#wkLayerDownload').click()
+ with zipfile.ZipFile(template_download.value.path()) as archive:
+  manifest=json.loads(archive.read('design.json'))
+  assert manifest['template']==sample['template'] and manifest['design']==sample['design']
+  assert base64.b64encode(poster_bytes) not in archive.read('cover.svg')
+  assert base64.b64encode(poster_bytes) in archive.read('02.svg')
+  assert b'enticket.com' in archive.read('03.svg')
+  for file_name in ['cover.svg','03.svg']:
+   svg=ET.fromstring(archive.read(file_name))
+   motif=svg.find(".//{*}g[@id='motif']")
+   assert motif is not None and any(p.get('d','').strip() for p in motif.findall('.//{*}path')),file_name
+   if file_name=='cover.svg':assert motif.get('opacity')=='0.83'
+ page.locator('#wkNewDraft').click()
+ expect(page.locator('#wkPreviews img')).to_have_count(2,timeout=30000)
+ expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  def drag(start,end):
   page.mouse.move(*start);page.mouse.down();page.mouse.move(*end,steps=12);page.mouse.up()
  def center(selector):
@@ -223,5 +299,5 @@ with sync_playwright() as p:
  page.screenshot(path=str(artifact_dir/'studio-mobile.png'),full_page=True);page.set_viewport_size({'width':1440,'height':1000})
  page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkUndo')).to_be_disabled();expect(page.locator('[data-add-object="text"]')).to_be_disabled();assert state['publishes']==0
  assert not errors,errors
- print('PASS: studio selection, inline text, add/resize/rotate/move, undo/redo, duplicate/delete, lock/order/zoom, all-page persistence, SVG and JPG parity, mobile and review lock')
+ print('PASS: editable template switching and motif exports, studio selection, inline text, add/resize/rotate/move, undo/redo, duplicate/delete, lock/order/zoom, all-page persistence, SVG and JPG parity, mobile and review lock')
  browser.close()

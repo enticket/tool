@@ -18,6 +18,9 @@ def public_html():
     controls = (ROOT / 'scripts/shared-controls.js').read_text().replace('/* SHARED_CALENDAR_JS */', (ROOT / 'scripts/shared-calendar.js').read_text())
     html = html.replace('/* SHARED_CONTROLS_JS */', controls)
     module = (ROOT / 'cloudflare/src/weekly-design.mjs').read_text()
+    styles = (ROOT / 'cloudflare/src/weekly-styles.mjs').read_text()
+    module = module.replace("import { weeklyStyles, weeklyMotifs } from './weekly-styles.mjs';",
+                            re.sub(r'^export ', '', styles, flags=re.M))
     names = re.findall(r'^export (?:const|function) (\w+)', module, re.M)
     code = re.sub(r'^export ', '', module, flags=re.M)
     html = html.replace('/* WEEKLY_LAYER_EDITOR */', (ROOT / 'scripts/weekly-layer-editor.js').read_text())
