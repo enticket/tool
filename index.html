@@ -667,6 +667,8 @@ th {
 tbody tr:last-child td { border-bottom: none; }
 tr:nth-child(even) td { background: transparent; }
 tbody tr:hover td { background: var(--bg-grey-lighter); }
+#output tbody tr:hover td[rowspan] { background: transparent; }
+#output tr.grade-start td { border-top: 2px solid var(--txt-black-dark); }
 tr.total td {
   background: var(--color-fill-accent) !important;
   font-weight: var(--font-weight-700);
@@ -3844,6 +3846,11 @@ data.rounds.forEach((rd,ri)=>{
     row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
     if(it.fixedAmount!=null) row(`AH${r}`,`AK${r}`,it.fixedAmount,S({fill:FILL.greenL,fmt:F.wonS}));
     else row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
+    if(it.gradeStart){
+      for(let col=COL.H; col<=COL.AK; col++){
+        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'medium',color:{rgb:'548235'}};
+      }
+    }
     r++;
   });
   roundEndRows.push(r-1);  // 이 회차의 마지막 행
@@ -4533,9 +4540,15 @@ function renderValidationCard(result) {
         });
       });
     });
-    return [...map.values()].sort((a,b)=>
+    const rows = [...map.values()].sort((a,b)=>
       a.gradeRank-b.gradeRank || b.가격-a.가격 ||
       a.권종.localeCompare(b.권종,"ko") || a.등급.localeCompare(b.등급,"ko"));
+    rows.forEach((row,i)=>{
+      const prev=rows[i-1];
+      row.gradeStart=!!prev && !priceOnly && (prev.gradeRank!==row.gradeRank ||
+        (row.gradeRank===SEAT_GRADE_RANK.size && prev.등급!==row.등급));
+    });
+    return rows;
   }
   // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
   // 초대좌석권 = 초대 + 홀딩 수량 합 (둘 다 권종 행 집계에선 빠지지만 초대좌석권으로 모음)
@@ -4612,7 +4625,7 @@ function renderValidationCard(result) {
       rows.forEach((r,ri)=>{
         const amt=r.가격*r.합계;
         g.엔티켓+=r.엔티켓; g.예술회관+=r.예술회관; g.폐쇄몰+=r.폐쇄몰; g.합계+=r.합계; g.금액+=amt;
-        body+="<tr>";
+        body+=r.gradeStart ? '<tr class="grade-start">' : "<tr>";
         if(ri===0){ body+=`<td class="c" rowspan="${rows.length}">${idx}</td><td class="c" rowspan="${rows.length}">${esc(dt)}</td>`; }
         if(showTicketDetails) body+=`<td>${esc(r.등급)}</td><td class="l">${esc(r.권종)}</td>`;
         body+=`<td>${money(r.가격)}</td>`;
@@ -4760,7 +4773,7 @@ function renderValidationCard(result) {
       const dt=sessionDateTime(s);
       const rows=aggregate([s]);
       const items=rows.map(r=>({
-        grade:r.등급, name:r.권종, price:r.가격,
+        grade:r.등급, gradeStart:r.gradeStart, name:r.권종, price:r.가격,
         s:[r.엔티켓, r.예술회관, r.폐쇄몰, null],   // 현장판매 빈 칸 (엑셀에서 수동 기입)
       }));
       return { dt: dt?parseDateTime(dt):null, items };
