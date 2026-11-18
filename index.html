@@ -2680,7 +2680,7 @@ window.ICO = {
   function clearRender(){urls.forEach(URL.revokeObjectURL);urls=[];rendered=[];$('wkPreviews').replaceChildren();$('wkFilmstrip').replaceChildren();$('wkReview').hidden=true;$('wkConfirm').checked=false;controls();}
   function changed(){dirty=true;rendered=[];$('wkReview').hidden=true;$('wkConfirm').checked=false;$('wkStageState').textContent='수정됨 · 미리보기 갱신';controls();}
   function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
-  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:'공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
+  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:'enticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
   function fillDraft(){
     selectedCard=0;selectedLayer=null;clearRender();$('wkWeek').value=draft.week;
     for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
@@ -2934,7 +2934,6 @@ window.ICO = {
         rect(0,0,1080,1350,violet);newsText('ENTICKET',56,52,800,60,32,'#fff',900);
         newsText('마음에 든 공연,\n저장해 두세요.',56,210,968,300,98,'#fff',900);
         newsText(d.closing,60,560,950,230,40,'#e9def7',500);
-        const count=Math.min(posters.length,3);for(let j=0;j<count;j++)fullPoster(posters[j],56+(968-count*278+18)/2+j*278,855,260,310);
         line(56,1240,1024,1240,'#ffffff60');newsText('@en__ticket',56,1278,750,45,28,'#fff',700);arrow(952,1300,'#fff');
       }else{
         const img=posters[index-1];

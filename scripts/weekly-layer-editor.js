@@ -20,7 +20,6 @@ function pageModel(){
   if(key==='cover')return draft.design;
   if(!draft.design.pages[key]){
     draft.design.pages[key]={layers:{},objects:[],order:[]};
-    if(key==='closing')draft.design.pages[key].layout='program';
   }
   return draft.design.pages[key];
 }

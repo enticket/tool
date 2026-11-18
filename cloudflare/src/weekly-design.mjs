@@ -69,7 +69,7 @@ export function normalizeDesign(input) {
     if(page.layout!==undefined){
       if(key!=='closing'||page.layout!=='program')invalid();
       clean[key].layout=page.layout;
-    }else if(key==='closing'&&!Object.keys(page.layers).length&&!clean[key].objects.length&&!clean[key].order.length)clean[key].layout='program';
+    }
   }
   return {version:2,...pageInput(input,true),pages:clean};
 }
@@ -90,80 +90,23 @@ export function coverScene(draft) {
     date:draft.week.slice(5).replace('-','.')+'—'+draft.weekEnd.slice(5).replace('-','.')};
   return applyPage(LAYERS.map(base=>({...base,...(content[base.id]!==undefined?{text:content[base.id]}:{})})),design);
 }
-// Fit the default copy before applying the user's explicit layer settings.
-function fitProgramText(ctx,layer,maxHeight,keepDateLines=false){
-  if(!ctx)return;
-  const lineHeight=PT*layer.leading;
-  const maxLines=keepDateLines?layer.text.split('\n').length:Infinity;
-  function fits(){
-    const lines=textRows(ctx,layer).length;
-    return lines<=maxLines&&lines*layer.fontSize*lineHeight<=maxHeight;
-  }
-  if(fits())return;
-  let low=12,high=layer.fontSize;
-  while(high-low>0.25){
-    layer.fontSize=(low+high)/2;
-    if(fits())low=layer.fontSize;
-    else high=layer.fontSize;
-  }
-  layer.fontSize=Math.floor(low*4)/4;
-}
-
-function programClosing(d,theme,page,ctx){
+function closingScene(draft,theme,page,ctx){
   const paper=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
-  const ink=theme.find(l=>l.id==='subtitle').color,red=theme.find(l=>l.id==='title').color;
-  const count=d.cards.length, sparse=count<=3;
-  const bandHeight=count===0?750:count===1?520:sparse?430:count<=5?350:296;
-  const base=[paper,{id:'closingBand',name:'날짜 바탕',type:'rect',color:red,x:0,y:0,width:1080,height:bandHeight},texture];
-  function text(id,name,value,x,y,width,fontSize,color,family,extra={}){
-    const layer={id,name,type:'text',text:value,x,y,width,fontSize,color,family,leading:1.14,...extra};
-    base.push(layer);
-    return layer;
+  const red=theme.find(l=>l.id==='title').color,ink=theme.find(l=>l.id==='subtitle').color;
+  const footer={id:'closingCopy',name:'마지막 안내',type:'text',text:draft.closing,
+    x:74,y:1078,width:746,fontSize:25,leading:1.35,family:'sans',weight:500,color:ink};
+  if(ctx){
+    while(footer.fontSize>12&&layerBounds(ctx,footer).height>220)footer.fontSize--;
   }
-  function rule(id,name,x,y,width,color,opacity=100){
-    base.push({id,name,type:'line',x,y,width,height:2,color,opacity});
-  }
-  text('closingTitle','목록 제목','이번 주 공연 일정',64,44,730,25,paper.color,'serif');
-  text('count','지역 · 공연 수','인천  /  '+count+'편',1016,51,230,18,paper.color,'sans',{align:'right',weight:600});
-  rule('topRule','상단 구분선',64,104,952,paper.color,65);
-  const period=d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.');
-  const dateSize=sparse?104:88;
-  const date=text('date','주간 날짜',period,61,bandHeight-PT*dateSize*1.18-34,958,dateSize,paper.color,'serif');
-  fitProgramText(ctx,date,PT*dateSize*1.2);
-  const listTop=bandHeight+(sparse?66:36);
-  const listEnd=1114;
-  const rowHeight=(listEnd-listTop)/Math.max(1,count);
-  d.cards.forEach((card,i)=>{
-    const y=listTop+rowHeight*i;
-    if(i)rule('entryLine'+i,(i+1)+'번 구분선',64,y-12,952,ink,24);
-    const dates=[...new Set(String(card.schedule||'').match(/\d{2}\.\d{2}/g)||[])];
-    const datesPerLine=dates.length>3?2:1;
-    const dateLines=[];
-    for(let start=0;start<dates.length;start+=datesPerLine){
-      dateLines.push(dates.slice(start,start+datesPerLine).join(' · '));
-    }
-    const dateText=dateLines.join('\n')||card.schedule||'일정 미정';
-    const dateLayer=text('entryDate'+i,(i+1)+'번 날짜',dateText,64,y+3,174,sparse?24:19,red,'sans',{weight:600});
-    fitProgramText(ctx,dateLayer,rowHeight-20,dates.length>0);
-    const hasVenue=sparse&&card.venue;
-    const title=text('entryTitle'+i,(i+1)+'번 공연명',card.title,266,y,750,sparse?39:26,ink,'serif');
-    if(ctx){
-      ctx.font=fontFor(title);
-      const width=ctx.measureText(title.text).width;
-      // A small size adjustment keeps the last few characters on the same line.
-      if(width>title.width&&width<=title.width*1.12)title.fontSize=Math.floor(title.fontSize*title.width/width*4)/4;
-    }
-    fitProgramText(ctx,title,rowHeight-(hasVenue?64:22));
-    if(hasVenue){
-      const titleHeight=ctx?layerBounds(ctx,title).height:title.fontSize*PT*title.leading;
-      const venue=text('entryVenue'+i,(i+1)+'번 공연장',card.venue,266,y+titleHeight+10,750,18,ink,'sans',{weight:500});
-      fitProgramText(ctx,venue,40);
-    }
-  });
-  rule('bottomRule','안내 구분선',64,1146,count?952:260,red);
-  const copy=text('closingCopy','마지막 안내',d.closing,64,1181,952,24,ink,'serif');
-  fitProgramText(ctx,copy,135);
-  return applyPage(base,page);
+  return applyPage([
+    paper,
+    {id:'corner',name:'붉은 곡선',type:'corner',x:140,y:80,color:red},
+    texture,
+    {id:'closingTitle',name:'마무리 인사',type:'text',text:'공연장에서\n만나요.',
+      x:64,y:397,width:950,fontSize:126,leading:1.08,family:'serif',color:red},
+    {id:'bottomRule',name:'안내 구분선',type:'line',x:74,y:1036,width:746,height:2,color:red},
+    footer
+  ],page);
 }
 
 export function pageScene(d,index=0,ctx){
@@ -171,28 +114,16 @@ export function pageScene(d,index=0,ctx){
   const design=normalizeDesign(d.design),key=pageKey(d,index),last=index===d.cards.length+1;
   const theme=coverScene(d),color=id=>theme.find(l=>l.id===id).color,ink=color('subtitle'),red=color('title');
   const page=design.pages?.[key];
-  // Previously edited closing pages retain the layout their overrides were authored against.
-  if(last&&(!page||page.layout==='program'))return programClosing(d,theme,page,ctx);
+  if(last)return closingScene(d,theme,page,ctx);
   const base=theme.filter(l=>['paper','texture','topRule'].includes(l.id)).map(l=>({...l}));
   const text=(id,name,value,x,y,width,fontSize,color=ink,family='sans')=>base.push({id,name,type:'text',text:value,x,y,width,fontSize,color,family,leading:1.2});
   text('handle','인스타 계정','@en__ticket',1016,42,400,22,ink);base.at(-1).align='right';
-  if(last){
-    text('closingTitle','목록 제목','이번 주의 공연',66,160,950,54,red,'serif');
-    d.cards.forEach((card,i)=>{
-      const y=300+i*104;base.push({id:'entryLine'+i,name:(i+1)+'번 구분선',type:'line',x:66,y:y-10,width:950,height:1,color:ink});
-      text('entryNumber'+i,(i+1)+'번 번호',String(i+1).padStart(2,'0'),66,y+7,60,16.5,red);
-      text('entryTitle'+i,(i+1)+'번 공연명',card.title,150,y,680,25.5,ink,'serif');
-      text('entryDate'+i,(i+1)+'번 날짜',[...new Set(card.schedule.match(/\d{2}\.\d{2}/g)||[])].join(' / '),850,y+5,166,17.25);
-    });
-    text('closingCopy','마지막 안내',d.closing,66,1160,950,20.25);
-  }else{
-    const card=d.cards[index-1];text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),66,150,250,18.75,red);
-    text('title','공연명',card.title,66,215,950,40,red,'serif');
-    base.push({id:'poster',name:'공연 포스터',type:'image',x:66,y:410,width:600,height:760,assetId:card.assetId});
-    text('scheduleLabel','일시 제목','공연 일시',708,432,310,18.75,red);text('schedule','공연 일시',card.schedule,708,490,310,22.5);
-    text('venueLabel','장소 제목','장소',708,800,310,18.75,red);text('venue','공연장',card.venue,708,852,310,22.5);
-    text('price','가격 안내',card.price,708,1040,310,20.25);
-  }
+  const card=d.cards[index-1];text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),66,150,250,18.75,red);
+  text('title','공연명',card.title,66,215,950,40,red,'serif');
+  base.push({id:'poster',name:'공연 포스터',type:'image',x:66,y:410,width:600,height:760,assetId:card.assetId});
+  text('scheduleLabel','일시 제목','공연 일시',708,432,310,18.75,red);text('schedule','공연 일시',card.schedule,708,490,310,22.5);
+  text('venueLabel','장소 제목','장소',708,800,310,18.75,red);text('venue','공연장',card.venue,708,852,310,22.5);
+  text('price','가격 안내',card.price,708,1040,310,20.25);
   base.push({id:'bottomRule',name:'하단 구분선',type:'line',x:66,y:1268,width:950,height:2,color:red});
   text('date','기간',d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.'),66,1290,700,18.75);
   return applyPage(base,design.pages?.[key]);

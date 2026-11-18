@@ -171,7 +171,7 @@ with sync_playwright() as p:
  page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkLayerPanel')).to_be_hidden();expect(page.locator('#wkLayerDownload')).to_be_disabled();assert state['publishes']==0
  archived=bytes(images[0]);page.locator('#wkRender').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000);assert bytes(images[0])==archived
  page.locator('#wkUnlock').click();pane('properties');expect(page.locator('#wkLayerPanel')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
- # Eight performances retain full titles on the final index and produce ten images.
+ # Eight performances produce ten images with the same closing artwork.
  paper_base=next(p for p in db['performances'] if p['title']=='11월의 작은 음악회')
  for n in range(2,9):
   sample={**paper_base,'id':f'paper-capacity-{n}','assetId':f'paper-capacity-{n}','title':f'인천시립교향악단 기획연주회 가을밤의 클래식 {n}'}
@@ -180,7 +180,9 @@ with sync_playwright() as p:
  for n in range(1,8):
   page.locator('[data-studio-pane="performances"]').click()
   page.locator('#wkCandidates input').nth(n).check();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
- expect(page.locator('#wkPreviews img')).to_have_count(10);page.locator('#wkFilmstrip button').last.click();page.locator('#wkLayerStage').screenshot(path=str(artifact_dir/'paper-eight-index.png'))
+ expect(page.locator('#wkPreviews img')).to_have_count(10);page.locator('#wkFilmstrip button').last.click();page.locator('#wkLayerStage').screenshot(path=str(artifact_dir/'paper-eight-closing.png'))
+ expect(page.locator('#wkLayerList [data-layer="closingTitle"]')).to_have_count(1)
+ expect(page.locator('#wkLayerList [data-layer^="entry"]')).to_have_count(0)
  assert page.locator('#wkStatus').get_attribute('data-error')!='true'
  for n in range(7,0,-1):
   page.locator('[data-studio-pane="performances"]').click()
