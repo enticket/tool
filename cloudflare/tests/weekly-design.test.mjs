@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeDesign,coverScene,coverSvg,performanceIntro,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
+import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
 
 test('layer settings preserve exact point sizes and reject executable or unbounded fields',()=>{
   const design={version:1,layers:{title:{fontSize:165,x:90,color:'#ac1010'},texture:{opacity:81},handle:{visible:false}}};
@@ -130,12 +130,11 @@ test('editable closing copy adopts the follow invitation and the public ticketin
   assert.equal(draft.design.pages.closing.objects[0].text,'자세히 보기 enticket.com.');
 });
 
-test('performance details follow the uncropped poster and flow past wrapped copy',()=>{
-  const description=performanceIntro({title:'작은 음악회',description:'🎭 작은 음악회\n\n세 연주자의 이야기입니다.\n\n📍 장소 | 아트홀'});
-  assert.equal(description,'세 연주자의 이야기입니다.');
-  assert.equal(performanceIntro({title:'작은 음악회',description:'작은 음악회\n📅 일시 | 11.20'}),'');
-  const card={performanceId:'p',assetId:'img',title:'작은 음악회',description,schedule:'11.20 19:30',venue:'아트홀',price:''};
+test('legacy introductions take up no space between the poster, title and details',()=>{
+  const card={performanceId:'p',assetId:'img',title:'작은 음악회',schedule:'11.20 19:30',venue:'아트홀',price:''};
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card]};
+  const oldPage={layers:{description:{text:'편집한 소개',visible:true}},order:['paper','description']};
+  const legacy={...draft,cards:[{...card,description:'저장된 소개'}],design:{...normalizeDesign(),pages:{'performance:p':oldPage}}};
   const ctx={measureText(s){return {width:s.length*parseFloat(this.font.match(/([\d.]+)px/)[1])};}};
   for(const [width,height] of [[450,800],[800,450],[600,600]]){
     const scene=pageScene(draft,1,ctx,{img:{width,height}});
@@ -144,8 +143,13 @@ test('performance details follow the uncropped poster and flow past wrapped copy
     assert.equal(poster.topLeft,true);
     assert.equal(poster.x,layer('title').x);
     assert.equal(layer('title').y,poster.y+Math.min(poster.height,poster.width*height/width)+32);
-    assert.ok(layer('description').y>layer('title').y);
-    assert.ok(layer('schedule').y>layer('description').y);
+    assert.equal(layer('description'),undefined);
+    const older=pageScene(legacy,1,ctx,{img:{width,height}});
+    assert.ok(older.every(l=>l.id!=='description'));
+    for(const id of ['poster','title','topRule','schedule','venue']){
+      assert.deepEqual(older.find(l=>l.id===id),layer(id));
+    }
+    assert.ok(layer('schedule').y>layer('title').y);
     assert.equal(layer('priceLabel').text,'');
     assert.match(coverSvg(ctx,scene,{imageData:{img:'data:image/jpeg;base64,AA=='}}),/xMinYMin meet/);
   }

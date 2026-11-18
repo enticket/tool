@@ -2695,7 +2695,7 @@ window.ICO = {
     const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
     if(!candidates.length)$('wkCandidates').append(el('p','이 주에 등록된 공연이 없습니다.','ig-hint'));
     for(const p of candidates){const row=el('label',undefined,'wk-candidate'),check=el('input');check.type='checkbox';check.checked=draft.cards.some(c=>c.performanceId===p.id);check.disabled=!!draft.jobId;
-      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,description:WD.performanceIntro(p),schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
+      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
       const info=el('span',undefined,'wk-performance-info');
       const name=el('strong',p.title);
       name.title=p.title;
@@ -2999,14 +2999,7 @@ window.ICO = {
     try{
     if(draft.jobId){for(let i=0;i<draft.cards.length+2;i++){const blob=await api('rendered',{id:draft.id,index:String(i)},true);checkCurrent();rendered.push(blob);}}
     else{
-      if(draft.template==='paper-editorial'){
-        for(const card of draft.cards){
-          if(card.description!==undefined)continue;
-          const source=performances.find(p=>p.id===card.performanceId);
-          if(source){card.description=WD.performanceIntro(source);if(card.description)dirty=true;}
-        }
-        await ensurePaperAssets();
-      }
+      if(draft.template==='paper-editorial')await ensurePaperAssets();
       await document.fonts.ready;checkCurrent();
       const template=draft.template||'classic';const posters=template==='classic'?[]:template==='paper-editorial'?await paperPosters(draft.cards):await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId))));
       checkCurrent();

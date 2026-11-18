@@ -155,21 +155,6 @@ function closingScene(draft,theme,page,ctx){
   return applyPage(base,page);
 }
 
-// The Instagram feed caption starts with the title and an optional introduction,
-// followed by labelled details. Keep only the opening prose in the weekly card.
-export function performanceIntro(performance){
-  const lines=String(performance.description||'').trim().split(/\r?\n/).map(line=>line.trim());
-  if(lines[0]===performance.title||/^(🎭|공연명\s*[:|｜])/.test(lines[0]))lines.shift();
-  while(lines.length&&!lines[0])lines.shift();
-  const prose=[];
-  for(const line of lines){
-    if(!line||/^(?:[#📅🗓📍👥⏱🎟📞]|https?:\/\/|예매는 프로필|(?:공연\s*)?(?:일시|일정|날짜|장소|가격|시간|티켓|문의|관람\s*연령)\s*[:|｜])/u.test(line))break;
-    prose.push(line);
-  }
-  const intro=prose.join(' ');
-  return intro.length>220?intro.slice(0,219).trimEnd()+'…':intro;
-}
-
 function performanceScene(d,index,theme,page,ctx,images){
   const card=d.cards[index-1],image=images?.[card.assetId];
   const left=66,right=1014,ruleY=1260;
@@ -202,11 +187,9 @@ function performanceScene(d,index,theme,page,ctx,images){
   text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
   const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
-  const intro=fit(text('description','공연 소개',card.description,left,27,ink,'sans',{weight:500,leading:1.4}),165);
   const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:2,color:ink});
   const rows=[
     {layers:[title],gap:0},
-    {layers:[intro],gap:15},
     {layers:[divider],gap:26}
   ];
   for(const [id,label,budget] of [['schedule','공연 일시',156],['venue','장소',105],['price','가격',105]]){
@@ -236,9 +219,8 @@ function performanceScene(d,index,theme,page,ctx,images){
   add({id:'bottomRule',name:'하단 구분선',type:'line',x:left,y:ruleY,width:right-left,height:2,color:red});
   text('date','기간',d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.'),left,18.75,ink,'sans',{y:1283});
   text('handle','인스타 계정','@en__ticket',right,18.75,ink,'sans',{align:'right',width:400,y:1283});
-  if(page?.order?.includes('paper')){
-    const missing=['description','priceLabel'].filter(id=>!page.order.includes(id));
-    if(missing.length)page={...page,order:page.order.concat(missing)};
+  if(page?.order?.includes('paper')&&!page.order.includes('priceLabel')){
+    page={...page,order:page.order.concat('priceLabel')};
   }
   return applyPage(base,page);
 }

@@ -57,7 +57,7 @@ function editText(value){
   const l=currentLayer();if(!l||l.locked)return;
   const field=selectedCard===0?({title:'title',subtitle:'subtitle'}[l.id]):selectedCard===draft.cards.length+1?(l.id==='closingCopy'?'closing':null):null;
   if(field)mutate(page=>{draft[field]=value;$(field==='title'?'wkTitle':field==='subtitle'?'wkSubtitle':'wkClosing').value=value;if(page.layers[l.id])delete page.layers[l.id].text;},'text-'+l.id);
-  else if(selectedCard>0&&selectedCard<=draft.cards.length&&['title','description','schedule','venue','price'].includes(l.id))mutate(page=>{draft.cards[selectedCard-1][l.id]=value;if(page.layers[l.id])delete page.layers[l.id].text;renderCards();},'text-'+l.id);
+  else if(selectedCard>0&&selectedCard<=draft.cards.length&&['title','schedule','venue','price'].includes(l.id))mutate(page=>{draft.cards[selectedCard-1][l.id]=value;if(page.layers[l.id])delete page.layers[l.id].text;renderCards();},'text-'+l.id);
   else editLayer({text:value},'text-'+l.id);
 }
 function undoStudio(redo=false){
