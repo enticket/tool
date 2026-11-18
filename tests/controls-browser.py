@@ -24,7 +24,7 @@ with sync_playwright() as p:
   page.screenshot(path=str(artifacts/('fallback-select.png' if fallback else 'weekly-select.png')))
   page.keyboard.press('Escape');expect(page.locator('#wkDraftList')).to_be_focused()
   # Modal selects remain above their dialog and dispatch the existing field handlers.
-  page.locator('[data-ig-view=calendar]').click();page.locator('#wkNewPerformance').click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
+  page.locator('[data-ig-view=calendar]').click();page.locator('#wkCalendar .wk-day-date').first.click();expect(page.locator('#wkPerformanceDialog')).to_be_visible()
   price=page.locator('#wkPPriceKind');price.click();page.get_by_role('option',name='유료',exact=True).click();expect(price).to_have_value('paid');expect(page.locator('#wkPPrice')).to_be_enabled()
   price.click();page.keyboard.press('Home');page.keyboard.press('ArrowDown');page.keyboard.press('Enter');expect(price).to_have_value('free');expect(page.locator('#wkPPrice')).to_be_disabled()
   # Keyboard cancellation leaves the value and the parent edit dialog intact.
