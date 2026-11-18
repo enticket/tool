@@ -129,6 +129,10 @@ with sync_playwright() as p:
                   Number(type.nextElementSibling.textContent.replace(/[₩,]/g,''))];
         })""")
     assert preview_order() == expected_order
+    boundaries = table.locator('tr.grade-start')
+    expect(boundaries).to_have_count(4)
+    assert boundaries.first.locator('td').first.evaluate(
+        'cell => getComputedStyle(cell).borderTop') == '1px solid rgb(0, 0, 0)'
     first = detail_rows.first
     merged = first.locator('td[rowspan]')
     ticket = first.locator('td.l')
