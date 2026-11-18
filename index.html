@@ -1387,6 +1387,9 @@ td.c { text-align: center; }
 
 .wk-day::before{content:"";grid-area:1/1;padding-top:100%;pointer-events:none}.wk-day-content{grid-area:1/1;min-width:0;padding:6px;display:flex;flex-direction:column;gap:3px}@media(max-width:640px){.wk-day-content{padding:3px}}
 .wk-calendar-savebar{margin-top:16px;font-size:12px;color:var(--txt-black-dark)}.wk-draggable{cursor:grab;touch-action:none;user-select:none}.wk-draggable:active{cursor:grabbing}.wk-dragging{opacity:.35}.wk-moved{box-shadow:inset 0 0 0 1px #9461c4}.wk-drop-target{background:#eee6f8;box-shadow:inset 0 0 0 2px #9461c4}.wk-drag-ghost{position:fixed;z-index:10000;pointer-events:none;opacity:.9;box-shadow:0 5px 18px #0003}
+#wkPerformanceTip { position:fixed; z-index:var(--layer-z-index-tooltip); pointer-events:none; width:max-content; max-width:min(300px,calc(100vw - 20px)); padding:12px 15px; background:var(--bg-white-normal); color:var(--txt-black-darkest); border:1px solid var(--color-border-neutral); border-radius:10px; box-shadow:0 5px 20px #24133d24; overflow-wrap:anywhere; font-size:13px; line-height:1.5; }
+#wkPerformanceTip strong { display:block; font-size:14px; margin-bottom:3px; }
+#wkPerformanceTip small { display:block; color:var(--color-text-accent); }
 .wk-event.wk-linked-highlight{background:#eee3fb;border-color:#9461c4;box-shadow:0 0 0 1px #9461c470,0 0 12px #9461c43d;color:var(--txt-black-darkest)}
 .wk-template-picker{margin:20px 0 24px;padding:20px;border:1px solid var(--color-border-neutral);border-radius:14px;background:var(--bg-white-normal)}.wk-template-picker h3{margin:0;font-size:15px}.wk-template-picker .ig-hint{margin:5px 0 0}.wk-template-picker #wkTemplateName{color:var(--color-text-accent);font-size:12px}.wk-templates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}.wk-template{display:flex;flex-direction:column;align-items:stretch;text-align:left;min-width:0;padding:8px;border:1px solid var(--color-border-neutral);border-radius:10px;background:var(--bg-white-normal);color:var(--txt-black-darkest);cursor:pointer;font:inherit;transition:border-color .15s,box-shadow .15s}.wk-template img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:5px}.wk-template strong{font-size:12px;margin:10px 2px 4px}.wk-template span{font-size:10px;color:var(--txt-black-dark);margin:0 2px 3px;line-height:1.5}.wk-template[aria-pressed="true"]{border-color:#7c4aaa;box-shadow:0 0 0 2px #7c4aaa25}.wk-template:hover:not(:disabled){border-color:#7c4aaa}.wk-template:disabled{cursor:default;opacity:.65}.wk-template:focus-visible{outline:2px solid #7c4aaa;outline-offset:3px}@media(max-width:640px){.wk-template-picker{padding:14px}.wk-templates{display:flex;overflow-x:auto;gap:10px;padding:3px 3px 8px;margin-inline:-3px;scroll-snap-type:x proximity}.wk-template{flex:0 0 132px;scroll-snap-align:start}.wk-template span{font-size:10px}}
 .wk-template-info{display:flex;flex-direction:column}.wk-template .wk-template-info strong{font-weight:700}.wk-template .wk-template-info>span{font-size:11px;line-height:1.6}#wkFeaturedTemplate .wk-template{display:flex;flex-direction:row;align-items:center;gap:22px;width:100%;margin-top:16px;padding:14px 20px}#wkFeaturedTemplate .wk-template img{width:130px;flex-shrink:0;border-radius:2px}#wkFeaturedTemplate .wk-template strong{font-size:19px;margin:0 0 10px}#wkFeaturedTemplate .wk-template-info>span{font-size:13px}#wkFeaturedTemplate .wk-template .wk-template-tag{margin-top:16px;color:var(--color-text-accent);font-size:11px}#wkPreviousTemplates{margin-top:16px}#wkPreviousTemplates summary{font-size:12px;color:var(--txt-black-dark);cursor:pointer}@media(max-width:640px){#wkFeaturedTemplate .wk-template{gap:14px;padding:10px}#wkFeaturedTemplate .wk-template img{width:100px}#wkFeaturedTemplate .wk-template strong{font-size:16px}#wkFeaturedTemplate .wk-template-info>span{font-size:11px}}
@@ -2661,21 +2664,56 @@ window.ICO = {
     $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
   }
   function highlightPerformance(id){id=id||document.activeElement?.closest('#wkCalendar .wk-event, #wkUnscheduled .wk-event')?.dataset.performanceId;for(const button of document.querySelectorAll('#wkCalendar .wk-event, #wkUnscheduled .wk-event'))button.classList.toggle('wk-linked-highlight',!!id&&button.dataset.performanceId===id);}
-  function performanceButton(p){const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));const title=el('span',p.title);title.className='wk-event-title';b.append(title);b.title=[p.title,p.venue].filter(Boolean).join('\n');b.type='button';b.dataset.performanceId=p.id;b.addEventListener('pointerenter',()=>highlightPerformance(p.id));b.addEventListener('pointerleave',()=>highlightPerformance(null));b.addEventListener('focus',()=>highlightPerformance(p.id));b.addEventListener('blur',()=>highlightPerformance(null));b.addEventListener('click',()=>run(()=>openPerformance(p)));return b;}
+  const tip=el('div');
+  tip.id='wkPerformanceTip'; tip.setAttribute('role','tooltip'); tip.hidden=true;
+  $('wkCalendarView').append(tip);
+  let tipTimer, tipOwner;
+  function hideTip(){
+    clearTimeout(tipTimer); tip.hidden=true;
+    tipOwner?.removeAttribute('aria-describedby'); tipOwner=null;
+  }
+  function queueTip(button,p){
+    hideTip(); tipOwner=button;
+    tipTimer=setTimeout(()=>{
+      if(calendarDrag || !button.getClientRects().length)return;
+      const date=button.dataset.fromDate;
+      const timing=date ? date+' · '+button.querySelector('small').textContent :
+        p.sessions.map(s=>[s.date,s.time].filter(Boolean).join(' ')).join(', ') || '일정 미정';
+      tip.replaceChildren(el('strong',p.title),el('div',p.venue || '공연장 미정'),el('small',timing));
+      tip.hidden=false; button.setAttribute('aria-describedby',tip.id);
+      const rect=button.getBoundingClientRect();
+      tip.style.left=Math.max(8,Math.min(rect.left,innerWidth-tip.offsetWidth-8))+'px';
+      tip.style.top=(rect.bottom+8+tip.offsetHeight<=innerHeight ? rect.bottom+8 : Math.max(8,rect.top-tip.offsetHeight-8))+'px';
+    },320);
+  }
+  document.addEventListener('scroll',hideTip,true);
+  window.addEventListener('resize',hideTip);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTip();});
+  function performanceButton(p){
+    const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));
+    b.append(el('span',p.title,'wk-event-title')); b.type='button'; b.dataset.performanceId=p.id;
+    b.addEventListener('pointerenter',e=>{highlightPerformance(p.id);if(e.pointerType!=='touch' && !e.buttons)queueTip(b,p);});
+    b.addEventListener('focus',()=>{highlightPerformance(p.id);if(b.matches(':focus-visible'))queueTip(b,p);});
+    for(const event of ['pointerleave','blur'])b.addEventListener(event,()=>{highlightPerformance(null);if(tipOwner===b)hideTip();});
+    b.addEventListener('pointerdown',hideTip);
+    b.addEventListener('click',()=>{hideTip();run(()=>openPerformance(p));});
+    return b;
+  }
   function renderCalendar(){
+    hideTip();
     const items=performances.map(p=>calendarChanges.has(p.id)?{...p,sessions:calendarChanges.get(p.id).sessions}:p);
     const month=$('wkMonth').value,first=new Date(month+'-01T00:00:00Z');if(!Number.isFinite(+first))return;
     $('wkMonthTitle').textContent=first.getUTCFullYear()+'년 '+(first.getUTCMonth()+1)+'월';$('wkPendingCount').textContent=items.filter(p=>!p.sessions.length||p.status==='hidden').length;const grid=$('wkCalendar');grid.replaceChildren();for(const day of ['월','화','수','목','금','토','일'])grid.append(el('strong',day,'wk-day-name'));
     const offset=(first.getUTCDay()+6)%7;for(let i=0;i<offset;i++){const prior=new Date(+first-(offset-i)*86400000);const cell=el('div',String(prior.getUTCDate()),'wk-day wk-outside');cell.dataset.date=prior.toISOString().slice(0,10);grid.append(cell);}
     const count=new Date(first.getUTCFullYear(),first.getUTCMonth()+1,0).getDate();
     for(let i=1;i<=count;i++){const date=month+'-'+String(i).padStart(2,'0'),cell=el('div',undefined,'wk-day');const dateButton=el('button',String(i),'wk-day-date'+(date===today()?' wk-today':''));dateButton.title=date+' 공연 등록';dateButton.addEventListener('click',()=>run(async()=>{await openPerformance();setPerformanceSessions(date);}));cell.dataset.date=date;cell.append(dateButton);
-      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.title=[p.title,times,p.venue].filter(Boolean).join('\n');button.append(el('small',times));
+      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.append(el('small',times));
         button.dataset.performanceId=p.id;button.dataset.fromDate=date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);}grid.append(cell);}
     for(let i=1;i<=(7-(offset+count)%7)%7;i++){const cell=el('div',String(i),'wk-day wk-outside');cell.dataset.date=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,i)).toISOString().slice(0,10);grid.append(cell);}
     for(const cell of grid.querySelectorAll('.wk-outside')){
       for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===cell.dataset.date))){
         const button=performanceButton(p),times=p.sessions.filter(s=>s.date===cell.dataset.date).map(s=>s.time||'시간 미정').join(', ');
-        button.title=[p.title,times,p.venue].filter(Boolean).join('\n');button.append(el('small',times));button.dataset.performanceId=p.id;button.dataset.fromDate=cell.dataset.date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);
+        button.append(el('small',times));button.dataset.performanceId=p.id;button.dataset.fromDate=cell.dataset.date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);
       }
     }
     for(const cell of grid.querySelectorAll('.wk-day')){const content=el('div',undefined,'wk-day-content');content.append(...cell.childNodes);cell.append(content);}

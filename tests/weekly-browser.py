@@ -87,6 +87,8 @@ with sync_playwright() as p:
  # Different dates of the same performance highlight together, including keyboard focus.
  linked=page.locator('#wkCalendar .wk-event')
  page.locator('#wkNextMonth').focus();linked.first.hover();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(2)
+ tip=page.get_by_role('tooltip');expect(tip).to_be_visible();expect(tip).to_contain_text(linked.first.locator('.wk-event-title').inner_text());assert linked.first.get_attribute('title') is None
+ page.keyboard.press('Escape');expect(tip).to_be_hidden()
  page.locator('#wkMonthTitle').hover();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(0)
  linked.first.focus();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(2)
  page.locator('#wkNextMonth').focus();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(0)
