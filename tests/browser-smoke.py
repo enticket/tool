@@ -97,6 +97,10 @@ with sync_playwright() as p:
     event.value.save_as(ROOT / 'poster.jpg')
     assert (ROOT / 'poster.jpg').read_bytes()[:2] == b'\xff\xd8'
     print('PASS: two poster sizes, aspect ratio, JPEG download')
+    reset_images = page.locator("#panel-poster .ig-footer #imClear")
+    reset_images.click()
+    expect(cards).to_have_count(0)
+    expect(reset_images).to_be_disabled()
     # Exercise actual settlement generation, then use its output for sealing.
     page.locator('[data-tab="settlement"]').click()
     settlement_fixture = page.evaluate("""() => {
