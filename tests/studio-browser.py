@@ -65,6 +65,7 @@ with sync_playwright() as p:
  page.route('**/api/**',api)
  base=os.environ.get('TOOL_URL','http://127.0.0.1:8788')
  fixture={'id':'studio-performance','assetId':'studio-performance','title':'11월의 작은 음악회','venue':'엔티켓 아트홀','priceKind':'paid','price':'전석 20,000원','status':'verified','sessions':[{'date':'2026-11-16','time':'19:30'}],'version':1}
+ fixture['description']='🎭 11월의 작은 음악회\n\n세 연주자가 들려주는 실내악 이야기.\n\n📅 일시 | 11.16'
  db['performances']=[fixture];assets[fixture['id']]=poster_bytes
  page.goto(base,wait_until='networkidle');page.locator('#gLoginBtn').click();expect(page.locator('#gUser')).to_have_text('staff@test.example');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkPreviews img')).to_have_count(2,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
@@ -109,6 +110,7 @@ with sync_playwright() as p:
  page.locator('#wkStudio').screenshot(path=str(artifact_dir/'studio-desktop.png'))
  # Every slide uses the same canvas editor, including the poster and closing page.
  pane('performances');page.locator('#wkCandidates input').check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_visible()
+ layer('description');expect(page.locator('#wkLayerText')).to_have_value('세 연주자가 들려주는 실내악 이야기.');page.locator('#wkLayerText').fill('기타와 피아노가 만나는 무대.')
  layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('600');page.locator('#wkLayerWidth').fill('560');page.locator('#wkLayerX').fill('80')
  pane('elements');page.locator('[data-add-object="text"]').click();page.locator('#wkInlineText').fill('현장에서 만나요');page.locator('#wkInlineText').press('Control+Enter');page.locator('#wkLayerSize').fill('24');page.locator('#wkLayerX').fill('80');page.locator('#wkLayerY').fill('1200')
  # Page order preserves each performance's scene; deleting a page removes its overrides.
@@ -140,6 +142,8 @@ with sync_playwright() as p:
  closing_svg=archive.read('03.svg').decode()
  assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
+ assert '기타와 피아노가 만나는 무대.' in archive.read('02.svg').decode()
+ assert saved['cards'][0]['description']=='기타와 피아노가 만나는 무대.'
  assert 'enticket.com' in closing_svg and 'clip-profilePhoto' in closing_svg
  assert base64.b64encode(profile).decode() in closing_svg and 'profilePhoto' not in archive.read('cover.svg').decode()
  saved['closing']='enticket.kr · @en__ticket'

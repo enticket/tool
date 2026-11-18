@@ -38,7 +38,7 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(ticketStock|poster|profilePhoto|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+const extraSpec=id=> /^(ticketStock|poster|profilePhoto|number|description|priceLabel|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
   ? {type:id==='ticketStock'?'ticket':['poster','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
@@ -155,24 +155,100 @@ function closingScene(draft,theme,page,ctx){
   return applyPage(base,page);
 }
 
-export function pageScene(d,index=0,ctx){
-  if(index===0)return coverScene(d);
-  const design=normalizeDesign(d.design),key=pageKey(d,index),last=index===d.cards.length+1;
-  const theme=coverScene(d),color=id=>theme.find(l=>l.id===id).color,ink=color('subtitle'),red=color('title');
-  const page=design.pages?.[key];
-  if(last)return closingScene(d,theme,page,ctx);
-  const base=theme.filter(l=>['paper','texture','topRule'].includes(l.id)).map(l=>({...l}));
-  const text=(id,name,value,x,y,width,fontSize,color=ink,family='sans')=>base.push({id,name,type:'text',text:value,x,y,width,fontSize,color,family,leading:1.2});
-  text('handle','인스타 계정','@en__ticket',1016,42,400,22,ink);base.at(-1).align='right';
-  const card=d.cards[index-1];text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),66,150,250,18.75,red);
-  text('title','공연명',card.title,66,215,950,40,red,'serif');
-  base.push({id:'poster',name:'공연 포스터',type:'image',x:66,y:410,width:600,height:760,assetId:card.assetId});
-  text('scheduleLabel','일시 제목','공연 일시',708,432,310,18.75,red);text('schedule','공연 일시',card.schedule,708,490,310,22.5);
-  text('venueLabel','장소 제목','장소',708,800,310,18.75,red);text('venue','공연장',card.venue,708,852,310,22.5);
-  text('price','가격 안내',card.price,708,1040,310,20.25);
-  base.push({id:'bottomRule',name:'하단 구분선',type:'line',x:66,y:1268,width:950,height:2,color:red});
-  text('date','기간',d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.'),66,1290,700,18.75);
-  return applyPage(base,design.pages?.[key]);
+// The Instagram feed caption starts with the title and an optional introduction,
+// followed by labelled details. Keep only the opening prose in the weekly card.
+export function performanceIntro(performance){
+  const lines=String(performance.description||'').trim().split(/\r?\n/).map(line=>line.trim());
+  if(lines[0]===performance.title||/^(🎭|공연명\s*[:|｜])/.test(lines[0]))lines.shift();
+  while(lines.length&&!lines[0])lines.shift();
+  const prose=[];
+  for(const line of lines){
+    if(!line||/^(?:[#📅🗓📍👥⏱🎟📞]|https?:\/\/|예매는 프로필|(?:공연\s*)?(?:일시|일정|날짜|장소|가격|시간|티켓|문의|관람\s*연령)\s*[:|｜])/u.test(line))break;
+    prose.push(line);
+  }
+  const intro=prose.join(' ');
+  return intro.length>220?intro.slice(0,219).trimEnd()+'…':intro;
+}
+
+function performanceScene(d,index,theme,page,ctx,images){
+  const card=d.cards[index-1],image=images?.[card.assetId];
+  const left=66,right=1014,ruleY=1260;
+  const coverColor=id=>theme.find(layer=>layer.id===id).color;
+  const ink=coverColor('subtitle'),red=coverColor('title');
+  const overrides=page?.layers||{};
+  const base=theme.filter(layer=>layer.id==='paper'||layer.id==='texture');
+  function add(spec){
+    const layer={...spec,...overrides[spec.id]};
+    base.push(layer);
+    return layer;
+  }
+  function height(layer){
+    if(layer.visible===false||layer.type==='text'&&!layer.text)return 0;
+    if(layer.type==='line')return layer.height;
+    return ctx?layerBounds(ctx,layer).height:layer.fontSize*PT*layer.leading*String(layer.text).split('\n').length;
+  }
+  function text(id,name,value,x,fontSize,color=ink,family='sans',extra={}){
+    return add({id,name,type:'text',text:value||'',x,y:0,width:Math.max(8,right-(overrides[id]?.x??x)),fontSize,color,family,leading:1.2,...extra});
+  }
+  function fit(layer,budget){
+    if(ctx&&overrides[layer.id]?.fontSize===undefined){
+      while(layer.fontSize>16&&height(layer)>budget)layer.fontSize--;
+    }
+    return layer;
+  }
+
+  const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,
+    x:left,y:60,width:image?.width>image?.height?780:600,height:736});
+  text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
+    right,23,red,'sans',{width:200,align:'right',y:62});
+  const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
+  const intro=fit(text('description','공연 소개',card.description,left,27,ink,'sans',{weight:500,leading:1.4}),165);
+  const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:2,color:ink});
+  const rows=[
+    {layers:[title],gap:0},
+    {layers:[intro],gap:15},
+    {layers:[divider],gap:26}
+  ];
+  for(const [id,label,budget] of [['schedule','공연 일시',156],['venue','장소',105],['price','가격',105]]){
+    const value=fit(text(id,label,card[id],234,25,ink,'sans',{weight:550}),budget);
+    const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,23,red,'sans',{width:154,weight:650});
+    rows.push({layers:[heading,value],gap:14});
+  }
+  const bodyHeight=rows.reduce((total,row)=>{
+    row.height=Math.max(...row.layers.map(height));
+    return total+(row.height?row.height+row.gap:0);
+  },0);
+  const ratio=image?.width&&image.height?image.width/image.height:.8;
+  if(overrides.poster?.height===undefined){
+    poster.height=Math.min(poster.height,poster.width/ratio,Math.max(160,ruleY-24-bodyHeight-32-poster.y));
+  }
+  const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
+  let y=Math.max(102,poster.y+imageHeight)+32;
+  for(const row of rows){
+    if(row.height)y+=row.gap;
+    const start=y;
+    for(const layer of row.layers){
+      if(overrides[layer.id]?.y===undefined)layer.y=start;
+      const h=height(layer);
+      if(h)y=Math.max(y,layer.y+h);
+    }
+  }
+  add({id:'bottomRule',name:'하단 구분선',type:'line',x:left,y:ruleY,width:right-left,height:2,color:red});
+  text('date','기간',d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.'),left,18.75,ink,'sans',{y:1283});
+  text('handle','인스타 계정','@en__ticket',right,18.75,ink,'sans',{align:'right',width:400,y:1283});
+  if(page?.order?.includes('paper')){
+    const missing=['description','priceLabel'].filter(id=>!page.order.includes(id));
+    if(missing.length)page={...page,order:page.order.concat(missing)};
+  }
+  return applyPage(base,page);
+}
+
+export function pageScene(d,index=0,ctx,images){
+  const theme=coverScene(d);
+  if(index===0)return theme;
+  const page=normalizeDesign(d.design).pages?.[pageKey(d,index)];
+  if(index===d.cards.length+1)return closingScene(d,theme,page,ctx);
+  return performanceScene(d,index,theme,page,ctx,images);
 }
 export function fontFor(layer) {return `${layer.italic?'italic ':''}${layer.weight||800} ${layer.fontSize*PT}px ${layer.family==='sans'?'system-ui, sans-serif':`"${SERIF}", serif`}`;}
 export function textRows(ctx,layer) {
@@ -222,7 +298,9 @@ export function paintScene(ctx,scene,texture,images={}) {
       if(layer.round){
         ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
       }
-      ctx.drawImage(img,layer.x+(layer.width-img.width*scale)/2,layer.y+(layer.height-img.height*scale)/2,img.width*scale,img.height*scale);
+      const x=layer.topLeft?layer.x:layer.x+(layer.width-img.width*scale)/2;
+      const y=layer.topLeft?layer.y:layer.y+(layer.height-img.height*scale)/2;
+      ctx.drawImage(img,x,y,img.width*scale,img.height*scale);
     }
     else if(layer.type==='text') {
       const rows=textRows(ctx,layer);ctx.textBaseline='top';ctx.textAlign=layer.align||'left';
@@ -252,7 +330,7 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='ellipse')out.push(`<ellipse cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" rx="${l.width/2}" ry="${l.height/2}" fill="${l.color}"/>`);
     else if(l.type==='image'&&imageData[l.assetId]){
       if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
-      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="xMidYMid meet"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
+      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${l.topLeft?'xMinYMin':'xMidYMid'} meet"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
     }
     else if(l.type==='text') {
       // Canvas top baseline is the font em box, represented explicitly in SVG.

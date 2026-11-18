@@ -2695,7 +2695,7 @@ window.ICO = {
     const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
     if(!candidates.length)$('wkCandidates').append(el('p','이 주에 등록된 공연이 없습니다.','ig-hint'));
     for(const p of candidates){const row=el('label',undefined,'wk-candidate'),check=el('input');check.type='checkbox';check.checked=draft.cards.some(c=>c.performanceId===p.id);check.disabled=!!draft.jobId;
-      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
+      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,description:WD.performanceIntro(p),schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
       const info=el('span',undefined,'wk-performance-info');
       const name=el('strong',p.title);
       name.title=p.title;
@@ -2834,7 +2834,7 @@ window.ICO = {
   function renderDraftList(){const select=$('wkDraftList');select.replaceChildren(new Option('새 초안',''));for(const d of drafts)select.append(new Option(d.title+' · '+(labels[d.status]||d.status),d.id));select.value=draft?.id||'';}
   async function load(){if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');const data=await api('list');performances=data.performances;drafts=data.drafts;renderCalendar();renderDraftList();if(!draft)blankDraft();else renderCandidates();status('');}
   function cacheDraft(d){draft=d;drafts=[d,...drafts.filter(x=>x.id!==d.id)];dirty=false;renderDraftList();controls();}
-  async function save(){commitInline();pull();if(isPaper()){await ensurePaperAssets();for(let i=0;i<draft.cards.length+2;i++)WD.validateScene(canvasContext(),WD.pageScene(draft,i,canvasContext()));}const result=await api('draft',{id:draft.id,data:JSON.stringify(draft)});cacheDraft(result.draft);status('초안을 저장했습니다.');}
+  async function save(){commitInline();pull();if(isPaper()){await Promise.all([ensurePaperAssets(),paperPosters(draft.cards)]);for(let i=0;i<draft.cards.length+2;i++)WD.validateScene(canvasContext(),WD.pageScene(draft,i,canvasContext(),paperImages));}const result=await api('draft',{id:draft.id,data:JSON.stringify(draft)});cacheDraft(result.draft);status('초안을 저장했습니다.');}
   async function asset(id){if(!assetCache.has(id)){const promise=api('asset',{id},true);assetCache.set(id,promise);try{await promise;}catch(e){assetCache.delete(id);throw e;}}return assetCache.get(id);}
   async function image(blob){const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();return img;}finally{URL.revokeObjectURL(url);}}
   async function normalize(file){if(file.size>15*1024*1024)throw Error('원본 포스터는 15MB 이하로 선택해 주세요.');const img=await image(file);if(img.width*img.height>40000000)throw Error('이미지가 너무 큽니다.');const c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const result=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.9));if(!result||result.size>2*1024*1024)throw Error('포스터 용량을 줄여 다시 선택해 주세요.');return result;}
@@ -2910,7 +2910,7 @@ window.ICO = {
       text(card.price,x,y+191,w,66,25,color,500);
     };
     rect(0,0,1080,1350,t.bg);
-    if(id==='paper-editorial'){paintPaperTemplate(ctx,d,index,posters,text,poster);ctx.textBaseline='alphabetic';return;}
+    if(id==='paper-editorial'){paintPaperTemplate(ctx,d,index);ctx.textBaseline='alphabetic';return;}
     if(id==='poster-news'){
       const ink='#17171b',paper='#f4f3ee',violet='#5c28a4';
       const newsText=(value,x,y,w,h,size=40,color=ink,weight=700)=>text(value,x,y,w,h,size,color,weight,'system-ui, sans-serif',Math.min(size,32),1.16);
@@ -2999,9 +2999,16 @@ window.ICO = {
     try{
     if(draft.jobId){for(let i=0;i<draft.cards.length+2;i++){const blob=await api('rendered',{id:draft.id,index:String(i)},true);checkCurrent();rendered.push(blob);}}
     else{
-      if(draft.template==='paper-editorial')await ensurePaperAssets();
+      if(draft.template==='paper-editorial'){
+        for(const card of draft.cards){
+          if(card.description!==undefined)continue;
+          const source=performances.find(p=>p.id===card.performanceId);
+          if(source){card.description=WD.performanceIntro(source);if(card.description)dirty=true;}
+        }
+        await ensurePaperAssets();
+      }
       await document.fonts.ready;checkCurrent();
-      const template=draft.template||'classic';const posters=template==='classic'?[]:await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId))));
+      const template=draft.template||'classic';const posters=template==='classic'?[]:template==='paper-editorial'?await paperPosters(draft.cards):await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId))));
       checkCurrent();
       for(let i=0;i<draft.cards.length+2;i++){
         const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');if(template!=='classic'){paintTemplate(ctx,template,draft,i,posters);if(i===0&&['poster-news','paper-editorial'].includes(template))$('wkTemplates').querySelector('[data-template="'+template+'"] img').src=canvas.toDataURL('image/jpeg',.7);}else{ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
