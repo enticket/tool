@@ -124,11 +124,17 @@ with sync_playwright() as p:
  page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다',timeout=30000)
  saved=db['drafts'][0];assert saved['design']['pages']['performance:studio-performance']['layers']['poster']['width']==560;assert saved['design']['pages']['closing']['layers']['closingTitle']['text']=='이번 주, 놓치지 마세요'
  assert 'performance:studio-second' not in saved['design']['pages'];assert saved['cards'][0]['performanceId']=='studio-performance'
- live=Image.open(io.BytesIO(base64.b64decode(page.locator('#wkLayerCanvas').evaluate('(c)=>c.toDataURL()').split(',')[1]))).convert('RGB')
- encoded=page.locator('#wkPreviews img').last.evaluate('(img)=>{const c=document.createElement("canvas");c.width=1080;c.height=1350;c.getContext("2d").drawImage(img,0,0);return c.toDataURL();}')
+ expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
+ # Compare both renders with the publishing JPEG encoder, including chroma subsampling.
+ live=Image.open(io.BytesIO(base64.b64decode(page.locator('#wkLayerCanvas').evaluate("(c)=>c.toDataURL('image/jpeg',.92)").split(',')[1]))).convert('RGB')
+ encoded=page.locator('#wkPreviews img').last.evaluate("""async img=>{
+   const blob=await(await fetch(img.src)).blob(), reader=new FileReader();
+   return new Promise(resolve=>{reader.onload=()=>resolve(reader.result);reader.readAsDataURL(blob);});
+ }""")
  exported=Image.open(io.BytesIO(base64.b64decode(encoded.split(',')[1]))).convert('RGB')
  from PIL import ImageChops,ImageStat
- assert max(ImageStat.Stat(ImageChops.difference(live,exported)).mean)<2
+ mean_error=ImageStat.Stat(ImageChops.difference(live,exported)).mean
+ assert max(mean_error)<2,mean_error
  with page.expect_download() as dl:page.locator('#wkLayerDownload').click()
  archive=zipfile.ZipFile(dl.value.path());source=json.loads(archive.read('design.json'));assert source['design']==saved['design'];assert '<rect ' in archive.read('cover.svg').decode();assert 'rotate(' in archive.read('cover.svg').decode();assert 'data:image/jpeg;base64,' in archive.read('02.svg').decode();assert '이번 주, 놓치지 마세요' in archive.read('03.svg').decode()
  closing_svg=archive.read('03.svg').decode()
