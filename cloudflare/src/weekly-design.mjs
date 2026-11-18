@@ -212,7 +212,7 @@ function closingScene(draft,theme,page,ctx){
 
 function performanceScene(d,index,theme,page,ctx,images){
   const card=d.cards[index-1],image=images?.[card.assetId];
-  const left=66,right=1014,ruleY=1288;
+  const left=66,right=1014,ruleY=1308;
   const coverColor=id=>theme.find(layer=>layer.id===id).color;
   const ink=coverColor('subtitle'),red=coverColor('title');
   const overrides=page?.layers||{};
@@ -238,9 +238,9 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
 
   const upcoming=image?d.cards.slice(index).filter(next=>images[next.assetId]):[];
-  const reservedWidth=Math.min(270,upcoming.length*52);
+  const reservedWidth=Math.min(238,upcoming.length*45);
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
-    x:left,y:60,width:right-left-reservedWidth,height:ruleY});
+    x:left,y:38,width:right-left-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
   const title=fit(text('title','공연명',card.title,left,46,red,'serif'),150);
@@ -292,7 +292,7 @@ function performanceScene(d,index,theme,page,ctx,images){
     // Each successive poster exposes three quarters as much of its edge.
     const gapWeights=upcoming.map((_,i)=>.75**i);
     const totalWeight=gapWeights.reduce((sum,weight)=>sum+weight,0);
-    const spread=Math.min(Math.max(0,right-edge),Math.min(148,frontWidth*.35)*totalWeight);
+    const spread=.9*Math.min(Math.max(0,right-edge),Math.min(148,frontWidth*.35)*totalWeight);
     const revealBelow=spread<8*upcoming.length;
     const numberBottom=number.visible===false?0:number.y+height(number)+14;
     const top=Math.max(centerY-frontHeight/2,numberBottom);

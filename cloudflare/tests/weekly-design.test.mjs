@@ -145,7 +145,8 @@ test('legacy introductions take up no space between the poster, title and detail
     const poster=layer('poster');
     assert.equal(poster.topLeft,true);
     assert.equal(poster.x,layer('title').x);
-    assert.equal(layer('title').y,poster.y+Math.min(poster.height,poster.width*height/width)+32);
+    const paintedBottom=poster.y+Math.min(poster.height,poster.width*height/width);
+    assert.ok(Math.abs(layer('title').y-paintedBottom-32)<1e-8);
     assert.equal(layer('description'),undefined);
     const older=pageScene(legacy,1,ctx,{img:{width,height}});
     assert.ok(older.every(l=>!['description','date','handle'].includes(l.id)));
