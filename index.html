@@ -6,6 +6,7 @@
 <title>엔티켓 업무 도구</title>
 <script>
 try { if(localStorage.getItem('enticket-nav-collapsed')==='true') document.documentElement.classList.add('nav-collapsed'); } catch {}
+if(history.state?.enticketMenu?.tab && history.state.enticketMenu.tab!=='excel') document.documentElement.classList.add('restoring-menu');
 // Keep old bookmarks working after the Cloudflare move.
 if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)?$/.test(location.pathname)) {
   location.replace("https://tools.enticket.kr/");
@@ -13,6 +14,7 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
 </script>
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
+.restoring-menu #mainNav, .restoring-menu .panel-view { visibility: hidden; }
 [hidden] { display: none !important; }
 .auth-loading { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#978a9f; height:30px; padding:0; }
 .auth-loading:not(.is-error)::before { content:""; display:block; width:14px; height:14px; flex-shrink:0; box-sizing:border-box; border:2px solid #e5ddeb; border-top-color:#75469b; border-radius:50%; animation:auth-spin .8s linear infinite; }
@@ -2968,6 +2970,47 @@ window.ICO = {
 })();
 
 </script>
+<script>
+/* ===== 탭 전환 ===== */
+document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
+    const target=t.dataset.tab || t.dataset.subtab;
+    if(target==='settlement' || target==='oseal'){
+      document.querySelector('.tab[data-tab="settlement"]').classList.add('active');
+      document.querySelectorAll('.settlement-tab').forEach(button=>{
+        const selected=(button.dataset.tab || button.dataset.subtab)===target;
+        button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
+      });
+    }else t.classList.add("active");
+    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
+    t.scrollIntoView({block:"nearest",inline:"nearest"});
+    document.getElementById("panel-"+target).classList.add("active");
+    rememberMenu(target);
+
+  });
+});
+function rememberMenu(tab){
+  const view=tab==='instagram' ? document.querySelector('[data-ig-view].active')?.dataset.igView : null;
+  history.replaceState({...history.state,enticketMenu:{tab,view}},'');
+}
+for(const button of document.querySelectorAll('[data-ig-view]')){
+  button.addEventListener('click',()=>rememberMenu('instagram'));
+}
+(function restoreMenu(){
+  const saved=history.state?.enticketMenu;
+  if(!saved) return;
+  const button=[...document.querySelectorAll('.tab, .settlement-tab')].find(el=>el.dataset.tab===saved.tab);
+  if(!button || button.closest('[hidden]')) return;
+  button.click();
+  if(saved.tab==='instagram'){
+    const subtab=[...document.querySelectorAll('[data-ig-view]')].find(el=>el.dataset.igView===saved.view);
+    subtab?.click();
+  }
+})();
+document.documentElement.classList.remove('restoring-menu');
+</script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js" integrity="sha384-ETfVLWAUsU3zp3SpnQsPDbAyrF6jYv2w8aNYo6KtY2JuyxXhzYLOL7e0ATbLSIHP" crossorigin="anonymous"></script>
 <script>
@@ -3007,44 +3050,6 @@ for(const button of document.querySelectorAll('.tab')){
   button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());
 }
 for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById(id);button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());}
-/* ===== 탭 전환 ===== */
-document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
-  t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
-    const target=t.dataset.tab || t.dataset.subtab;
-    if(target==='settlement' || target==='oseal'){
-      document.querySelector('.tab[data-tab="settlement"]').classList.add('active');
-      document.querySelectorAll('.settlement-tab').forEach(button=>{
-        const selected=(button.dataset.tab || button.dataset.subtab)===target;
-        button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
-      });
-    }else t.classList.add("active");
-    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
-    t.scrollIntoView({block:"nearest",inline:"nearest"});
-    document.getElementById("panel-"+target).classList.add("active");
-    rememberMenu(target);
-
-  });
-});
-function rememberMenu(tab){
-  const view=tab==='instagram' ? document.querySelector('[data-ig-view].active')?.dataset.igView : null;
-  history.replaceState({...history.state,enticketMenu:{tab,view}},'');
-}
-for(const button of document.querySelectorAll('[data-ig-view]')){
-  button.addEventListener('click',()=>rememberMenu('instagram'));
-}
-document.addEventListener('DOMContentLoaded',()=>{
-  const saved=history.state?.enticketMenu;
-  if(!saved) return;
-  const button=[...document.querySelectorAll('.tab, .settlement-tab')].find(el=>el.dataset.tab===saved.tab);
-  if(!button || button.closest('[hidden]')) return;
-  button.click();
-  if(saved.tab==='instagram'){
-    const subtab=[...document.querySelectorAll('[data-ig-view]')].find(el=>el.dataset.igView===saved.view);
-    subtab?.click();
-  }
-});
 /* ===== 공용: 암호 걸린 Office 파일 복호화 (도구1·도구4 공유) ===== */
   // ── 암호 걸린 Office 파일(.xls/.xlsx, Agile 암호화) 브라우저 복호화 ──
   // 순수 JS AES-CBC(128·192·256) + Web Crypto 해시(SHA-1·256·384·512) + 최소 CFB(OLE) 파서
