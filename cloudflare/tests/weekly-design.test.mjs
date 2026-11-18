@@ -57,3 +57,34 @@ test('cover scenes bind live content, keep posters out, and export escaped edita
   assert.match(svg,/&lt;img onerror=&quot;alert\(1\)&quot;&gt; &amp; test/);
   assert.equal(svg.includes('<img onerror='),false);
 });
+
+test('closing programme adapts to the weekly line-up and preserves saved layer positions',()=>{
+  const card={performanceId:'p1',title:'실내악의 밤',schedule:'11.18 14:00 / 11.18 19:30 / 11.19 14:00',venue:'아트홀'};
+  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card],closing:'다음 주에 만나요.'};
+  const scene=()=>pageScene(draft,draft.cards.length+1);
+  const layer=id=>scene().find(l=>l.id===id);
+  assert.equal(layer('date').text,'11.16—11.22');
+  assert.equal(layer('entryDate0').text,'11.18\n11.19');
+  assert.equal(layer('entryVenue0').text,'아트홀');
+  assert.equal(layer('closingCopy').text,draft.closing);
+  const sparseBand=layer('closingBand').height;
+  draft.cards=Array.from({length:8},(_,i)=>({...card,performanceId:'p'+i}));
+  assert.ok(layer('closingBand').height<sparseBand);
+  assert.equal(layer('entryVenue0'),undefined);
+  assert.ok(layer('entryTitle7').y<layer('bottomRule').y);
+  const cover=pageScene(draft,0),detail=pageScene(draft,1);
+  const design=normalizeDesign(),closing={layers:{closingTitle:{x:108}}};
+  design.pages.closing=closing;
+  draft.design=normalizeDesign(design);
+  assert.equal(layer('closingBand'),undefined);
+  assert.equal(layer('closingTitle').x,108);
+  closing.layout='program';
+  closing.layers.closingBand={height:320};
+  draft.design=normalizeDesign(design);
+  assert.equal(layer('closingBand').height,320);
+  assert.equal(layer('closingTitle').x,108);
+  assert.deepEqual(pageScene(draft,0),cover);
+  assert.deepEqual(pageScene(draft,1),detail);
+  assert.throws(()=>normalizeDesign({...design,pages:{'performance:p0':closing}}));
+  assert.equal(normalizeDesign({...design,pages:{closing:{layers:{}}}}).pages.closing.layout,'program');
+});

@@ -13,12 +13,16 @@ async function ensurePaperAssets(){
   })().catch(error=>{paperAssetsPromise=null;throw error;});
   return paperAssetsPromise;
 }
-function currentScene(){return draft?WD.pageScene(draft,Math.min(selectedCard,draft.cards.length+1)):[];}
+function currentScene(){return draft?WD.pageScene(draft,Math.min(selectedCard,draft.cards.length+1),canvasContext()):[];}
 function currentLayer(){return currentScene().find(l=>l.id===selectedLayer);}
 function pageModel(){
   const key=WD.pageKey(draft,selectedCard);
   if(key==='cover')return draft.design;
-  return draft.design.pages[key]??=( {layers:{},objects:[],order:[]} );
+  if(!draft.design.pages[key]){
+    draft.design.pages[key]={layers:{},objects:[],order:[]};
+    if(key==='closing')draft.design.pages[key].layout='program';
+  }
+  return draft.design.pages[key];
 }
 function snapshot(){pull();return JSON.stringify({design:draft.design,title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards});}
 function restoreSnapshot(value){
@@ -146,7 +150,7 @@ function paintLayerPreview(){
 }
 function paintPaperTemplate(ctx,d,index,posters){
   d.cards.forEach((c,i)=>{if(posters[i])paperImages[c.assetId]=posters[i];});
-  const scene=WD.pageScene(d,index);WD.validateScene(ctx,scene);WD.paintScene(ctx,scene,paperTexture,paperImages);
+  const scene=WD.pageScene(d,index,ctx);WD.validateScene(ctx,scene);WD.paintScene(ctx,scene,paperTexture,paperImages);
 }
 function addObject(type){
   commitInline();const id='object-'+crypto.randomUUID();
@@ -189,7 +193,7 @@ async function downloadLayerSource(){
   for(const c of draft.cards)imageData[c.assetId]=await dataUrl(await asset(c.assetId));
   const manifest={format:'enticket-weekly-design',version:2,width:1080,height:1350,template:'paper-editorial',title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards,week:draft.week,weekEnd:draft.weekEnd,design:WD.normalizeDesign(draft.design)};
   const files={'design.json':new TextEncoder().encode(JSON.stringify(manifest,null,2)),'NanumMyeongjo-ExtraBold.woff2':new Uint8Array(await font.arrayBuffer()),'OFL.txt':new Uint8Array(await license.arrayBuffer()),'paper-grain.png':new Uint8Array(await texture.arrayBuffer()),'README.txt':new TextEncoder().encode('엔티켓 디자인 원본\n각 SVG는 편집 가능한 텍스트·도형·이미지 레이어입니다. 폰트와 이미지가 포함되어 있습니다.\ndesign.json에는 각 페이지의 요소와 배치가 저장됩니다.\n글꼴: 나눔명조 ExtraBold (SIL OFL 1.1). 외부 편집기의 웹폰트 지원에 따라 표시가 달라질 수 있습니다. 게시에는 사이트의 JPG 출력을 사용하세요.\n사이트에서는 저장한 디자인을 선택해 이어서 편집합니다. 원본 ZIP 가져오기는 지원하지 않습니다.\n')};
-  for(let i=0;i<draft.cards.length+2;i++){const scene=WD.pageScene(draft,i);WD.validateScene(canvasContext(),scene);files[i===0?'cover.svg':String(i+1).padStart(2,'0')+'.svg']=new TextEncoder().encode(WD.coverSvg(canvasContext(),scene,{fontData,textureData,imageData}));}
+  for(let i=0;i<draft.cards.length+2;i++){const scene=WD.pageScene(draft,i,canvasContext());WD.validateScene(canvasContext(),scene);files[i===0?'cover.svg':String(i+1).padStart(2,'0')+'.svg']=new TextEncoder().encode(WD.coverSvg(canvasContext(),scene,{fontData,textureData,imageData}));}
   if(exportEpoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
   const url=URL.createObjectURL(new Blob([fflate.zipSync(files,{level:6})],{type:'application/zip'})),a=el('a');a.href=url;a.download=draft.week+'-enticket-editable.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }

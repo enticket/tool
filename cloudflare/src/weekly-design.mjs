@@ -17,8 +17,8 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(poster|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|entry(?:Title|Date|Number|Line)[0-7])$/.test(id)
-  ? {type:id==='poster'?'image':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
+const extraSpec=id=> /^(poster|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+  ? {type:id==='poster'?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
   for(const [key,value]of Object.entries(values)) {
@@ -66,6 +66,10 @@ export function normalizeDesign(input) {
   const pages=input.pages??{};if(!record(pages)||Object.keys(pages).length>10)invalid();
   const clean={};for(const [key,page]of Object.entries(pages)){
     if(key!=='closing'&&!/^performance:[a-zA-Z0-9_-]{1,40}$/.test(key))invalid();clean[key]=pageInput(page);
+    if(page.layout!==undefined){
+      if(key!=='closing'||page.layout!=='program')invalid();
+      clean[key].layout=page.layout;
+    }else if(key==='closing'&&!Object.keys(page.layers).length&&!clean[key].objects.length&&!clean[key].order.length)clean[key].layout='program';
   }
   return {version:2,...pageInput(input,true),pages:clean};
 }
@@ -86,10 +90,89 @@ export function coverScene(draft) {
     date:draft.week.slice(5).replace('-','.')+'—'+draft.weekEnd.slice(5).replace('-','.')};
   return applyPage(LAYERS.map(base=>({...base,...(content[base.id]!==undefined?{text:content[base.id]}:{})})),design);
 }
-export function pageScene(d,index=0){
+// Fit the default copy before applying the user's explicit layer settings.
+function fitProgramText(ctx,layer,maxHeight,keepDateLines=false){
+  if(!ctx)return;
+  const lineHeight=PT*layer.leading;
+  const maxLines=keepDateLines?layer.text.split('\n').length:Infinity;
+  function fits(){
+    const lines=textRows(ctx,layer).length;
+    return lines<=maxLines&&lines*layer.fontSize*lineHeight<=maxHeight;
+  }
+  if(fits())return;
+  let low=12,high=layer.fontSize;
+  while(high-low>0.25){
+    layer.fontSize=(low+high)/2;
+    if(fits())low=layer.fontSize;
+    else high=layer.fontSize;
+  }
+  layer.fontSize=Math.floor(low*4)/4;
+}
+
+function programClosing(d,theme,page,ctx){
+  const paper=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
+  const ink=theme.find(l=>l.id==='subtitle').color,red=theme.find(l=>l.id==='title').color;
+  const count=d.cards.length, sparse=count<=3;
+  const bandHeight=count===0?750:count===1?520:sparse?430:count<=5?350:296;
+  const base=[paper,{id:'closingBand',name:'날짜 바탕',type:'rect',color:red,x:0,y:0,width:1080,height:bandHeight},texture];
+  function text(id,name,value,x,y,width,fontSize,color,family,extra={}){
+    const layer={id,name,type:'text',text:value,x,y,width,fontSize,color,family,leading:1.14,...extra};
+    base.push(layer);
+    return layer;
+  }
+  function rule(id,name,x,y,width,color,opacity=100){
+    base.push({id,name,type:'line',x,y,width,height:2,color,opacity});
+  }
+  text('closingTitle','목록 제목','이번 주 공연 일정',64,44,730,25,paper.color,'serif');
+  text('count','지역 · 공연 수','인천  /  '+count+'편',1016,51,230,18,paper.color,'sans',{align:'right',weight:600});
+  rule('topRule','상단 구분선',64,104,952,paper.color,65);
+  const period=d.week.slice(5).replace('-','.')+'—'+d.weekEnd.slice(5).replace('-','.');
+  const dateSize=sparse?104:88;
+  const date=text('date','주간 날짜',period,61,bandHeight-PT*dateSize*1.18-34,958,dateSize,paper.color,'serif');
+  fitProgramText(ctx,date,PT*dateSize*1.2);
+  const listTop=bandHeight+(sparse?66:36);
+  const listEnd=1114;
+  const rowHeight=(listEnd-listTop)/Math.max(1,count);
+  d.cards.forEach((card,i)=>{
+    const y=listTop+rowHeight*i;
+    if(i)rule('entryLine'+i,(i+1)+'번 구분선',64,y-12,952,ink,24);
+    const dates=[...new Set(String(card.schedule||'').match(/\d{2}\.\d{2}/g)||[])];
+    const datesPerLine=dates.length>3?2:1;
+    const dateLines=[];
+    for(let start=0;start<dates.length;start+=datesPerLine){
+      dateLines.push(dates.slice(start,start+datesPerLine).join(' · '));
+    }
+    const dateText=dateLines.join('\n')||card.schedule||'일정 미정';
+    const dateLayer=text('entryDate'+i,(i+1)+'번 날짜',dateText,64,y+3,174,sparse?24:19,red,'sans',{weight:600});
+    fitProgramText(ctx,dateLayer,rowHeight-20,dates.length>0);
+    const hasVenue=sparse&&card.venue;
+    const title=text('entryTitle'+i,(i+1)+'번 공연명',card.title,266,y,750,sparse?39:26,ink,'serif');
+    if(ctx){
+      ctx.font=fontFor(title);
+      const width=ctx.measureText(title.text).width;
+      // A small size adjustment keeps the last few characters on the same line.
+      if(width>title.width&&width<=title.width*1.12)title.fontSize=Math.floor(title.fontSize*title.width/width*4)/4;
+    }
+    fitProgramText(ctx,title,rowHeight-(hasVenue?64:22));
+    if(hasVenue){
+      const titleHeight=ctx?layerBounds(ctx,title).height:title.fontSize*PT*title.leading;
+      const venue=text('entryVenue'+i,(i+1)+'번 공연장',card.venue,266,y+titleHeight+10,750,18,ink,'sans',{weight:500});
+      fitProgramText(ctx,venue,40);
+    }
+  });
+  rule('bottomRule','안내 구분선',64,1146,count?952:260,red);
+  const copy=text('closingCopy','마지막 안내',d.closing,64,1181,952,24,ink,'serif');
+  fitProgramText(ctx,copy,135);
+  return applyPage(base,page);
+}
+
+export function pageScene(d,index=0,ctx){
   if(index===0)return coverScene(d);
   const design=normalizeDesign(d.design),key=pageKey(d,index),last=index===d.cards.length+1;
   const theme=coverScene(d),color=id=>theme.find(l=>l.id===id).color,ink=color('subtitle'),red=color('title');
+  const page=design.pages?.[key];
+  // Previously edited closing pages retain the layout their overrides were authored against.
+  if(last&&(!page||page.layout==='program'))return programClosing(d,theme,page,ctx);
   const base=theme.filter(l=>['paper','texture','topRule'].includes(l.id)).map(l=>({...l}));
   const text=(id,name,value,x,y,width,fontSize,color=ink,family='sans')=>base.push({id,name,type:'text',text:value,x,y,width,fontSize,color,family,leading:1.2});
   text('handle','인스타 계정','@en__ticket',1016,42,400,22,ink);base.at(-1).align='right';
