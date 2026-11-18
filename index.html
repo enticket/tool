@@ -677,10 +677,10 @@ tbody tr:hover td { background: var(--bg-grey-lighter); }
 @container (max-width: 920px) {
   #output th, #output td { padding: 6px 4px; }
   #output th { white-space: normal; word-break: keep-all; }
-  #output td.l, #output td.seat-grade {
+  #output td.seat-grade {
     white-space: normal; overflow-wrap: anywhere;
   }
-  #output td.l { width: 20%; }
+  #output td.l { width: 20%; max-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   #output .session-time { display: block; }
 }
 tr.total td {
@@ -4664,7 +4664,7 @@ function renderValidationCard(result) {
         g.엔티켓+=r.엔티켓; g.예술회관+=r.예술회관; g.폐쇄몰+=r.폐쇄몰; g.합계+=r.합계; g.금액+=amt;
         body+=r.gradeStart ? '<tr class="grade-start">' : "<tr>";
         if(ri===0){ body+=`<td class="c" rowspan="${rows.length}">${idx}</td><td class="c" rowspan="${rows.length}">${esc(dt).replace(/ (\d{2}:\d{2})$/, ' <span class="session-time">$1</span>')}</td>`; }
-        if(showTicketDetails) body+=`<td class="seat-grade">${esc(r.등급)}</td><td class="l">${esc(r.권종)}</td>`;
+        if(showTicketDetails) body+=`<td class="seat-grade">${esc(r.등급)}</td><td class="l" title="${esc(r.권종)}">${esc(r.권종)}</td>`;
         body+=`<td>${money(r.가격)}</td>`;
         body+=`<td>${dash(r.엔티켓)}</td><td>${dash(r.예술회관)}</td><td>${dash(r.폐쇄몰)}</td>`;
         body+=`<td>${won(r.합계)}</td><td>${money(amt)}</td></tr>`;
