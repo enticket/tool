@@ -670,7 +670,7 @@ tbody tr:hover td { background: var(--bg-grey-lighter); }
 #output tbody tr:hover td[rowspan]:not(:hover),
 #output tbody tr:has(> td[rowspan]:hover) > td:not(:hover) { background: transparent; }
 #output tr:has(+ tr.grade-start) > td:not([rowspan]) { border-bottom: 0; }
-#output tr.grade-start td { border-top: 1px solid #000; }
+#output tr.grade-start td { border-top: 1px solid #555; }
 tr.total td {
   background: var(--color-fill-accent) !important;
   font-weight: var(--font-weight-700);
@@ -3023,7 +3023,27 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
     for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
     t.scrollIntoView({block:"nearest",inline:"nearest"});
     document.getElementById("panel-"+target).classList.add("active");
+    rememberMenu(target);
+
   });
+});
+function rememberMenu(tab){
+  const view=tab==='instagram' ? document.querySelector('[data-ig-view].active')?.dataset.igView : null;
+  history.replaceState({...history.state,enticketMenu:{tab,view}},'');
+}
+for(const button of document.querySelectorAll('[data-ig-view]')){
+  button.addEventListener('click',()=>rememberMenu('instagram'));
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const saved=history.state?.enticketMenu;
+  if(!saved) return;
+  const button=[...document.querySelectorAll('.tab, .settlement-tab')].find(el=>el.dataset.tab===saved.tab);
+  if(!button || button.closest('[hidden]')) return;
+  button.click();
+  if(saved.tab==='instagram'){
+    const subtab=[...document.querySelectorAll('[data-ig-view]')].find(el=>el.dataset.igView===saved.view);
+    subtab?.click();
+  }
 });
 /* ===== 공용: 암호 걸린 Office 파일 복호화 (도구1·도구4 공유) ===== */
   // ── 암호 걸린 Office 파일(.xls/.xlsx, Agile 암호화) 브라우저 복호화 ──
@@ -3850,7 +3870,7 @@ data.rounds.forEach((rd,ri)=>{
     else row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
     if(it.gradeStart){
       for(let col=COL.H; col<=COL.AK; col++){
-        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'thin',color:{rgb:'000000'}};
+        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'thin',color:{rgb:'555555'}};
       }
     }
     r++;

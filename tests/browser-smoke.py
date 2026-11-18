@@ -132,7 +132,7 @@ with sync_playwright() as p:
     boundaries = table.locator('tr.grade-start')
     expect(boundaries).to_have_count(4)
     assert boundaries.first.locator('td').first.evaluate(
-        'cell => getComputedStyle(cell).borderTop') == '1px solid rgb(0, 0, 0)'
+        'cell => getComputedStyle(cell).borderTop') == '1px solid rgb(85, 85, 85)'
     first = detail_rows.first
     merged = first.locator('td[rowspan]')
     ticket = first.locator('td.l')
@@ -212,6 +212,7 @@ with sync_playwright() as p:
     page.locator('#localStampInput').set_input_files(stamp_file)
     expect(page.locator('#osealWork')).to_be_visible()
     page.reload(wait_until='networkidle')
+    expect(page.locator('#panel-oseal')).to_be_visible()
     assert not page.evaluate('gdrive.hasLocalStamp()')
     assert page.evaluate("Object.keys(localStorage).every(key=>key==='enticket-nav-collapsed') && sessionStorage.length === 0")
     assert not backend_requests, backend_requests
