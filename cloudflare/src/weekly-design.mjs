@@ -3,8 +3,9 @@
 export const DESIGN_VERSION = 2;
 export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
-export const DEFAULT_CLOSING_COPY='@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com';
-const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket'];
+export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
+export const DEFAULT_CLOSING_COPY='팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com';
+const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
 
 export function refreshClosingCopy(draft){
   if(draft.jobId)return false;
@@ -37,8 +38,8 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(poster|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
-  ? {type:id==='poster'?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
+const extraSpec=id=> /^(poster|profilePhoto|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+  ? {type:['poster','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
   for(const [key,value]of Object.entries(values)) {
@@ -114,17 +115,25 @@ function closingScene(draft,theme,page,ctx){
   const paper=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
   const red=theme.find(l=>l.id==='title').color,ink=theme.find(l=>l.id==='subtitle').color;
   const footer={id:'closingCopy',name:'마지막 안내',type:'text',text:draft.closing,
-    x:74,y:1070,width:780,fontSize:34,leading:1.35,family:'sans',weight:500,color:ink};
+    x:283,y:985,width:730,fontSize:28,leading:1.55,family:'sans',weight:500,color:ink};
   if(ctx){
     while(footer.fontSize>12&&layerBounds(ctx,footer).height>220)footer.fontSize--;
+  }
+  // Earlier saved full stacking orders can include the background but omit the profile.
+  if(page?.order?.includes('paper')){
+    const missing=['profilePhoto','handle'].filter(id=>!page.order.includes(id));
+    page={...page,order:page.order.concat(missing)};
   }
   return applyPage([
     paper,
     {id:'corner',name:'붉은 곡선',type:'corner',x:140,y:80,color:red},
     texture,
     {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'다음 주엔\n어떤 공연이?',
-      x:64,y:397,width:950,fontSize:126,leading:1.08,family:'serif',color:red},
-    {id:'bottomRule',name:'안내 구분선',type:'line',x:74,y:1036,width:746,height:2,color:red},
+      x:64,y:270,width:950,fontSize:126,leading:1.08,family:'serif',color:red},
+    {id:'bottomRule',name:'안내 구분선',type:'line',x:74,y:830,width:932,height:2,color:red},
+    {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,x:74,y:905,width:172,height:172},
+    {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',x:280,y:889,width:725,
+      fontSize:47,leading:1.15,family:'sans',weight:800,color:ink},
     footer
   ],page);
 }
@@ -188,7 +197,13 @@ export function paintScene(ctx,scene,texture,images={}) {
       ctx.globalAlpha=layer.opacity/100;ctx.globalCompositeOperation='multiply';ctx.drawImage(texture,0,0,1080,1350);
     } else if(['line','rect'].includes(layer.type))ctx.fillRect(layer.x,layer.y,layer.width,layer.height||3);
     else if(layer.type==='ellipse'){ctx.beginPath();ctx.ellipse(layer.x+layer.width/2,layer.y+layer.height/2,layer.width/2,layer.height/2,0,0,2*Math.PI);ctx.fill();}
-    else if(layer.type==='image'&&images[layer.assetId]){const img=images[layer.assetId],scale=Math.min(layer.width/img.width,layer.height/img.height);ctx.drawImage(img,layer.x+(layer.width-img.width*scale)/2,layer.y+(layer.height-img.height*scale)/2,img.width*scale,img.height*scale);}
+    else if(layer.type==='image'&&images[layer.assetId]){
+      const img=images[layer.assetId],scale=Math.min(layer.width/img.width,layer.height/img.height);
+      if(layer.round){
+        ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
+      }
+      ctx.drawImage(img,layer.x+(layer.width-img.width*scale)/2,layer.y+(layer.height-img.height*scale)/2,img.width*scale,img.height*scale);
+    }
     else if(layer.type==='text') {
       const rows=textRows(ctx,layer);ctx.textBaseline='top';ctx.textAlign=layer.align||'left';
       rows.forEach((row,i)=>ctx.fillText(row,layer.x,layer.y+i*layer.fontSize*PT*(layer.leading||1.2)));
@@ -214,7 +229,10 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='texture')out.push(`<image width="1080" height="1350" href="${textureData}" opacity="${l.opacity/100}" style="mix-blend-mode:multiply" preserveAspectRatio="none"/>`);
     else if(['line','rect'].includes(l.type))out.push(`<rect x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height||3}" fill="${l.color}"/>`);
     else if(l.type==='ellipse')out.push(`<ellipse cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" rx="${l.width/2}" ry="${l.height/2}" fill="${l.color}"/>`);
-    else if(l.type==='image'&&imageData[l.assetId])out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="xMidYMid meet"/>`);
+    else if(l.type==='image'&&imageData[l.assetId]){
+      if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
+      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="xMidYMid meet"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
+    }
     else if(l.type==='text') {
       // Canvas top baseline is the font em box, represented explicitly in SVG.
       out.push(`<text fill="${l.color}" font-family="${l.family==='sans'?'sans-serif':SERIF}" font-size="${l.fontSize*PT}" font-weight="${l.weight||800}" font-style="${l.italic?'italic':'normal'}" text-anchor="${l.align==='right'?'end':l.align==='center'?'middle':'start'}" dominant-baseline="text-before-edge">`);

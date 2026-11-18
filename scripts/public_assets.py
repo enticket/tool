@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ASSETS = {
     'assets/weekly/NanumMyeongjo-ExtraBold.woff2': 'font/woff2',
     'assets/weekly/paper-grain.png': 'image/png',
+    # Profile photo published at https://www.instagram.com/en__ticket/
+    'assets/weekly/enticket-instagram-profile.jpg': 'image/jpeg',
     'assets/weekly/OFL.txt': 'text/plain; charset=utf-8',
 }
 

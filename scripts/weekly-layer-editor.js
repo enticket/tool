@@ -9,7 +9,10 @@ async function ensurePaperAssets(){
   if(!paperAssetsPromise)paperAssetsPromise=(async()=>{
     const fonts=await document.fonts.load('800 48px "Enticket Myeongjo"','공연이 있는 일주일');
     if(!fonts.length)throw Error('명조 글꼴을 불러오지 못했습니다. 다시 시도해 주세요.');
-    const img=new Image();img.src='/assets/weekly/paper-grain.png';await img.decode();paperTexture=img;
+    const img=new Image(),profile=new Image();
+    img.src='/assets/weekly/paper-grain.png';profile.src=WD.PROFILE_PHOTO;
+    await Promise.all([img.decode(),profile.decode()]);
+    paperTexture=img;paperImages[WD.PROFILE_PHOTO]=profile;
   })().catch(error=>{paperAssetsPromise=null;throw error;});
   return paperAssetsPromise;
 }
@@ -187,11 +190,12 @@ async function downloadLayerSource(){
   commitInline();const exportEpoch=generation;pull();await ensurePaperAssets();
   const dataUrl=blob=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});
   const get=async path=>{const r=await fetch(path);if(!r.ok)throw Error('원본 파일을 불러오지 못했습니다.');return r.blob();};
-  const [font,texture,license]=await Promise.all([get('/assets/weekly/NanumMyeongjo-ExtraBold.woff2'),get('/assets/weekly/paper-grain.png'),get('/assets/weekly/OFL.txt')]);
-  const [fontData,textureData]=await Promise.all([dataUrl(font),dataUrl(texture)]),imageData={};
+  const [font,texture,license,profile]=await Promise.all([get('/assets/weekly/NanumMyeongjo-ExtraBold.woff2'),get('/assets/weekly/paper-grain.png'),get('/assets/weekly/OFL.txt'),get(WD.PROFILE_PHOTO)]);
+  const [fontData,textureData,profileData]=await Promise.all([dataUrl(font),dataUrl(texture),dataUrl(profile)]),imageData={[WD.PROFILE_PHOTO]:profileData};
   for(const c of draft.cards)imageData[c.assetId]=await dataUrl(await asset(c.assetId));
   const manifest={format:'enticket-weekly-design',version:2,width:1080,height:1350,template:'paper-editorial',title:draft.title,subtitle:draft.subtitle,closing:draft.closing,cards:draft.cards,week:draft.week,weekEnd:draft.weekEnd,design:WD.normalizeDesign(draft.design)};
   const files={'design.json':new TextEncoder().encode(JSON.stringify(manifest,null,2)),'NanumMyeongjo-ExtraBold.woff2':new Uint8Array(await font.arrayBuffer()),'OFL.txt':new Uint8Array(await license.arrayBuffer()),'paper-grain.png':new Uint8Array(await texture.arrayBuffer()),'README.txt':new TextEncoder().encode('엔티켓 디자인 원본\n각 SVG는 편집 가능한 텍스트·도형·이미지 레이어입니다. 폰트와 이미지가 포함되어 있습니다.\ndesign.json에는 각 페이지의 요소와 배치가 저장됩니다.\n글꼴: 나눔명조 ExtraBold (SIL OFL 1.1). 외부 편집기의 웹폰트 지원에 따라 표시가 달라질 수 있습니다. 게시에는 사이트의 JPG 출력을 사용하세요.\n사이트에서는 저장한 디자인을 선택해 이어서 편집합니다. 원본 ZIP 가져오기는 지원하지 않습니다.\n')};
+  files['enticket-instagram-profile.jpg']=new Uint8Array(await profile.arrayBuffer());
   for(let i=0;i<draft.cards.length+2;i++){const scene=WD.pageScene(draft,i,canvasContext());WD.validateScene(canvasContext(),scene);files[i===0?'cover.svg':String(i+1).padStart(2,'0')+'.svg']=new TextEncoder().encode(WD.coverSvg(canvasContext(),scene,{fontData,textureData,imageData}));}
   if(exportEpoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
   const url=URL.createObjectURL(new Blob([fflate.zipSync(files,{level:6})],{type:'application/zip'})),a=el('a');a.href=url;a.download=draft.week+'-enticket-editable.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -296,6 +300,6 @@ function initLayerEditor(){
       editLayer({x:l.x+(e.key==='ArrowLeft'?-delta:e.key==='ArrowRight'?delta:0),y:l.y+(e.key==='ArrowUp'?-delta:e.key==='ArrowDown'?delta:0)},'arrow-'+l.id);fillLayerProperties();
     }
   });
-  document.addEventListener('enticket-auth',()=>{inlineEdit=null;$('wkInlineText').hidden=true;stop();past=[];future=[];historyKey='';paperImages={};canvasContext().clearRect(0,0,1080,1350);$('wkLayerStage').hidden=true;$('wkLayerPanel').hidden=true;$('wkDesignView').classList.remove('wk-focus');selectedLayer=null;});
+  document.addEventListener('enticket-auth',()=>{inlineEdit=null;$('wkInlineText').hidden=true;stop();past=[];future=[];historyKey='';paperImages={};paperAssetsPromise=null;canvasContext().clearRect(0,0,1080,1350);$('wkLayerStage').hidden=true;$('wkLayerPanel').hidden=true;$('wkDesignView').classList.remove('wk-focus');selectedLayer=null;});
   setStudioPane('performances');
 }

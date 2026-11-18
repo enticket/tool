@@ -131,7 +131,10 @@ with sync_playwright() as p:
  assert max(ImageStat.Stat(ImageChops.difference(live,exported)).mean)<2
  with page.expect_download() as dl:page.locator('#wkLayerDownload').click()
  archive=zipfile.ZipFile(dl.value.path());source=json.loads(archive.read('design.json'));assert source['design']==saved['design'];assert '<rect ' in archive.read('cover.svg').decode();assert 'rotate(' in archive.read('cover.svg').decode();assert 'data:image/jpeg;base64,' in archive.read('02.svg').decode();assert '이번 주, 놓치지 마세요' in archive.read('03.svg').decode()
- assert 'enticket.com' in archive.read('03.svg').decode()
+ closing_svg=archive.read('03.svg').decode()
+ profile=archive.read('enticket-instagram-profile.jpg')
+ assert 'enticket.com' in closing_svg and 'clip-profilePhoto' in closing_svg
+ assert base64.b64encode(profile).decode() in closing_svg and 'profilePhoto' not in archive.read('cover.svg').decode()
  saved['closing']='enticket.kr · @en__ticket'
  saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=30000);page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkClosing')).to_have_value(default_closing)
@@ -152,7 +155,7 @@ with sync_playwright() as p:
    assert canvas['width']>=240, (width,canvas)
   expect(page.locator('[data-studio-pane="properties"]')).to_be_visible()
  page.screenshot(path=str(artifact_dir/'studio-mobile.png'),full_page=True);page.set_viewport_size({'width':1440,'height':1000})
- page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkUndo')).to_be_disabled();expect(page.locator('[data-add-object="text"]')).to_be_disabled();assert state['publishes']==0
+ page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkUndo')).to_be_disabled();expect(page.locator('[data-add-object="text"]')).to_be_disabled();assert state['publishes']==0
  assert not errors,errors
  print('PASS: studio selection, inline text, add/resize/rotate/move, undo/redo, duplicate/delete, lock/order/zoom, all-page persistence, SVG and JPG parity, mobile and review lock')
  browser.close()
