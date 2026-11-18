@@ -134,9 +134,17 @@ with sync_playwright() as p:
  expect(page.locator('#wkLayerOpacity')).to_have_value('100')
  def exposed_pixel():
   return page.locator('#wkLayerCanvas').evaluate("(canvas)=>Array.from(canvas.getContext('2d').getImageData(675,480,1,1).data)")
- pixel=exposed_pixel()
+ # Compare the same paper pixels while hiding the cropped poster behind the main poster.
+ right=float(page.locator('#wkLayerX').input_value())+float(page.locator('#wkLayerWidth').input_value())
+ top=float(page.locator('#wkLayerY').input_value());height=float(page.locator('#wkLayerHeight').input_value())
+ def shadow_samples():
+  points=[[right-12,top-4],[right+4,top+height/2],[right-12,top+height+4]]
+  return page.locator('#wkLayerCanvas').evaluate("(c,p)=>p.map(([x,y])=>c.getContext('2d').getImageData(x,y,1,1).data[0])",points)
+ pixel=exposed_pixel();shaded=shadow_samples()
  assert max(abs(x-y) for x,y in zip(pixel,[39,178,133,255]))<4,pixel
  page.locator('#wkLayerVisible').uncheck()
+ paper=shadow_samples()
+ assert paper[0]-shaded[0]>20 and paper[1]-shaded[1]>20 and abs(paper[2]-shaded[2])<5,(paper,shaded)
  assert exposed_pixel()!=pixel
  page.locator('#wkLayerVisible').check()
  assert exposed_pixel()==pixel
@@ -151,10 +159,14 @@ with sync_playwright() as p:
  with page.expect_download() as stack_download:page.locator('#wkLayerDownload').click()
  from xml.etree import ElementTree
  with zipfile.ZipFile(stack_download.value.path()) as stack_source:
-  groups=ElementTree.fromstring(stack_source.read('02.svg')).findall('{*}g')
+  svg=ElementTree.fromstring(stack_source.read('02.svg'))
+  shadow=svg.find('.//{*}filter[@id="poster-shadow"]/{*}feDropShadow')
+  assert float(shadow.get('dx'))==-float(shadow.get('dy'))>0
+  groups=svg.findall('{*}g')
   ids=[g.get('id') for g in groups]
   back=groups[ids.index('nextPoster1')]
   assert ids.index('nextPoster1')<ids.index('poster') and float(back.get('opacity'))==1
+  assert back.get('filter')==groups[ids.index('poster')].get('filter')=='url(#poster-shadow)'
   assert back.find('{*}image').get('preserveAspectRatio')=='xMidYMid slice'
   assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
   assert b'nextPoster' not in stack_source.read('03.svg')

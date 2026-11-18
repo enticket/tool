@@ -5,6 +5,7 @@ export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
 export const MAX_SCHEDULE_LENGTH=3000;
+const posterShadow={offset:9,deviation:6,rgb:'55,39,28',opacity:.30};
 export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
 export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
 const oldClosingFooters=['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
@@ -238,7 +239,7 @@ function performanceScene(d,index,theme,page,ctx,images){
 
   const upcoming=image?d.cards.slice(index).filter(next=>images[next.assetId]):[];
   const reservedWidth=Math.min(270,upcoming.length*52);
-  const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,
+  const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
     x:left,y:60,width:right-left-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
@@ -301,7 +302,7 @@ function performanceScene(d,index,theme,page,ctx,images){
       // A full-width saved poster can still reveal the lineup along its bottom edge.
       const y=step<8?bottom-height+18*depth:top+(span-height)/2;
       stack.push({id:'nextPoster'+slot,name:'다음 공연 · '+next.title,type:'image',assetId:next.assetId,
-        crop:true,x,y,width,height});
+        crop:true,posterShadow:true,x,y,width,height});
     }
     // Paint from the last page back to the current one.
     base.splice(base.indexOf(poster),0,...stack.slice().reverse());
@@ -389,18 +390,26 @@ export function paintScene(ctx,scene,texture,images={}) {
     else if(layer.type==='ellipse'){ctx.beginPath();ctx.ellipse(layer.x+layer.width/2,layer.y+layer.height/2,layer.width/2,layer.height/2,0,0,2*Math.PI);ctx.fill();}
     else if(layer.type==='image'&&images[layer.assetId]){
       const img=images[layer.assetId];
-      const fit=layer.crop?Math.max:Math.min;
-      const scale=fit(layer.width/img.width,layer.height/img.height);
+      if(layer.posterShadow){
+        ctx.shadowColor=`rgba(${posterShadow.rgb},${posterShadow.opacity})`;
+        ctx.shadowOffsetX=posterShadow.offset;ctx.shadowOffsetY=-posterShadow.offset;
+        ctx.shadowBlur=2*posterShadow.deviation;
+      }
       if(layer.crop){
-        ctx.beginPath();ctx.rect(layer.x,layer.y,layer.width,layer.height);ctx.clip();
+        // Crop the source so the exposed edges can cast a shadow outside the frame.
+        const scale=Math.max(layer.width/img.width,layer.height/img.height);
+        const sw=layer.width/scale,sh=layer.height/scale;
+        ctx.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,layer.x,layer.y,layer.width,layer.height);
+      }else{
+        if(layer.round){
+          ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
+        }
+        const scale=Math.min(layer.width/img.width,layer.height/img.height);
+        const width=img.width*scale,height=img.height*scale;
+        const x=layer.topLeft?layer.x:layer.x+(layer.width-width)/2;
+        const y=layer.topLeft?layer.y:layer.y+(layer.height-height)/2;
+        ctx.drawImage(img,x,y,width,height);
       }
-      if(layer.round){
-        ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
-      }
-      const width=img.width*scale,height=img.height*scale;
-      const x=layer.topLeft?layer.x:layer.x+(layer.width-width)/2;
-      const y=layer.topLeft?layer.y:layer.y+(layer.height-height)/2;
-      ctx.drawImage(img,x,y,width,height);
     }
     else if(layer.type==='text') {
       const rows=textRows(ctx,layer);ctx.textBaseline='top';ctx.textAlign=layer.align||'left';
@@ -418,10 +427,13 @@ export function validateScene(ctx,scene) {
 const xml=value=>String(value).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
 export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
   // Every object is a named group. Text remains text; the paper texture alone is raster.
-  const out=[`<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1080" height="1350" viewBox="0 0 1080 1350"><defs><style>@font-face{font-family:'${SERIF}';font-weight:800;src:url('${fontData}') format('woff2')}</style></defs><rect width="1080" height="1350" fill="#ffffff"/>`];
+  const shadowFilter=scene.some(l=>l.posterShadow)
+    ? `<filter id="poster-shadow" filterUnits="userSpaceOnUse" x="-48" y="-48" width="1176" height="1446" color-interpolation-filters="sRGB"><feDropShadow dx="${posterShadow.offset}" dy="${-posterShadow.offset}" stdDeviation="${posterShadow.deviation}" flood-color="rgb(${posterShadow.rgb})" flood-opacity="${posterShadow.opacity}"/></filter>` : '';
+  const out=[`<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1080" height="1350" viewBox="0 0 1080 1350"><defs><style>@font-face{font-family:'${SERIF}';font-weight:800;src:url('${fontData}') format('woff2')}</style>${shadowFilter}</defs><rect width="1080" height="1350" fill="#ffffff"/>`];
   for(const l of scene) {
     const b=layerBounds(ctx,l);
-    out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.angle?` transform="rotate(${l.angle} ${b.x+b.width/2} ${b.y+b.height/2})"`:''}>`);
+    const rotation=l.angle?` transform="rotate(${l.angle} ${b.x+b.width/2} ${b.y+b.height/2})"`:'';
+    out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.posterShadow?' filter="url(#poster-shadow)"':rotation}>`);
     if(l.type==='background')out.push(`<rect width="1080" height="1350" fill="${l.color}"/>`);
     else if(l.type==='ticket')out.push(`<path d="${ticketPath}" transform="translate(${l.x} ${l.y}) scale(${l.width/960} ${l.height/1200})" fill="${l.color}" fill-rule="evenodd"/>`);
     else if(l.type==='corner')out.push(`<path transform="translate(${l.x} ${l.y})" d="M535 1350 C740 1280 950 1135 1080 1010 L1080 1350 Z" fill="${l.color}"/>`);
@@ -431,7 +443,7 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='image'&&imageData[l.assetId]){
       if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
       const aspect=l.crop?'xMidYMid slice':l.topLeft?'xMinYMin meet':'xMidYMid meet';
-      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${aspect}"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
+      out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${aspect}"${l.posterShadow?rotation:''}${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
     }
     else if(l.type==='text') {
       // Canvas top baseline is the font em box, represented explicitly in SVG.
