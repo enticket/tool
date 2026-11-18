@@ -69,6 +69,7 @@ with sync_playwright() as p:
  page.goto(base,wait_until='networkidle');page.locator('#gLoginBtn').click();expect(page.locator('#gUser')).to_have_text('staff@test.example');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkPreviews img')).to_have_count(2,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkTitle')).to_have_value('공연이\n있는\n일주일.')
+ default_closing=page.locator('#wkClosing').input_value();assert '팔로우' in default_closing and 'enticket.com' in default_closing
  expect(page.locator('#wkLayerSelection')).to_be_hidden()
  page.locator('#wkStudio').screenshot(path=str(artifact_dir/'studio-clean.png'))
  def pane(name):page.locator(f'[data-studio-pane="{name}"]').click()
@@ -130,7 +131,10 @@ with sync_playwright() as p:
  assert max(ImageStat.Stat(ImageChops.difference(live,exported)).mean)<2
  with page.expect_download() as dl:page.locator('#wkLayerDownload').click()
  archive=zipfile.ZipFile(dl.value.path());source=json.loads(archive.read('design.json'));assert source['design']==saved['design'];assert '<rect ' in archive.read('cover.svg').decode();assert 'rotate(' in archive.read('cover.svg').decode();assert 'data:image/jpeg;base64,' in archive.read('02.svg').decode();assert '이번 주, 놓치지 마세요' in archive.read('03.svg').decode()
+ assert 'enticket.com' in archive.read('03.svg').decode()
+ saved['closing']='enticket.kr · @en__ticket'
  saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=30000);page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
+ expect(page.locator('#wkClosing')).to_have_value(default_closing)
  layer('title');expect(page.locator('#wkLayerSize')).to_have_value('165');expect(page.locator('#wkLayerList [data-layer^="object-"]')).to_have_count(3)
  next_page=page.locator('#wkShowNext');previous_page=page.locator('#wkShowPrevious')
  expect(previous_page).to_be_disabled()

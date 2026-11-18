@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer} from '../src/weekly-design.mjs';
+import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
 
 test('layer settings preserve exact point sizes and reject executable or unbounded fields',()=>{
   const design={version:1,layers:{title:{fontSize:165,x:90,color:'#ac1010'},texture:{opacity:81},handle:{visible:false}}};
@@ -62,7 +62,7 @@ test('closing artwork is independent of the line-up and respects existing closin
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[],closing:'엔티켓에서 만나요.'};
   const scene=()=>pageScene(draft,draft.cards.length+1);
   const empty=scene();
-  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['공연장에서\n만나요.',draft.closing]);
+  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['다음 주엔\n어떤 공연이?',draft.closing]);
   const card={performanceId:'p1',title:'실내악의 밤',schedule:'11.18 14:00',venue:'아트홀'};
   for(const count of [1,3,8]){
     draft.cards=Array.from({length:count},(_,i)=>({...card,performanceId:'p'+i}));
@@ -84,4 +84,24 @@ test('closing artwork is independent of the line-up and respects existing closin
     assert.deepEqual(pageScene(draft,1),detail);
   }
   assert.throws(()=>normalizeDesign({...draft.design,pages:{'performance:p0':{...closing,layout:'program'}}}));
+});
+
+test('editable closing copy adopts the follow invitation and the public ticketing domain',()=>{
+  for(const closing of ['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket']){
+    const draft={closing};
+    assert.equal(refreshClosingCopy(draft),true);
+    assert.equal(draft.closing,DEFAULT_CLOSING_COPY);
+    assert.match(draft.closing,/@en__ticket을 팔로우/);
+    assert.match(draft.closing,/enticket\.com$/);
+    assert.equal(refreshClosingCopy(draft),false);
+    const locked={closing,jobId:'review'};
+    assert.equal(refreshClosingCopy(locked),false);
+    assert.equal(locked.closing,closing);
+  }
+  const draft={closing:'예매는 https://www.enticket.kr/show 에서. 도구는 tools.enticket.kr',
+    design:{pages:{closing:{layers:{closingCopy:{text:'내 문구 · enticket.kr'}},objects:[{type:'text',text:'자세히 보기 enticket.kr.'}]}}}};
+  assert.equal(refreshClosingCopy(draft),true);
+  assert.equal(draft.closing,'예매는 https://enticket.com/show 에서. 도구는 tools.enticket.kr');
+  assert.equal(draft.design.pages.closing.layers.closingCopy.text,'내 문구 · enticket.com');
+  assert.equal(draft.design.pages.closing.objects[0].text,'자세히 보기 enticket.com.');
 });

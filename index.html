@@ -2680,8 +2680,9 @@ window.ICO = {
   function clearRender(){urls.forEach(URL.revokeObjectURL);urls=[];rendered=[];$('wkPreviews').replaceChildren();$('wkFilmstrip').replaceChildren();$('wkReview').hidden=true;$('wkConfirm').checked=false;controls();}
   function changed(){dirty=true;rendered=[];$('wkReview').hidden=true;$('wkConfirm').checked=false;$('wkStageState').textContent='수정됨 · 미리보기 갱신';controls();}
   function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
-  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:'enticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
+  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:WD.DEFAULT_CLOSING_COPY,caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
   function fillDraft(){
+    if(WD.refreshClosingCopy(draft))dirty=true;
     selectedCard=0;selectedLayer=null;clearRender();$('wkWeek').value=draft.week;
     for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
     $('wkDraftList').value=drafts.some(d=>d.id===draft.id)?draft.id:'';renderCandidates();renderCards();selectCard(0);controls();
@@ -2879,7 +2880,7 @@ window.ICO = {
     for(const t of weeklyTemplates){
       const button=el('button',undefined,'wk-template');button.type='button';button.dataset.template=t.id;button.setAttribute('aria-pressed','false');
       const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
-      const dates=week(today());const sample={title:'이번 주\n공연 모음',subtitle:'공연장에서 만나는 새로운 일주일',week:dates.start,weekEnd:dates.end,closing:'다음 주에도\n공연장에서 만나요.',cards:[]};
+      const dates=week(today());const sample={title:'이번 주\n공연 모음',subtitle:'공연장에서 만나는 새로운 일주일',week:dates.start,weekEnd:dates.end,closing:WD.DEFAULT_CLOSING_COPY,cards:[]};
       if(t.id==='paper-editorial'){sample.title='공연이\n있는\n일주일.';sample.subtitle=window.EnticketWeeklyDesign.weekLabel(dates.start);}paintTemplate(canvas.getContext('2d'),t.id,sample,0,[]);
       const img=el('img');img.src=canvas.toDataURL('image/jpeg',.75);img.alt='';const info=el('span',undefined,'wk-template-info');info.append(el('strong',t.name),el('span',t.note));if(t.id==='paper-editorial')info.append(el('span','표지 레이어 편집 · 원본 다운로드','wk-template-tag'));if(t.id==='poster-news')info.append(el('span','표지 · 공연 소개 · 저장 안내','wk-template-tag'));button.append(img,info);
       button.addEventListener('click',()=>run(async()=>{if(draft?.jobId)return;pull();draft.template=t.id;if(t.id==='paper-editorial'&&!draft.design){draft.design=window.EnticketWeeklyDesign.normalizeDesign();if(['이번 주\n인천에서 볼 공연','이번 주\n공연 모음'].includes(draft.title)){draft.title='공연이\n있는\n일주일.';$('wkTitle').value=draft.title;draft.subtitle=window.EnticketWeeklyDesign.weekLabel(draft.week);$('wkSubtitle').value=draft.subtitle;}}changed();templateControls();await render();}));$(['paper-editorial','poster-news'].includes(t.id)?'wkFeaturedTemplate':'wkLegacyTemplates').append(button);

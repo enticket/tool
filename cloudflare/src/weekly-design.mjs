@@ -3,6 +3,26 @@
 export const DESIGN_VERSION = 2;
 export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
+export const DEFAULT_CLOSING_COPY='@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com';
+const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket'];
+
+export function refreshClosingCopy(draft){
+  if(draft.jobId)return false;
+  let changed=false;
+  function update(owner,key,footer=false){
+    const copy=owner?.[key];
+    if(typeof copy!=='string')return;
+    const updated=footer&&oldClosingFooters.includes(copy)?DEFAULT_CLOSING_COPY:
+      copy.replace(/(?<![\w.@-])(?:www\.)?enticket\.kr(?![\w-]|\.[\w-])/gi,'enticket.com');
+    if(updated!==copy){owner[key]=updated;changed=true;}
+  }
+  update(draft,'closing',true);
+  const page=draft.design?.pages?.closing;
+  for(const [id,layer] of Object.entries(page?.layers||{}))update(layer,'text',id==='closingCopy');
+  for(const object of page?.objects||[])update(object,'text');
+  return changed;
+}
+
 export const LAYERS = [
   {id:'paper', name:'배경', type:'background', color:'#fff1e1'},
   {id:'corner', name:'붉은 곡선', type:'corner', color:'#bc0808', x:0, y:0},
@@ -94,7 +114,7 @@ function closingScene(draft,theme,page,ctx){
   const paper=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
   const red=theme.find(l=>l.id==='title').color,ink=theme.find(l=>l.id==='subtitle').color;
   const footer={id:'closingCopy',name:'마지막 안내',type:'text',text:draft.closing,
-    x:74,y:1078,width:746,fontSize:25,leading:1.35,family:'sans',weight:500,color:ink};
+    x:74,y:1070,width:780,fontSize:34,leading:1.35,family:'sans',weight:500,color:ink};
   if(ctx){
     while(footer.fontSize>12&&layerBounds(ctx,footer).height>220)footer.fontSize--;
   }
@@ -102,7 +122,7 @@ function closingScene(draft,theme,page,ctx){
     paper,
     {id:'corner',name:'붉은 곡선',type:'corner',x:140,y:80,color:red},
     texture,
-    {id:'closingTitle',name:'마무리 인사',type:'text',text:'공연장에서\n만나요.',
+    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'다음 주엔\n어떤 공연이?',
       x:64,y:397,width:950,fontSize:126,leading:1.08,family:'serif',color:red},
     {id:'bottomRule',name:'안내 구분선',type:'line',x:74,y:1036,width:746,height:2,color:red},
     footer
