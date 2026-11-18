@@ -1788,7 +1788,6 @@ window.ICO = {
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button></div></div>
       </div>
 <section id="igWeeklyView" hidden>
-  <div class="wk-toolbar wk-heading" id="wkDesignHeading" hidden><div><h2 id="wkPageTitle">주간 디자인</h2><p class="ig-hint" id="wkPageHint">카드를 선택하고 문구를 편집하세요.</p></div><button class="btn ghost sm" id="wkRefresh">새로고침</button></div>
   <p id="wkStatus" role="status" aria-live="polite"></p>
   <div id="wkCalendarView">
     <div class="wk-panel">
@@ -1798,56 +1797,80 @@ window.ICO = {
     </div>
   </div>
   <div id="wkDesignView" hidden>
+    <header class="wk-design-top" id="wkDesignHeading" hidden>
+      <div class="wk-document-title"><h2>주간 디자인</h2><span id="wkRange"></span></div>
+      <div class="btn-row"><button class="btn ghost sm" id="wkRefresh">새로고침</button><button class="btn ghost sm" id="wkNewDraft">새 디자인</button><button class="btn primary sm" id="wkSave">저장</button></div>
+    </header>
     <div class="wk-design-toolbar">
-      <label class="ig-field">디자인할 주<input type="date" id="wkWeek"></label>
+      <label class="ig-field">공연 주간<input type="date" id="wkWeek"></label>
       <label class="ig-field wk-drafts">저장한 디자인<select id="wkDraftList"><option value="">새 초안</option></select></label>
-      <button class="btn ghost sm" id="wkNewDraft">새 디자인</button><button class="btn primary sm" id="wkSave">저장</button>
     </div>
-    <p id="wkRange" class="ig-hint"></p>
     <div class="wk-studio" id="wkStudio">
+      <div class="wk-stage">
+        <div class="wk-stage-heading"><div><div class="wk-page-nav" role="group" aria-label="페이지 이동"><button type="button" id="wkShowPrevious" aria-label="이전 페이지" title="이전 페이지" disabled></button><span id="wkPageNumber" class="wk-page-number"></span><button type="button" id="wkShowNext" aria-label="다음 페이지" title="다음 페이지" disabled></button></div><strong id="wkStageTitle">표지</strong></div><button class="btn ghost sm wk-to-tools" type="button" id="wkToTools">편집 도구</button><span id="wkStageState"></span></div>
+        <div id="wkStudioTools" class="wk-studio-tools" role="toolbar" aria-label="요소 편집"><div><button type="button" id="wkUndo" title="실행 취소 (Ctrl/⌘ Z)" aria-label="실행 취소">↶</button><button type="button" id="wkRedo" title="다시 실행 (Ctrl/⌘ Shift Z)" aria-label="다시 실행">↷</button></div><span class="wk-tool-divider"></span><button type="button" id="wkDuplicate">복제</button><button type="button" id="wkDelete">삭제</button><span class="wk-tool-divider"></span><button type="button" id="wkBackward">뒤로</button><button type="button" id="wkForward">앞으로</button><button type="button" id="wkAlignCenter">가운데</button><button type="button" id="wkLock" aria-pressed="false">잠금</button></div>
+        <div id="wkCanvasViewport" class="wk-canvas-viewport"><div class="wk-canvas-slot"><div id="wkLayerStage" class="wk-layer-stage" hidden><canvas id="wkLayerCanvas" width="1080" height="1350" tabindex="0" aria-label="디자인 캔버스. 요소를 클릭해 선택, 더블클릭해 글자 수정, 모서리를 끌어 크기 조절."></canvas><div id="wkLayerSelection" class="wk-layer-selection" hidden><button type="button" data-handle="nw" aria-label="왼쪽 위 크기 조절"></button><button type="button" data-handle="ne" aria-label="오른쪽 위 크기 조절"></button><button type="button" data-handle="sw" aria-label="왼쪽 아래 크기 조절"></button><button type="button" data-handle="se" aria-label="오른쪽 아래 크기 조절"></button><button type="button" data-handle="rotate" aria-label="요소 회전" title="회전 · Shift로 15도씩">↻</button></div><textarea id="wkInlineText" class="wk-inline-text" spellcheck="false" aria-label="캔버스 글자 직접 수정" hidden></textarea><div id="wkGuideX" class="wk-guide x" hidden></div><div id="wkGuideY" class="wk-guide y" hidden></div></div><div class="wk-previews" id="wkPreviews"></div></div></div>
+        <div class="wk-stage-bottom"><button class="btn ghost sm" id="wkRender">미리보기 갱신</button><div><span id="wkZoomLabel"></span><label><span class="sr-only">캔버스 확대</span><select id="wkZoom"><option value="fit">화면에 맞춤</option><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option><option value="150">150%</option></select></label><button type="button" id="wkFocus">넓게 보기</button></div></div>
+        <div class="wk-page-heading"><strong>페이지</strong><span id="wkCount"></span><div id="wkPageOrder" hidden><button type="button" class="btn ghost sm" id="wkPagePrevious" aria-label="공연 페이지 이전으로">← 이전으로</button><button type="button" class="btn ghost sm" id="wkPageNext" aria-label="공연 페이지 다음으로">다음으로 →</button></div></div>
+        <div id="wkFilmstrip" class="wk-filmstrip" aria-label="편집할 카드 선택"></div>
+      </div>
       <aside class="wk-assets" aria-label="디자인 도구">
+        <div class="wk-tool-heading"><h3>편집 도구</h3><button type="button" class="btn ghost sm" id="wkToCanvas">캔버스로</button></div>
         <div class="wk-assets-tabs" role="tablist" aria-label="도구 선택">
-          <button type="button" role="tab" data-studio-pane="elements" aria-controls="wkElementsPane">요소</button><button type="button" role="tab" data-studio-pane="layers" aria-controls="wkLayersPane">레이어</button><button type="button" role="tab" data-studio-pane="templates" aria-controls="wkTemplatesPane">템플릿</button><button type="button" role="tab" data-studio-pane="performances" aria-controls="wkPerformancesPane">공연</button>
+          <button type="button" role="tab" id="wkToolPerformances" data-studio-pane="performances" aria-controls="wkPerformancesPane">공연</button>
+          <button type="button" role="tab" id="wkToolTemplates" data-studio-pane="templates" aria-controls="wkTemplatesPane">템플릿</button>
+          <button type="button" role="tab" id="wkToolElements" data-studio-pane="elements" aria-controls="wkElementsPane">요소</button>
+          <button type="button" role="tab" id="wkToolLayers" data-studio-pane="layers" aria-controls="wkLayersPane">레이어</button>
+          <button type="button" role="tab" id="wkToolProperties" data-studio-pane="properties" aria-controls="wkPropertiesPane">속성</button>
         </div>
         <div class="wk-assets-content">
-          <section id="wkElementsPane" data-studio-content="elements" role="tabpanel"><h3>요소 추가</h3><button class="wk-add-text" type="button" data-add-object="text"><span>T</span> 텍스트 추가</button><h4>기본 도형</h4><div class="wk-shapes"><button type="button" data-add-object="rect" aria-label="사각형 추가"><span class="wk-shape-rect"></span>사각형</button><button type="button" data-add-object="ellipse" aria-label="원 추가"><span class="wk-shape-circle"></span>원</button><button type="button" data-add-object="line" aria-label="선 추가"><span class="wk-shape-line"></span>선</button></div><div class="wk-shortcuts"><p>글자 더블클릭으로 수정</p><p>모서리를 끌어 크기 조절</p><p>Ctrl / ⌘ + Z 실행 취소</p><p>Ctrl / ⌘ + D 복제</p><p>방향키 이동 · Shift로 10px</p></div></section>
-          <section id="wkLayersPane" data-studio-content="layers" role="tabpanel" hidden><h3>페이지 레이어</h3><div id="wkLayerList" class="wk-layer-grid" role="group" aria-label="레이어 선택"></div></section>
-          <section id="wkTemplatesPane" data-studio-content="templates" role="tabpanel" hidden>    <section class="wk-template-picker" aria-label="캐러셀 템플릿"><div class="wk-toolbar"><div><h3>템플릿</h3><p class="ig-hint">표지부터 마지막 장까지 한 번에 적용됩니다.</p></div><span id="wkTemplateName"></span></div><div id="wkTemplates"><div id="wkFeaturedTemplate"></div><details id="wkPreviousTemplates"><summary>이전 템플릿</summary><div id="wkLegacyTemplates" class="wk-templates"></div></details></div></section>
+          <section id="wkElementsPane" data-studio-content="elements" role="tabpanel" aria-labelledby="wkToolElements"><button class="wk-add-text" type="button" data-add-object="text"><span>T</span> 텍스트 추가</button><h4>기본 도형</h4><div class="wk-shapes"><button type="button" data-add-object="rect" aria-label="사각형 추가"><span class="wk-shape-rect"></span>사각형</button><button type="button" data-add-object="ellipse" aria-label="원 추가"><span class="wk-shape-circle"></span>원</button><button type="button" data-add-object="line" aria-label="선 추가"><span class="wk-shape-line"></span>선</button></div></section>
+          <section id="wkLayersPane" data-studio-content="layers" role="tabpanel" aria-labelledby="wkToolLayers" hidden><h3>페이지 레이어</h3><div id="wkLayerList" class="wk-layer-grid" role="group" aria-label="레이어 선택"></div></section>
+          <section id="wkTemplatesPane" data-studio-content="templates" role="tabpanel" aria-labelledby="wkToolTemplates" hidden>    <section class="wk-template-picker" aria-label="캐러셀 템플릿"><div class="wk-toolbar"><div><h3>카드 템플릿</h3></div><span id="wkTemplateName"></span></div><div id="wkTemplates"><div id="wkFeaturedTemplate"></div><details id="wkPreviousTemplates"><summary>이전 템플릿</summary><div id="wkLegacyTemplates" class="wk-templates"></div></details></div></section>
 </section>
-          <section id="wkPerformancesPane" data-studio-content="performances" role="tabpanel" hidden>        <details class="wk-inspector-section" id="wkSelectPerformances" open><summary>공연 선택</summary><div id="wkCandidates"></div><p class="ig-hint">달력에 등록한 이 주의 공연입니다. 최대 8개를 선택할 수 있습니다.</p></details></section>
-        </div>
-      </aside>
-      <div class="wk-stage">
-        <div id="wkStudioTools" class="wk-studio-tools" role="toolbar" aria-label="요소 편집"><div><button type="button" id="wkUndo" title="실행 취소 (Ctrl/⌘ Z)" aria-label="실행 취소">↶</button><button type="button" id="wkRedo" title="다시 실행 (Ctrl/⌘ Shift Z)" aria-label="다시 실행">↷</button></div><span class="wk-tool-divider"></span><button type="button" id="wkDuplicate">복제</button><button type="button" id="wkDelete">삭제</button><span class="wk-tool-divider"></span><button type="button" id="wkBackward">뒤로</button><button type="button" id="wkForward">앞으로</button><button type="button" id="wkAlignCenter">가운데</button><button type="button" id="wkLock" aria-pressed="false">잠금</button></div>
-        <div class="wk-toolbar"><strong id="wkStageTitle">표지</strong><span id="wkStageState" class="ig-hint"></span></div>
-        <div id="wkCanvasViewport" class="wk-canvas-viewport"><div class="wk-canvas-slot"><div id="wkLayerStage" class="wk-layer-stage" hidden><canvas id="wkLayerCanvas" width="1080" height="1350" tabindex="0" aria-label="디자인 캔버스. 요소를 클릭해 선택, 더블클릭해 글자 수정, 모서리를 끌어 크기 조절."></canvas><div id="wkLayerSelection" class="wk-layer-selection" hidden><button type="button" data-handle="nw" aria-label="왼쪽 위 크기 조절"></button><button type="button" data-handle="ne" aria-label="오른쪽 위 크기 조절"></button><button type="button" data-handle="sw" aria-label="왼쪽 아래 크기 조절"></button><button type="button" data-handle="se" aria-label="오른쪽 아래 크기 조절"></button><button type="button" data-handle="rotate" aria-label="요소 회전" title="회전 · Shift로 15도씩">↻</button></div><textarea id="wkInlineText" class="wk-inline-text" spellcheck="false" aria-label="캔버스 글자 직접 수정" hidden></textarea><div id="wkGuideX" class="wk-guide x" hidden></div><div id="wkGuideY" class="wk-guide y" hidden></div></div><div class="wk-previews" id="wkPreviews"></div></div></div>
-        <div class="wk-stage-bottom"><span>1080 × 1350</span><div><span id="wkZoomLabel"></span><label><span class="sr-only">캔버스 확대</span><select id="wkZoom"><option value="fit">화면에 맞춤</option><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option><option value="150">150%</option></select></label><button type="button" id="wkFocus">넓게 보기</button></div></div>
-        <div id="wkFilmstrip" class="wk-filmstrip" aria-label="편집할 카드 선택"></div>
-        <div class="wk-toolbar"><span id="wkCount"></span><div id="wkPageOrder" hidden><button type="button" class="btn ghost sm" id="wkPagePrevious" aria-label="공연 페이지 이전으로">← 이전으로</button><button type="button" class="btn ghost sm" id="wkPageNext" aria-label="공연 페이지 다음으로">다음으로 →</button></div><button class="btn ghost sm" id="wkRender">미리보기 갱신</button></div>
-      </div>
-      <aside class="wk-inspector">
+          <section id="wkPerformancesPane" data-studio-content="performances" role="tabpanel" aria-labelledby="wkToolPerformances" hidden>        <details class="wk-inspector-section" id="wkSelectPerformances" open><summary>공연 선택<span id="wkSelectedCount"></span></summary><div id="wkCandidates"></div></details></section>
+          <section id="wkPropertiesPane" class="wk-inspector" data-studio-content="properties" role="tabpanel" aria-labelledby="wkToolProperties" hidden>
 
         <fieldset id="wkEditor"><legend class="sr-only">선택한 카드 편집</legend>
           <div id="wkCoverFields" class="wk-inspector-section"><h3>표지 문구</h3><label class="ig-field">제목<textarea id="wkTitle" maxlength="220" rows="3"></textarea></label><label class="ig-field">부제<input type="text" id="wkSubtitle" maxlength="220"></label></div>
-          <section id="wkLayerPanel" class="wk-inspector-section" hidden>
-            <h3>선택한 요소</h3><p id="wkLayerEmpty" class="wk-layer-note">캔버스에서 편집할 요소를 선택하세요.</p>
-
+          <section id="wkLayerPanel" class="wk-inspector-section" aria-label="선택한 요소 속성" hidden>
+            <p id="wkLayerEmpty" class="wk-layer-note">캔버스에서 편집할 요소를 선택하세요.</p>
             <div class="wk-layer-properties" id="wkLayerProperties">
-              <div class="wk-toolbar"><strong id="wkLayerName"></strong><label class="wk-layer-visible"><input type="checkbox" id="wkLayerVisible">표시</label></div>
+              <div class="wk-layer-heading">
+                <h3 id="wkLayerName" tabindex="-1"></h3>
+                <label class="wk-layer-visible"><input type="checkbox" id="wkLayerVisible">표시</label>
+              </div>
               <label class="ig-field" id="wkLayerTextField">문구<textarea id="wkLayerText" maxlength="220" rows="3"></textarea></label>
-              <label class="ig-field" id="wkLayerFontField">글꼴<select id="wkLayerFont"><option value="serif">나눔명조</option><option value="sans">고딕</option></select></label><div class="ig-row"><label class="ig-field" id="wkLayerSizeField">글자 크기 (pt)<input id="wkLayerSize" type="number" min="12" max="220" step="0.25"></label><label class="ig-field" id="wkLayerColorField">색상<input type="color" id="wkLayerColor"></label></div>
-              <label class="ig-field" id="wkLayerAlignField">글자 정렬<select id="wkLayerAlign"><option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option></select></label><div class="ig-row" id="wkLayerDimensions"><label class="ig-field">너비<input id="wkLayerWidth" type="number" min="8" max="2160" step="0.01"></label><label class="ig-field" id="wkLayerHeightField">높이<input id="wkLayerHeight" type="number" min="8" max="2160" step="0.01"></label></div><div class="ig-row" id="wkLayerPosition"><label class="ig-field">가로 위치<input id="wkLayerX" type="number" min="-1080" max="1080" step="0.01"></label><label class="ig-field">세로 위치<input id="wkLayerY" type="number" min="-1350" max="1350" step="0.01"></label></div>
-              <label class="ig-field" id="wkLayerRotationField">회전 (°)<input id="wkLayerRotation" type="number" min="-180" max="180" step="0.01"></label><label class="ig-field" id="wkLayerOpacityField"><span id="wkLayerOpacityLabel">질감 강도</span> <output id="wkLayerOpacityValue"></output><input id="wkLayerOpacity" type="range" min="0" max="100" step="1"></label>
               <p id="wkLayerAutoNote" class="wk-layer-note" hidden>선택한 공연 수가 자동으로 표시됩니다.</p>
+              <div class="wk-layer-fields">
+                <label class="ig-field" id="wkLayerFontField">글꼴<select id="wkLayerFont"><option value="serif">나눔명조</option><option value="sans">고딕</option></select></label>
+                <label class="ig-field" id="wkLayerSizeField">글자 크기 (pt)<input id="wkLayerSize" type="number" min="12" max="220" step="0.25"></label>
+                <label class="ig-field" id="wkLayerAlignField">글자 정렬<select id="wkLayerAlign"><option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option></select></label>
+                <label class="ig-field" id="wkLayerColorField">색상<input type="color" id="wkLayerColor"></label>
+              </div>
+              <label class="ig-field wk-layer-slider" id="wkLayerOpacityField" for="wkLayerOpacity"><span id="wkLayerOpacityLabel">질감 강도</span><output for="wkLayerOpacity" id="wkLayerOpacityValue"></output><input id="wkLayerOpacity" aria-labelledby="wkLayerOpacityLabel" type="range" min="0" max="100" step="1"></label>
+              <div id="wkLayerGeometry" class="wk-layer-geometry">
+                <div class="wk-layer-fields" id="wkLayerPosition">
+                  <label class="ig-field">가로 위치<input id="wkLayerX" type="number" min="-1080" max="1080" step="0.01"></label>
+                  <label class="ig-field">세로 위치<input id="wkLayerY" type="number" min="-1350" max="1350" step="0.01"></label>
+                </div>
+                <div class="wk-layer-fields" id="wkLayerDimensions">
+                  <label class="ig-field">너비<input id="wkLayerWidth" type="number" min="8" max="2160" step="0.01"></label>
+                  <label class="ig-field" id="wkLayerHeightField">높이<input id="wkLayerHeight" type="number" min="8" max="2160" step="0.01"></label>
+                </div>
+                <label class="ig-field" id="wkLayerRotationField">회전 (°)<input id="wkLayerRotation" type="number" min="-180" max="180" step="0.01"></label>
+              </div>
               <div class="wk-layer-tools"><button type="button" class="btn ghost sm" id="wkLayerReset">이 레이어 초기화</button></div>
             </div>
           </section><div id="wkCards"></div>
           <div id="wkClosingFields" class="wk-inspector-section" hidden><h3>뒷표지 문구</h3><label class="ig-field">안내 문구<textarea id="wkClosing" maxlength="300" rows="3"></textarea></label></div>
           <details class="wk-inspector-section" id="wkCaptionSection"><summary>게시글 캡션</summary><label class="ig-field"><span class="sr-only">캡션</span><textarea id="wkCaption" maxlength="2200" rows="7"></textarea></label><button class="btn ghost sm" id="wkCaptionGenerate">공연 정보로 채우기</button></details>
         </fieldset>
+          </section>
+        </div>
       </aside>
     </div>
-    <div class="wk-publish-bar"><span class="ig-hint">이미지를 내려받거나, 내용 확인 후 인스타그램에 게시하세요.</span><div class="btn-row"><button class="btn ghost sm" id="wkLayerDownload" hidden>편집 원본</button><button class="btn ghost sm" id="wkDownload" disabled>ZIP 다운로드</button><button class="btn primary" id="wkPrepare">게시 전 확인</button></div></div>
+    <div class="wk-publish-bar"><div class="btn-row"><button class="btn ghost sm" id="wkLayerDownload" hidden>편집 원본</button><button class="btn ghost sm" id="wkDownload" disabled>ZIP 다운로드</button><button class="btn primary" id="wkPrepare">게시 전 확인</button></div></div>
     <div id="wkReview" class="wk-panel" hidden><p id="wkAccount"></p><pre id="wkFinalCaption"></pre><label><input type="checkbox" id="wkConfirm"> 모든 카드의 이미지·순서·캡션과 게시 계정을 확인했습니다.</label></div>
     <div class="btn-row"><button class="btn primary" id="wkPublish" hidden>확인한 내용 지금 게시</button><button class="btn ghost sm" id="wkJobStatus" hidden>게시 상태 확인</button><button class="btn ghost sm" id="wkUnlock" hidden>초안 다시 편집</button></div>
   </div>
@@ -2599,7 +2622,28 @@ window.ICO = {
   const messages={weekly_conflict:'다른 창에서 수정되었습니다. 내용을 복사한 뒤 새로고침해 주세요.',weekly_source_duplicate:'이 게시물의 이미지는 이미 등록했습니다. 달력에서 기존 공연을 수정해 주세요.',weekly_locked:'게시 작업이 연결된 초안입니다. 먼저 게시 상태를 확인해 주세요.',weekly_verification_required:'공연명·공연일·장소·포스터와 정보 확인 상태를 점검해 주세요.',weekly_in_use:'주간 초안이나 발행 이력에서 사용하는 공연입니다. 삭제 대신 숨김으로 변경해 주세요.',weekly_source_unavailable:'원본 이미지를 가져오지 못했습니다. 포스터 파일을 직접 선택해 주세요.',weekly_invalid_sessions:'회차를 YYYY-MM-DD 또는 YYYY-MM-DD HH:MM 형식으로 입력하고 중복을 제거해 주세요.',weekly_invalid_image:'포스터는 JPEG, 최대 2MB로 저장합니다. 다른 이미지를 선택해 주세요.',weekly_poster_required:'포스터 파일을 선택해 주세요.',weekly_invalid_design:'레이어 설정을 확인해 주세요.',weekly_invalid_fields:'필수 항목과 가격 정보를 확인해 주세요.',weekly_library_full:'저장 한도에 도달했습니다. 담당자에게 문의해 주세요.'};
   const calendarChanges=new Map();let calendarDrag=null,suppressCalendarClick=false;
   let thumbUrls=new Map(),selectedCard=0;
-  function selectCard(index){selectedCard=Math.max(0,Math.min(index,(draft?.cards.length||0)+1));const last=(draft?.cards.length||0)+1;$('wkCoverFields').hidden=selectedCard!==0;$('wkClosingFields').hidden=selectedCard!==last;for(const [i,node]of [...$('wkCards').children].entries())node.hidden=i+1!==selectedCard;for(const [i,node]of [...$('wkPreviews').children].entries())node.hidden=i!==selectedCard;for(const [i,node]of [...$('wkFilmstrip').children].entries())node.setAttribute('aria-pressed',String(i===selectedCard));syncLayerEditor();$('wkStageTitle').textContent=selectedCard===0?'표지':selectedCard===last?'뒷표지':draft.cards[selectedCard-1]?.title||'공연 카드';}
+  function selectCard(index){
+    const last=(draft?.cards.length||0)+1;
+    const next=Math.max(0,Math.min(index,last));
+    if(next!==selectedCard)selectedLayer=null;
+    selectedCard=next;
+    $('wkCoverFields').hidden=next!==0;
+    $('wkClosingFields').hidden=next!==last;
+    for(const [i,node] of [...$('wkCards').children].entries())node.hidden=i+1!==next;
+    for(const [i,node] of [...$('wkPreviews').children].entries())node.hidden=i!==next;
+    const strip=$('wkFilmstrip');
+    for(const [i,tab] of [...strip.children].entries())tab.setAttribute('aria-pressed',String(i===next));
+    const thumb=strip.children[next];
+    if(thumb){
+      const box=strip.getBoundingClientRect(), item=thumb.getBoundingClientRect();
+      if(item.left<box.left)strip.scrollLeft+=item.left-box.left;
+      else if(item.right>box.right)strip.scrollLeft+=item.right-box.right;
+    }
+    syncLayerEditor();
+    $('wkPageNumber').textContent=(next+1)+' / '+(last+1);
+    $('wkStageTitle').textContent=next===0?'표지':next===last?'뒷표지':draft.cards[next-1]?.title||'공연 카드';
+    $('wkStageTitle').title=$('wkStageTitle').textContent;
+  }
 
   let performances=[],drafts=[],draft=null,pEdit=null,pFile=null,sourceCursor=null,sourceBusy=false,busy=false,dirty=false,generation=0,rendered=[],urls=[],assetCache=new Map();
   const status=(text,error=false)=>{$('wkStatus').textContent=text;$('wkStatus').dataset.error=String(error);};
@@ -2638,7 +2682,7 @@ window.ICO = {
   function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
   function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:'공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket',caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
   function fillDraft(){
-    selectedCard=0;clearRender();$('wkWeek').value=draft.week;
+    selectedCard=0;selectedLayer=null;clearRender();$('wkWeek').value=draft.week;
     for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
     $('wkDraftList').value=drafts.some(d=>d.id===draft.id)?draft.id:'';renderCandidates();renderCards();selectCard(0);controls();
     status(draft.jobId?(labels[draft.status]||draft.status)+' · 게시 상태와 저장된 이미지를 확인해 주세요.':'초안을 편집한 뒤 저장해 주세요.');
@@ -2646,13 +2690,28 @@ window.ICO = {
   const weekSessions=p=>p.sessions.filter(s=>s.date>=draft.week&&s.date<=draft.weekEnd);
   const scheduleText=p=>weekSessions(p).map(s=>s.date.slice(5).replace('-','.')+(s.time?' '+s.time:'')).join(' / ');
   function renderCandidates(){
-    $('wkRange').textContent=draft.week+' ~ '+draft.weekEnd+' · 월요일 기준';$('wkCandidates').replaceChildren();
+    $('wkRange').textContent=draft.week.replaceAll('-','.')+' – '+draft.weekEnd.slice(5).replace('-','.');$('wkCandidates').replaceChildren();
     const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
     if(!candidates.length)$('wkCandidates').append(el('p','이 주에 등록된 공연이 없습니다.','ig-hint'));
     for(const p of candidates){const row=el('label',undefined,'wk-candidate'),check=el('input');check.type='checkbox';check.checked=draft.cards.some(c=>c.performanceId===p.id);check.disabled=!!draft.jobId;
       check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
-      const info=el('span',p.title+' · '+scheduleText(p)+(p.status==='verified'?'':' · 확인 필요'));const thumb=el('img');thumb.alt='';const epoch=generation;asset(p.assetId).then(blob=>{if(epoch!==generation||!thumb.isConnected)return;if(!thumbUrls.has(p.assetId))thumbUrls.set(p.assetId,URL.createObjectURL(blob));thumb.src=thumbUrls.get(p.assetId);}).catch(()=>thumb.remove());row.append(check,thumb,info);$('wkCandidates').append(row);}
-    $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
+      const info=el('span',undefined,'wk-performance-info');
+      const name=el('strong',p.title);
+      name.title=p.title;
+      info.append(name,el('small',scheduleText(p)));
+      if(p.status!=='verified')info.append(el('small','정보 확인 필요','wk-needs-review'));
+      const thumb=el('img'), epoch=generation;
+      thumb.alt='';
+      asset(p.assetId).then(blob=>{
+        if(epoch!==generation||!thumb.isConnected)return;
+        if(!thumbUrls.has(p.assetId))thumbUrls.set(p.assetId,URL.createObjectURL(blob));
+        thumb.src=thumbUrls.get(p.assetId);
+      }).catch(()=>thumb.remove());
+      row.append(check,thumb,info);
+      $('wkCandidates').append(row);
+    }
+    $('wkCount').textContent=(draft.cards.length+2)+'장';
+    $('wkSelectedCount').textContent=draft.cards.length+' / 8';
   }
   function renderCards(){
     if(draft.design?.pages){const active=new Set(['closing',...draft.cards.map(c=>'performance:'+c.performanceId)]);for(const key of Object.keys(draft.design.pages))if(!active.has(key))delete draft.design.pages[key];}
@@ -2661,7 +2720,8 @@ window.ICO = {
       const head=el('div',undefined,'wk-toolbar');head.append(el('strong',(i+1)+'. 공연 카드'));
       for(const [name,delta]of [['위로',-1],['아래로',1],['제외',0]]){const button=el('button',name,'btn ghost sm');button.type='button';button.disabled=!!draft.jobId||(delta!==0&&(i+delta<0||i+delta>=draft.cards.length));button.addEventListener('click',()=>{pull();const [c]=draft.cards.splice(i,1);if(delta)draft.cards.splice(i+delta,0,c);changed();renderCards();renderCandidates();run(render);});head.append(button);}box.append(head);
       for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?600:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
-    $('wkCount').textContent='공연 '+draft.cards.length+'개 / 총 '+(draft.cards.length+2)+'장';
+    $('wkCount').textContent=(draft.cards.length+2)+'장';
+    $('wkSelectedCount').textContent=draft.cards.length+' / 8';
   }
   function highlightPerformance(id){id=id||document.activeElement?.closest('#wkCalendar .wk-event, #wkUnscheduled .wk-event')?.dataset.performanceId;for(const button of document.querySelectorAll('#wkCalendar .wk-event, #wkUnscheduled .wk-event'))button.classList.toggle('wk-linked-highlight',!!id&&button.dataset.performanceId===id);}
   const tip=el('div');
@@ -2954,8 +3014,31 @@ window.ICO = {
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));checkCurrent();if(!blob)throw Error('이미지 생성에 실패했습니다.');rendered.push(blob);
       }
     }
-    for(let i=0;i<rendered.length;i++){const url=URL.createObjectURL(rendered[i]);urls.push(url);const fig=el('figure'),img=el('img');img.src=url;img.alt=(i+1)+'번 실제 게시 이미지';const a=el('a',(i+1)+'번 이미지 내려받기');a.href=url;a.download=String(i+1).padStart(2,'0')+'.jpg';const zoom=el('a');zoom.href=url;zoom.target='_blank';zoom.rel='noopener';zoom.title='원본 크기로 보기';zoom.append(img);fig.append(zoom,a);$('wkPreviews').append(fig);const tab=el('button');tab.type='button';if(i>0&&i<rendered.length-1){tab.dataset.page=String(i);tab.draggable=!draft.jobId;tab.title='끌어서 공연 순서 변경';}tab.setAttribute('aria-label',(i===0?'표지':i===rendered.length-1?'뒷표지':'공연 '+i)+' 편집');const thumb=el('img');thumb.src=url;thumb.alt='';tab.append(thumb,el('span',i===0?'표지':i===rendered.length-1?'뒷표지':String(i)));tab.addEventListener('click',()=>selectCard(i));$('wkFilmstrip').append(tab);}
-    selectCard(selectedCard);$('wkStageState').textContent='미리보기 최신';status('실제 출력 이미지 '+rendered.length+'장을 생성했습니다.');controls();if(draft.jobId)showReview();
+    for(let i=0;i<rendered.length;i++){
+      const url=URL.createObjectURL(rendered[i]);
+      urls.push(url);
+      const fig=el('figure'), img=el('img'), zoom=el('a');
+      img.src=url; img.alt=(i+1)+'번 실제 게시 이미지';
+      zoom.href=url; zoom.target='_blank'; zoom.rel='noopener'; zoom.title='원본 크기로 보기'; zoom.append(img);
+      const link=el('a',(i+1)+'번 이미지 내려받기');
+      link.href=url; link.download=String(i+1).padStart(2,'0')+'.jpg';
+      fig.append(zoom,link);
+      $('wkPreviews').append(fig);
+
+      const last=rendered.length-1;
+      const pageName=i===0?'표지':i===last?'뒷표지':draft.cards[i-1].title;
+      const tab=el('button');
+      tab.type='button';
+      if(i>0&&i<last){tab.dataset.page=String(i);tab.draggable=!draft.jobId;}
+      tab.title=tab.draggable?pageName+' · 끌어서 순서 변경':pageName;
+      tab.setAttribute('aria-label',(i+1)+'페이지 '+pageName+' 편집');
+      const thumb=el('img');
+      thumb.src=url; thumb.alt='';
+      tab.append(thumb,el('span',pageName));
+      tab.addEventListener('click',()=>selectCard(i));
+      $('wkFilmstrip').append(tab);
+    }
+    selectCard(selectedCard);$('wkStageState').textContent=dirty?'저장하지 않은 변경':'미리보기 최신';status('');controls();if(draft.jobId)showReview();
     }catch(e){clearRender();$('wkStageState').textContent='미리보기를 다시 생성해 주세요.';throw e;}
   }
   function showReview(){selectCard(selectedCard);$('wkReview').hidden=false;$('wkAccount').textContent='게시 계정 @'+(draft.job?.account?.username||'확인 필요')+' · '+(labels[draft.status]||draft.status);$('wkFinalCaption').textContent=draft.caption;const old=$('wkPublishedLink');if(old)old.remove();if(draft.job?.permalink){const a=el('a','인스타그램에서 게시물 보기');a.id='wkPublishedLink';a.href=draft.job.permalink;a.target='_blank';a.rel='noopener noreferrer';$('wkReview').append(a);}$('wkConfirm').checked=false;controls();}

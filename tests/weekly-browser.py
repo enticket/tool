@@ -123,6 +123,8 @@ with sync_playwright() as p:
  page.locator('#wkSessionRows .wk-session-remove').nth(1).click();expect(page.locator('#wkSessionRows input[type=date]')).to_have_count(1)
  page.locator('#wkClosePerformance').click();page.set_viewport_size({'width':1440,'height':1000})
  page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkCalendarView')).to_be_hidden();expect(page.locator('#wkDesignView')).to_be_visible()
+ def pane(name):page.locator(f'[data-studio-pane="{name}"]').click()
+ expect(page.locator('[data-studio-pane="performances"]')).to_have_attribute('aria-selected','true')
  page.locator('#wkWeek').fill('2026-11-16');page.locator('#wkWeek').dispatch_event('change');expect(page.locator('#wkTitle')).to_have_value('공연이\n있는\n일주일.')
  expect(page.locator('#wkLayerStage')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  assert page.evaluate("document.fonts.check('800 48px \"Enticket Myeongjo\"', '공연')")
@@ -155,7 +157,7 @@ with sync_playwright() as p:
  assert manifest['design']['layers']['title']['fontSize']==165
  assert '<g id="title"' in svg and '<text ' in svg and 'ENTICKET' not in svg and 'data:font/woff2;base64,' in svg
  assert state['publishes']==0
- layer_saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=20000);page.locator('#wkDraftList').select_option(layer_saved_id)
+ layer_saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=20000);page.locator('#wkDraftList').select_option(layer_saved_id);pane('layers');page.locator('[data-layer="title"]').click()
  expect(page.locator('#wkLayerSize')).to_have_value('165');expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  page.locator('[data-studio-pane="layers"]').click()
  page.locator('[data-layer="texture"]').click();expect(page.locator('#wkLayerOpacity')).to_have_value('80')
@@ -168,7 +170,7 @@ with sync_playwright() as p:
  page.locator('#wkFilmstrip button').nth(1).click();page.locator('#wkLayerStage').screenshot(path=str(artifact_dir/'paper-detail.png'))
  page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkLayerPanel')).to_be_hidden();expect(page.locator('#wkLayerDownload')).to_be_disabled();assert state['publishes']==0
  archived=bytes(images[0]);page.locator('#wkRender').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000);assert bytes(images[0])==archived
- page.locator('#wkUnlock').click();expect(page.locator('#wkLayerPanel')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+ page.locator('#wkUnlock').click();pane('properties');expect(page.locator('#wkLayerPanel')).to_be_visible();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
  # Eight performances retain full titles on the final index and produce ten images.
  paper_base=next(p for p in db['performances'] if p['title']=='11월의 작은 음악회')
  for n in range(2,9):
@@ -190,6 +192,7 @@ with sync_playwright() as p:
  # Retain the original templates and posting flow checks below.
  page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkRender')).to_be_enabled(timeout=20000)
+ pane('properties')
  page.locator('#wkTitle').fill('이번 주\n인천에서 볼 공연');page.locator('#wkSubtitle').fill('이번 주, 공연장에서 만나요')
  expect(page.locator('#wkPreviousTemplates')).not_to_have_attribute('open','')
  page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(2)
@@ -233,6 +236,7 @@ with sync_playwright() as p:
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(1)
  # Realistic long copy must fit all styles; excessive copy must not leave a partial export enabled.
  page.locator('#wkFilmstrip button').nth(1).click()
+ pane('properties')
  fields=page.locator('#wkCards input');original=[fields.nth(i).input_value() for i in range(4)]
  stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11.16 14:00 / 11.17 19:30 / 11.18 19:30 / 11.19 19:30 / 11.22 15:00','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
  for i,value in enumerate(stress):fields.nth(i).fill(value)
@@ -241,16 +245,18 @@ with sync_playwright() as p:
   choice=page.locator(f'#wkTemplates [data-template="{template}"]');choice.click();expect(choice).to_be_enabled(timeout=20000);expect(page.locator('#wkPreviews img')).to_have_count(3);expect(page.locator('#wkDownload')).to_be_enabled()
  page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
+ pane('properties')
  fields.nth(2).fill('장소가 너무 긴 문구입니다 '*15);page.locator('#wkRender').click();expect(page.locator('#wkStatus')).to_contain_text('너무 깁니다');expect(page.locator('#wkDownload')).to_be_disabled();expect(page.locator('#wkPreviews img')).to_have_count(0)
  for i,value in enumerate(original):fields.nth(i).fill(value)
  page.locator('[data-studio-pane="templates"]').click()
  page.locator('#wkTemplates [data-template="poster-news"]').click();expect(page.locator('#wkTemplates [data-template="poster-news"]')).to_be_enabled(timeout=20000)
  page.locator('#wkFilmstrip button').first.click()
+ pane('properties')
  page.locator('#wkCaptionSection summary').click();page.locator('#wkCaptionGenerate').click();page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다')
  assert db['drafts'][0]['template']=='poster-news'
  assert db['drafts'][0]['title']=='이번 주\n인천에서 볼 공연'
  saved_id=db['drafts'][0]['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkCards input').first).to_have_value('11월의 작은 음악회')
- page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(3);page.locator('#wkFilmstrip button').nth(1).click();expect(page.locator('#wkCards input').first).to_be_visible()
+ page.locator('#wkRender').click();expect(page.locator('#wkPreviews img')).to_have_count(3);page.locator('#wkFilmstrip button').nth(1).click();pane('properties');expect(page.locator('#wkCards input').first).to_be_visible()
  assert page.locator('#wkPreviews img').evaluate_all('(xs)=>xs.every(i=>i.naturalWidth===1080&&i.naturalHeight===1350)')
  assert state['publishes']==0
  # The two workspaces are distinct, and navigating between them preserves the editor.

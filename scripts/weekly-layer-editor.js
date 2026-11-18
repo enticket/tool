@@ -1,7 +1,7 @@
 // Embedded inside the weekly editor closure by the public build.
 const WD=window.EnticketWeeklyDesign;
-let paperAssetsPromise,paperTexture=null,paperImages={},selectedLayer='title',layerDrag=null,inlineEdit=null;
-let historyKey='',past=[],future=[],historyGroup='',historyTime=0,studioPane='elements',zoom='fit';
+let paperAssetsPromise,paperTexture=null,paperImages={},selectedLayer=null,layerDrag=null,inlineEdit=null;
+let historyKey='',past=[],future=[],historyGroup='',historyTime=0,zoom='fit';
 const isPaper=()=>draft?.template==='paper-editorial';
 const canEdit=()=>isPaper()&&!busy&&!draft.jobId;
 const canvasContext=()=>$('wkLayerCanvas').getContext('2d');
@@ -60,7 +60,7 @@ function syncLayerEditor(){
     $('wkCoverFields').hidden=true;$('wkClosingFields').hidden=true;
     const key=draft.id+'|'+draft.cards.map(c=>c.performanceId).join(',')+'|'+(draft.jobId||'');
     if(key!==historyKey){historyKey=key;past=[];future=[];historyGroup='';}
-    if(!currentLayer())selectedLayer=currentScene().find(l=>l.type==='text')?.id||null;
+    if(!currentLayer())selectedLayer=null;
     refreshStudio();
   }
   studioControls();requestAnimationFrame(fitCanvas);
@@ -70,9 +70,20 @@ function renderLayerList(){
   $('wkLayerList').replaceChildren();
   for(const l of currentScene().slice().reverse()){
     const b=el('button');b.type='button';b.dataset.layer=l.id;b.setAttribute('aria-pressed',String(l.id===selectedLayer));
-    b.dataset.hidden=String(!l.visible);b.title=l.name+(l.locked?' · 잠김':'');
-    b.append(el('span',l.type==='text'?'T':l.type==='image'?'▧':l.type==='ellipse'?'○':l.type==='line'?'—':'□','wk-object-symbol'),el('span',l.name),el('small',l.locked?'잠김':!l.visible?'숨김':''));
-    b.addEventListener('click',()=>{commitInline();selectedLayer=l.id;fillLayerProperties();paintLayerPreview();renderLayerList();});$('wkLayerList').append(b);
+    const state=[l.locked?'잠김':'',!l.visible?'숨김':''].filter(Boolean).join(' · ');
+    b.dataset.hidden=String(!l.visible);
+    b.title=[l.name,state].filter(Boolean).join(' · ');
+    const symbol=el('span',l.type==='text'?'T':'','wk-object-symbol');
+    symbol.dataset.type=l.type;
+    symbol.setAttribute('aria-hidden','true');
+    if(l.color)symbol.style.setProperty('--layer-color',l.color);
+    b.append(symbol,el('span',l.name));
+    if(state)b.append(el('small',state));
+    b.addEventListener('click',event=>{
+      commitInline();selectedLayer=l.id;setStudioPane('properties');refreshStudio();
+      if(event.detail===0)$('wkLayerName').focus({preventScroll:true});
+    });
+    $('wkLayerList').append(b);
   }
 }
 function fillLayerProperties(){
@@ -85,7 +96,7 @@ function fillLayerProperties(){
   $('wkLayerFontField').hidden=!text;$('wkLayerFont').value=l.family||'serif';
   $('wkLayerAlignField').hidden=!text;$('wkLayerAlign').value=l.align||'left';
   $('wkLayerColorField').hidden=!l.color;$('wkLayerColor').value=l.color||'#000000';
-  $('wkLayerPosition').hidden=l.x===undefined;$('wkLayerX').value=l.x??0;$('wkLayerY').value=l.y??0;
+  $('wkLayerGeometry').hidden=l.x===undefined;$('wkLayerX').value=l.x??0;$('wkLayerY').value=l.y??0;
   $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text'].includes(l.type);$('wkLayerWidth').value=l.width||950;$('wkLayerHeight').value=l.height||3;$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
   $('wkLayerRotationField').hidden=l.x===undefined;$('wkLayerRotation').value=l.angle||0;
   $('wkLayerOpacity').value=l.opacity??100;$('wkLayerOpacityValue').value=(l.opacity??100)+'%';
@@ -105,6 +116,8 @@ function studioControls(){
   $('wkDuplicate').disabled=!mutable||!['text','rect','ellipse','line'].includes(l?.type);
   $('wkLock').disabled=!enabled||!l;$('wkLock').textContent=l?.locked?'잠금 해제':'잠금';$('wkLock').setAttribute('aria-pressed',String(!!l?.locked));
   const performance=selectedCard>0&&selectedCard<=(draft?.cards.length||0);
+  $('wkShowPrevious').disabled=busy||!draft||selectedCard===0;
+  $('wkShowNext').disabled=busy||!draft||selectedCard>=draft.cards.length+1;
   $('wkPageOrder').hidden=!performance;
   $('wkPagePrevious').disabled=busy||!!draft?.jobId||selectedCard<=1;
   $('wkPageNext').disabled=busy||!!draft?.jobId||selectedCard>=(draft?.cards.length||0);
@@ -143,7 +156,7 @@ function addObject(type){
   commitInline();const id='object-'+crypto.randomUUID();
   const spec={id,type,name:type==='text'?'새 텍스트':type==='rect'?'사각형':type==='ellipse'?'원':'선',x:320,y:520,width:440,height:type==='line'?5:240,color:type==='text'?'#222222':'#b80808',visible:true,locked:false,angle:0,opacity:100};
   if(type==='text')Object.assign(spec,{text:'텍스트를 입력하세요',fontSize:34,family:'sans',leading:1.2});
-  if(mutate(page=>{if(page.objects.length>=40)throw Error('limit');page.objects.push(spec);page.order.push(id);})){selectedLayer=id;refreshStudio();if(type==='text')startInline();}
+  if(mutate(page=>{if(page.objects.length>=40)throw Error('limit');page.objects.push(spec);page.order.push(id);})){selectedLayer=id;setStudioPane('properties');refreshStudio();if(type==='text')startInline();}
 }
 function deleteObject(){
   const l=currentLayer();if(!l||l.locked)return;
@@ -154,7 +167,7 @@ function duplicateObject(){
   const copy={id:'object-'+crypto.randomUUID(),type:l.type,name:l.name+' 복사'};
   for(const key of ['text','x','y','width','height','fontSize','color','family','leading','weight','italic','align','angle','opacity'])if(l[key]!==undefined)copy[key]=l[key];
   copy.x=Math.min(1000,copy.x+24);copy.y=Math.min(1250,copy.y+24);
-  if(mutate(page=>{if(page.objects.length>=40)throw Error('limit');page.objects.push(copy);page.order=currentScene().map(n=>n.id).filter(id=>id!==copy.id).concat(copy.id);})){selectedLayer=copy.id;refreshStudio();}
+  if(mutate(page=>{if(page.objects.length>=40)throw Error('limit');page.objects.push(copy);page.order=currentScene().map(n=>n.id).filter(id=>id!==copy.id).concat(copy.id);})){selectedLayer=copy.id;setStudioPane('properties');refreshStudio();}
 }
 function moveOrder(delta){
   if(!currentLayer()||currentLayer().locked)return;
@@ -184,9 +197,26 @@ async function downloadLayerSource(){
   if(exportEpoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
   const url=URL.createObjectURL(new Blob([fflate.zipSync(files,{level:6})],{type:'application/zip'})),a=el('a');a.href=url;a.download=draft.week+'-enticket-editable.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+function setStudioPane(name){
+  for(const button of document.querySelectorAll('[data-studio-pane]')){
+    const selected=button.dataset.studioPane===name;
+    button.setAttribute('aria-selected',String(selected));
+    button.tabIndex=selected?0:-1;
+  }
+  for(const panel of document.querySelectorAll('[data-studio-content]'))panel.hidden=panel.dataset.studioContent!==name;
+}
 function initLayerEditor(){
-  const setPane=name=>{studioPane=name;for(const b of document.querySelectorAll('[data-studio-pane]'))b.setAttribute('aria-selected',String(b.dataset.studioPane===name));for(const panel of document.querySelectorAll('[data-studio-content]'))panel.hidden=panel.dataset.studioContent!==name;};
-  for(const b of document.querySelectorAll('[data-studio-pane]'))b.addEventListener('click',()=>setPane(b.dataset.studioPane));
+  const tabs=[...document.querySelectorAll('[data-studio-pane]')];
+  for(const [index,button] of tabs.entries()){
+    button.addEventListener('click',()=>setStudioPane(button.dataset.studioPane));
+    button.addEventListener('keydown',event=>{
+      const next={ArrowLeft:(index+tabs.length-1)%tabs.length,ArrowRight:(index+1)%tabs.length,Home:0,End:tabs.length-1}[event.key];
+      if(next===undefined)return;
+      event.preventDefault();tabs[next].click();tabs[next].focus();
+    });
+  }
+  $('wkToTools').addEventListener('click',()=>tabs.find(t=>t.tabIndex===0).focus());
+  $('wkToCanvas').addEventListener('click',()=>$('wkToTools').focus());
   for(const b of document.querySelectorAll('[data-add-object]'))b.addEventListener('click',()=>addObject(b.dataset.addObject));
   $('wkUndo').addEventListener('click',()=>undoStudio());$('wkRedo').addEventListener('click',()=>undoStudio(true));
   $('wkDelete').addEventListener('click',deleteObject);$('wkDuplicate').addEventListener('click',duplicateObject);
@@ -194,6 +224,8 @@ function initLayerEditor(){
   $('wkLock').addEventListener('click',()=>{const l=currentLayer();if(l){editLayer({locked:!l.locked});fillLayerProperties();}});
   $('wkAlignCenter').addEventListener('click',()=>{const l=currentLayer();if(l){const b=WD.layerBounds(canvasContext(),l);editLayer({x:l.x+540-b.x-b.width/2});fillLayerProperties();}});
   $('wkZoom').addEventListener('change',()=>{zoom=$('wkZoom').value;fitCanvas();});
+  $('wkShowPrevious').addEventListener('click',()=>selectCard(selectedCard-1));
+  $('wkShowNext').addEventListener('click',()=>selectCard(selectedCard+1));
   $('wkPagePrevious').addEventListener('click',()=>reorderStudioPage(selectedCard,selectedCard-1));
   $('wkPageNext').addEventListener('click',()=>reorderStudioPage(selectedCard,selectedCard+1));
   $('wkFilmstrip').addEventListener('dragstart',e=>{
@@ -218,7 +250,7 @@ function initLayerEditor(){
     if(!canEdit()||e.button!==0)return;commitInline();const p=point(e);
     if(mode==='move'){
       const hit=currentScene().slice().reverse().find(l=>l.visible&&!l.locked&&!['background','texture'].includes(l.type)&&WD.hitLayer(canvasContext(),l,p.x,p.y));
-      selectedLayer=hit?.id||null;refreshStudio();if(!hit)return;
+      selectedLayer=hit?.id||null;if(hit)setStudioPane('properties');refreshStudio();if(!hit)return;
     }
     const l=currentLayer();if(!l||l.locked)return;e.preventDefault();canvas.focus();
     layerDrag={pointer:e.pointerId,mode,p,layer:{...l},bounds:WD.layerBounds(canvasContext(),l),group:'pointer-'+Date.now(),moved:false};stage.setPointerCapture(e.pointerId);
@@ -253,7 +285,7 @@ function initLayerEditor(){
   const stop=()=>{layerDrag=null;historyGroup='';$('wkGuideX').hidden=true;$('wkGuideY').hidden=true;};
   for(const type of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(type,stop);
   $('wkDesignView').addEventListener('keydown',e=>{
-    if(e.isComposing||e.target.closest('input,textarea,select,[contenteditable=true]'))return;
+    if(e.defaultPrevented||e.isComposing||e.target.closest('input,textarea,select,[contenteditable=true]'))return;
     if(e.key==='Escape'){stop();selectedLayer=null;refreshStudio();return;}
     if(!canEdit())return;
     const mod=e.ctrlKey||e.metaKey;
@@ -261,12 +293,12 @@ function initLayerEditor(){
     if(mod&&e.key.toLowerCase()==='y'){e.preventDefault();undoStudio(true);return;}
     if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();duplicateObject();return;}
     if(['Delete','Backspace'].includes(e.key)){e.preventDefault();deleteObject();return;}
-    if(e.key==='Enter'){e.preventDefault();startInline();return;}
+    if(e.key==='Enter' && e.target===canvas){e.preventDefault();startInline();return;}
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
       const l=currentLayer();if(!l||l.locked||l.x===undefined)return;e.preventDefault();const delta=e.shiftKey?10:1;
       editLayer({x:l.x+(e.key==='ArrowLeft'?-delta:e.key==='ArrowRight'?delta:0),y:l.y+(e.key==='ArrowUp'?-delta:e.key==='ArrowDown'?delta:0)},'arrow-'+l.id);fillLayerProperties();
     }
   });
-  document.addEventListener('enticket-auth',()=>{inlineEdit=null;$('wkInlineText').hidden=true;stop();past=[];future=[];historyKey='';paperImages={};canvasContext().clearRect(0,0,1080,1350);$('wkLayerStage').hidden=true;$('wkLayerPanel').hidden=true;$('wkDesignView').classList.remove('wk-focus');selectedLayer='title';});
-  setPane('elements');
+  document.addEventListener('enticket-auth',()=>{inlineEdit=null;$('wkInlineText').hidden=true;stop();past=[];future=[];historyKey='';paperImages={};canvasContext().clearRect(0,0,1080,1350);$('wkLayerStage').hidden=true;$('wkLayerPanel').hidden=true;$('wkDesignView').classList.remove('wk-focus');selectedLayer=null;});
+  setStudioPane('performances');
 }

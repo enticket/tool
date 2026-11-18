@@ -69,9 +69,17 @@ with sync_playwright() as p:
  page.goto(base,wait_until='networkidle');page.locator('#gLoginBtn').click();expect(page.locator('#gUser')).to_have_text('staff@test.example');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkPreviews img')).to_have_count(2,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkTitle')).to_have_value('공연이\n있는\n일주일.')
+ expect(page.locator('#wkLayerSelection')).to_be_hidden()
  page.locator('#wkStudio').screenshot(path=str(artifact_dir/'studio-clean.png'))
  def pane(name):page.locator(f'[data-studio-pane="{name}"]').click()
- def layer(name):pane('layers');page.locator(f'[data-layer="{name}"]').click()
+ def layer(name):
+  pane('layers');page.locator(f'[data-layer="{name}"]').click()
+  expect(page.locator('[data-studio-pane="properties"]')).to_have_attribute('aria-selected','true')
+ active_tool=page.locator('[data-studio-pane="performances"]')
+ active_tool.focus();page.keyboard.press('ArrowRight')
+ expect(page.locator('[data-studio-pane="templates"]')).to_be_focused()
+ expect(page.locator('#wkTemplatesPane')).to_be_visible()
+ page.keyboard.press('Home');expect(active_tool).to_be_focused()
  def drag(start,end):
   page.mouse.move(*start);page.mouse.down();page.mouse.move(*end,steps=12);page.mouse.up()
  def center(selector):
@@ -124,9 +132,21 @@ with sync_playwright() as p:
  archive=zipfile.ZipFile(dl.value.path());source=json.loads(archive.read('design.json'));assert source['design']==saved['design'];assert '<rect ' in archive.read('cover.svg').decode();assert 'rotate(' in archive.read('cover.svg').decode();assert 'data:image/jpeg;base64,' in archive.read('02.svg').decode();assert '이번 주, 놓치지 마세요' in archive.read('03.svg').decode()
  saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=30000);page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  layer('title');expect(page.locator('#wkLayerSize')).to_have_value('165');expect(page.locator('#wkLayerList [data-layer^="object-"]')).to_have_count(3)
- page.locator('#wkFilmstrip button').nth(1).click();layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('560');expect(page.locator('#wkLayerX')).to_have_value('80')
- for width in [390,320]:
-  page.set_viewport_size({'width':width,'height':900});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+ next_page=page.locator('#wkShowNext');previous_page=page.locator('#wkShowPrevious')
+ expect(previous_page).to_be_disabled()
+ page_labels=page.locator('#wkFilmstrip button').all_text_contents()
+ next_page.click();expect(page.locator('#wkStageTitle')).to_have_text(fixture['title'])
+ next_page.click();expect(next_page).to_be_disabled()
+ previous_page.click();expect(page.locator('#wkStageTitle')).to_have_text(fixture['title'])
+ assert page.locator('#wkFilmstrip button').all_text_contents()==page_labels
+ layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('560');expect(page.locator('#wkLayerX')).to_have_value('80')
+ for width in [960,823,390,320]:
+  page.set_viewport_size({'width':width,'height':900})
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  if width in (960,823):
+   canvas=page.locator('#wkLayerCanvas').bounding_box()
+   assert canvas['width']>=240, (width,canvas)
+  expect(page.locator('[data-studio-pane="properties"]')).to_be_visible()
  page.screenshot(path=str(artifact_dir/'studio-mobile.png'),full_page=True);page.set_viewport_size({'width':1440,'height':1000})
  page.locator('#wkPrepare').click();expect(page.locator('#wkReview')).to_be_visible();expect(page.locator('#wkLayerStage')).to_be_hidden();expect(page.locator('#wkUndo')).to_be_disabled();expect(page.locator('[data-add-object="text"]')).to_be_disabled();assert state['publishes']==0
  assert not errors,errors
