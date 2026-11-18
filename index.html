@@ -3703,6 +3703,7 @@ function S(o={}) {
     alignment: { horizontal: o.h||'center', vertical: o.v||'center', wrapText: !!o.wrap },
     border,
   };
+  if (o.shrinkToFit) s.alignment.shrinkToFit = true;
   if (o.fill) s.fill = { patternType:'solid', fgColor:{rgb:o.fill} };
   if (o.fmt) s.numFmt = o.fmt;
   return s;
@@ -3801,9 +3802,12 @@ row('AG11','AK11','=IF(Z5="청구금액",M11+Q11,IF(Z5="지급금액",B11-M11-Q1
 curBC=BC.t2;
 row('B13','AK13',data.priceOnly?'2. 회차 및 금액별 판매내역':'2. 회차 및 등급별 판매내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
 const gh=(a,b,t)=>row(a,b,t,S({fill:FILL.green,font:'나눔고딕'}));
-const dateEndCol=data.priceOnly?'L':'H';
+const dateEndCol=data.priceOnly?'L':'G';
 gh('B14','C15','회차'); gh('D14',dateEndCol+'15','공연일시');
-if(!data.priceOnly) gh('I14','L15','권종');
+if(!data.priceOnly){
+  gh('H14','I15','등급');
+  gh('J14','L15','권종');
+}
 gh('M14','O15','판매(원)');
 gh('P14','AD14','예매처별 판매수(장)'); gh('AE14','AG15','총판매수(장)'); gh('AH14','AK15','총판매금액(원)');
 // 채널 배치 규칙: 예매처(온라인)는 왼쪽 슬롯부터, 현장판매는 항상 맨 끝(슬롯4=AB)
@@ -3826,8 +3830,11 @@ data.rounds.forEach((rd,ri)=>{
   rd.items.forEach((it,idx)=>{
     // 회차·공연일시: 행별 가로병합, 값은 첫 행에만 (세로병합 안 함 - 원본 방식)
     row(`B${r}`,`C${r}`, idx===0?(ri+1):'', S({fill:FILL.greenL}));
-    row(`D${r}`,dateEndCol+r, idx===0?rd.dt:'', S({fill:FILL.greenL,fmt:F.dt}));
-    if(!data.priceOnly) row(`I${r}`,`L${r}`,it.name,S({fill:FILL.greenL,h:'left'}));
+    row(`D${r}`,dateEndCol+r, idx===0?rd.dt:'', S({fill:FILL.greenL,fmt:F.dt,shrinkToFit:!data.priceOnly}));
+    if(!data.priceOnly){
+      row(`H${r}`,`I${r}`,it.grade,S({fill:FILL.greenL,shrinkToFit:true}));
+      row(`J${r}`,`L${r}`,it.name,S({fill:FILL.greenL,h:'left',shrinkToFit:true}));
+    }
     row(`M${r}`,`O${r}`,it.price,S({fill:FILL.greenL,fmt:F.won}));
     const ch=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
     // 채널별 판매수를 규칙 슬롯에 배치
@@ -4525,7 +4532,7 @@ function renderValidationCard(result) {
     });
     return [...map.values()].map(({grades, ...row}) => ({
       ...row,
-      표시권종: grades.size ? [...grades].sort().join(" / ") + " · " + row.권종 : row.권종,
+      등급: [...grades].sort().join(" / "),
       합계: row.엔티켓 + row.예술회관 + row.폐쇄몰,
     }))
       .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
@@ -4585,10 +4592,12 @@ function renderValidationCard(result) {
     if(!withData.length){ outputEl.innerHTML=''; return; }
     const money=n=>`₩${won(n)}`;
     const dash=v=>v?won(v):"-";
-    const showTicketType=!priceMode.checked;
+    const showTicketDetails=!priceMode.checked;
     let thead=`<thead>
       <tr>
-        <th rowspan="2">회차</th><th rowspan="2">공연일시</th>${showTicketType?'<th rowspan="2" class="l">권종</th>':''}<th rowspan="2">판매(원)</th>
+        <th rowspan="2">회차</th><th rowspan="2">공연일시</th>
+        ${showTicketDetails?'<th rowspan="2">등급</th><th rowspan="2" class="l">권종</th>':''}
+        <th rowspan="2">판매(원)</th>
         <th colspan="3">예매처별 판매수(장)</th>
         <th rowspan="2">총판매수(장)</th><th rowspan="2">총판매금액(원)</th>
       </tr>
@@ -4605,13 +4614,13 @@ function renderValidationCard(result) {
         g.엔티켓+=r.엔티켓; g.예술회관+=r.예술회관; g.폐쇄몰+=r.폐쇄몰; g.합계+=r.합계; g.금액+=amt;
         body+="<tr>";
         if(ri===0){ body+=`<td class="c" rowspan="${rows.length}">${idx}</td><td class="c" rowspan="${rows.length}">${esc(dt)}</td>`; }
-        if(showTicketType) body+=`<td class="l">${esc(r.표시권종)}</td>`;
+        if(showTicketDetails) body+=`<td>${esc(r.등급)}</td><td class="l">${esc(r.권종)}</td>`;
         body+=`<td>${money(r.가격)}</td>`;
         body+=`<td>${dash(r.엔티켓)}</td><td>${dash(r.예술회관)}</td><td>${dash(r.폐쇄몰)}</td>`;
         body+=`<td>${won(r.합계)}</td><td>${money(amt)}</td></tr>`;
       });
     });
-    let total=`<tr class="total"><td colspan="${showTicketType?4:3}">계</td><td>${dash(g.엔티켓)}</td><td>${dash(g.예술회관)}</td><td>${dash(g.폐쇄몰)}</td><td>${won(g.합계)}</td><td>${money(g.금액)}</td></tr>`;
+    let total=`<tr class="total"><td colspan="${showTicketDetails?5:3}">계</td><td>${dash(g.엔티켓)}</td><td>${dash(g.예술회관)}</td><td>${dash(g.폐쇄몰)}</td><td>${won(g.합계)}</td><td>${money(g.금액)}</td></tr>`;
     // 초대·홀딩 처리 현황 안내
     const sp=specialGradeStats(withData);
     let note="";
@@ -4751,7 +4760,7 @@ function renderValidationCard(result) {
       const dt=sessionDateTime(s);
       const rows=aggregate([s]);
       const items=rows.map(r=>({
-        name:r.표시권종, price:r.가격,
+        grade:r.등급, name:r.권종, price:r.가격,
         s:[r.엔티켓, r.예술회관, r.폐쇄몰, null],   // 현장판매 빈 칸 (엑셀에서 수동 기입)
       }));
       return { dt: dt?parseDateTime(dt):null, items };

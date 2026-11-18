@@ -113,15 +113,21 @@ with sync_playwright() as p:
     expect(page.locator('#genSettlement')).to_be_enabled()
     price_mode = page.get_by_role('switch', name='금액별 정산')
     table = page.locator('#output table')
-    expect(table.get_by_role('cell', name='R석 · 일반', exact=True)).to_be_visible()
+    headers = table.locator('thead tr').first.locator('th')
+    assert headers.all_text_contents()[1:5] == ['공연일시', '등급', '권종', '판매(원)']
+    regular_row = table.get_by_role('row').filter(has=page.get_by_role('cell', name='R석', exact=True))
+    expect(regular_row.get_by_role('cell', name='일반', exact=True)).to_be_visible()
     price_mode.check()
+    assert headers.all_text_contents()[1:3] == ['공연일시', '판매(원)']
+    expect(table.get_by_role('columnheader', name='등급', exact=True)).to_have_count(0)
     expect(table.get_by_role('columnheader', name='권종', exact=True)).to_have_count(0)
     expect(table.locator('tbody tr:not(.total)')).to_have_count(1)
     expect(table.locator('tbody tr').first.locator('td').nth(2)).to_have_text('₩10,000')
     expect(table).not_to_contain_text('R석')
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     price_mode.uncheck()
-    expect(table.get_by_role('cell', name='S석 · 단체', exact=True)).to_be_visible()
+    group_row = table.get_by_role('row').filter(has=page.get_by_role('cell', name='S석', exact=True))
+    expect(group_row.get_by_role('cell', name='단체', exact=True)).to_be_visible()
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     expect(page.locator('#saveSettlementDrive')).to_be_hidden()
     page.evaluate('''()=>{
