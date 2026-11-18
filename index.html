@@ -2880,7 +2880,7 @@ window.ICO = {
     for(const t of weeklyTemplates){
       const button=el('button',undefined,'wk-template');button.type='button';button.dataset.template=t.id;button.setAttribute('aria-pressed','false');
       const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
-      const dates=week(today());const sample={title:'이번 주\n공연 모음',subtitle:'공연장에서 만나는 새로운 일주일',week:dates.start,weekEnd:dates.end,closing:WD.DEFAULT_CLOSING_COPY,cards:[]};
+      const dates=week(today());const sample={title:'이번 주\n공연 모음',subtitle:WD.weekLabel(dates.start),week:dates.start,weekEnd:dates.end,closing:WD.DEFAULT_CLOSING_COPY,cards:[]};
       if(t.id==='paper-editorial'){sample.title='공연이\n있는\n일주일.';sample.subtitle=window.EnticketWeeklyDesign.weekLabel(dates.start);}paintTemplate(canvas.getContext('2d'),t.id,sample,0,[]);
       const img=el('img');img.src=canvas.toDataURL('image/jpeg',.75);img.alt='';const info=el('span',undefined,'wk-template-info');info.append(el('strong',t.name),el('span',t.note));if(t.id==='paper-editorial')info.append(el('span','표지 레이어 편집 · 원본 다운로드','wk-template-tag'));button.append(img,info);
       button.addEventListener('click',()=>run(async()=>{if(draft?.jobId)return;pull();draft.template=t.id;if(t.id==='paper-editorial'&&!draft.design){draft.design=window.EnticketWeeklyDesign.normalizeDesign();if(['이번 주\n인천에서 볼 공연','이번 주\n공연 모음'].includes(draft.title)){draft.title='공연이\n있는\n일주일.';$('wkTitle').value=draft.title;draft.subtitle=window.EnticketWeeklyDesign.weekLabel(draft.week);$('wkSubtitle').value=draft.subtitle;}}changed();templateControls();await render();}));$(t.id==='paper-editorial'?'wkFeaturedTemplate':'wkLegacyTemplates').append(button);
@@ -2931,7 +2931,7 @@ window.ICO = {
         else if(count===2){fullPoster(posters[0],56,558,463,660);fullPoster(posters[1],561,558,463,660);}
         else if(count===3){fullPoster(posters[0],36,660,304,558);fullPoster(posters[2],740,660,304,558);fullPoster(posters[1],354,558,372,660);}
         else{ctx.strokeStyle='#c6c2ca';ctx.lineWidth=2;ctx.setLineDash([8,8]);ctx.strokeRect(56,558,968,660);ctx.setLineDash([]);newsText('공연을 선택하면\n포스터가 여기에 모입니다.',180,820,760,130,42,'#77727e',500);}
-        rect(0,1252,1080,98,violet);newsText(count?d.cards.length+'개의 공연을 만나보세요':'이번 주 공연 모음',56,1280,850,52,32,'#fff',700);arrow(952,1300,'#fff');
+        rect(0,1252,1080,98,violet);newsText(count?'공연 '+d.cards.length+'편':'이번 주 공연 모음',56,1280,850,52,32,'#fff',700);arrow(952,1300,'#fff');
       }else if(last){
         rect(0,0,1080,1350,violet);newsText('ENTICKET',56,52,800,60,32,'#fff',900);
         newsText('마음에 든 공연,\n저장해 두세요.',56,210,968,300,98,'#fff',900);
@@ -2960,29 +2960,29 @@ window.ICO = {
       const g=ctx.createRadialGradient(1050,480,20,900,570,800);g.addColorStop(0,'#61519b');g.addColorStop(1,'#19162c');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1350);
       ctx.strokeStyle='#ffffff16';ctx.lineWidth=2;for(const r of [260,420,580]){ctx.beginPath();ctx.arc(1050,540,r,0,Math.PI*2);ctx.stroke();}
       text('ENTICKET',64,62,500,54,30,t.accent,800);text('WEEKLY / LIVE',750,68,280,40,20,t.ink,500);
-      if(cover){text(title,64,240,920,440,102,t.ink,800);rect(64,718,84,7,t.accent);text(d.subtitle,64,770,830,160,38,t.ink,400);rect(64,1020,952,190,t.accent);text(date,100,1050,800,65,50,'#19162c',700);text(d.cards.length+'개의 공연, 이번 주의 무대',100,1130,830,50,26,'#19162c',500);}
-      else if(last){text('SEE YOU\nON STAGE.',64,240,930,370,118,t.accent,800);text(d.closing,64,800,900,330,44,t.ink,500);}
+      if(cover){text(title,64,240,920,440,102,t.ink,800);rect(64,718,84,7,t.accent);text(d.subtitle,64,770,830,160,38,t.ink,400);rect(64,1020,952,190,t.accent);text(date,100,1050,800,65,50,'#19162c',700);text('공연 '+d.cards.length+'편',100,1130,830,50,26,'#19162c',500);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,240,930,370,118,t.accent,800);text(d.closing,64,800,900,330,44,t.ink,500);}
       else{ text('공연 '+String(index).padStart(2,'0'),64,128,800,40,22,t.accent);poster(posters[index-1],64,190,952,710,'#100f1e');text(card.title,64,930,940,112,45,t.ink,700);text(card.schedule,64,1063,940,77,27,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1155,940,96,27,t.ink,500);}
       line(64,1274,1016,1274,'#ffffff45');if(!card)text('@en__ticket',64,1292,600,32,20,t.ink,500);text(page,890,1292,150,32,20,t.accent,600);
     }else if(id==='ticket'){
       rect(48,48,984,1254,'#fff7e7');text('ENTICKET',90,90,600,60,40,t.ink,800);text('ADMIT / WEEKLY',748,105,240,35,19,t.ink,500);line(90,180,990,180);
-      if(cover){text('이번 주의 공연 티켓',90,216,900,50,26,t.ink,500);text(title,90,340,880,390,88,t.ink,800);text(d.subtitle,90,800,880,160,36,t.ink,500);}
-      else if(last){text('다음 무대에서\n또 만나요.',90,270,880,320,92,t.ink,800);text(d.closing,90,710,880,270,38,t.ink,500);}
+      if(cover){text(title,90,340,880,390,88,t.ink,800);text(d.subtitle,90,800,880,160,36,t.ink,500);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,90,270,880,320,92,t.ink,800);text(d.closing,90,710,880,270,38,t.ink,500);}
       else{poster(posters[index-1],90,220,530,730,'#f1e7d3');text(String(index).padStart(2,'0'),674,236,290,150,112,t.accent,800);text(card.title,674,430,290,300,42,t.ink,700);text(card.venue,674,766,290,174,27,t.ink,500);}
       line(48,1016,1032,1016,'#b8a993',[12,9]);for(const x of [48,1032]){ctx.fillStyle=t.bg;ctx.beginPath();ctx.arc(x,1016,25,0,Math.PI*2);ctx.fill();}
-      if(card){text(card.schedule,90,1062,900,96,32,t.ink,600);text(card.price,90,1170,900,62,27,t.ink,500);}else{text(date,90,1062,880,70,52,t.ink,700);text(cover?'한 주의 공연을 한 장씩 만나보세요.':'좋아하는 공연을 저장해 두세요.',90,1150,880,60,29,t.ink,500);}
+      if(card){text(card.schedule,90,1062,900,96,32,t.ink,600);text(card.price,90,1170,900,62,27,t.ink,500);}else{text(date,90,1062,880,70,52,t.ink,700);if(cover)text('공연 '+d.cards.length+'편',90,1150,880,60,29,t.ink,500);}
       if(!card)text('@en__ticket',90,1250,500,32,20,t.ink,500);text(page,860,1250,150,32,20,t.ink,600);
     }else if(id==='gallery'){
       text('ENTICKET',64,62,600,55,34,t.ink,800);text('공연 아카이브 / WEEKLY',690,75,340,35,22,t.ink,400);line(64,142,1016,142);
       if(cover){text(title,64,220,952,340,90,t.ink,600);text(d.subtitle,64,603,952,112,34,t.ink,400);const count=Math.min(posters.length||3,3);for(let j=0;j<count;j++)poster(posters[j],64+(952-(count*326-26))/2+j*326,795,300,330,j===1?'#e1e8dd':'#eeeee7');text(date,64,1168,900,70,44,t.ink,400);}
-      else if(last){text('공연이 남긴\n여운을 모아.',64,250,952,320,90,t.ink,500);line(64,708,220,708);text(d.closing,64,800,930,330,42,t.ink,400);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,250,952,320,90,t.ink,500);line(64,708,220,708);text(d.closing,64,800,930,330,42,t.ink,400);}
       else{poster(posters[index-1],64,182,952,770,'#edeee9');text(card.title,64,982,952,102,40,t.ink,700);text(card.schedule,64,1100,952,72,25,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1188,952,62,25,t.ink,400);}
       line(64,1270,1016,1270);if(!card)text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.ink,500);
     }else{
       // Editorial: warm paper, forest-green typography, generous margins.
       text('ENTICKET',64,62,500,60,40,t.ink,800);text('THE WEEKLY EDIT',744,78,300,35,21,t.ink,500);line(64,150,1016,150);
-      if(cover){text('이번 주, 당신을 위한 무대',64,214,900,52,27,t.accent,600);text(title,64,335,952,360,96,t.ink,700);text(d.subtitle,64,740,930,120,36,t.ink,400);rect(64,940,952,276,t.ink);text(date,100,985,860,80,60,'#f4f0e7',600);text(d.cards.length+'개의 공연을 만나보세요',100,1106,860,60,30,'#f4f0e7',400);}
-      else if(last){text('이번 주도,\n공연과 함께.',64,270,952,330,98,t.ink,600);rect(64,727,90,7,t.accent);text(d.closing,64,820,930,340,44,t.ink,400);}
+      if(cover){text(title,64,335,952,360,96,t.ink,700);text(d.subtitle,64,740,930,120,36,t.ink,400);rect(64,940,952,276,t.ink);text(date,100,985,860,80,60,'#f4f0e7',600);text('공연 '+d.cards.length+'편',100,1106,860,60,30,'#f4f0e7',400);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,270,952,330,98,t.ink,600);rect(64,727,90,7,t.accent);text(d.closing,64,820,930,340,44,t.ink,400);}
       else{ text(card.title,64,207,952,160,56,t.ink,700);poster(posters[index-1],64,412,550,770,'#e7e3d7');text('ON STAGE',660,428,360,40,23,t.accent,600);text(String(index).padStart(2,'0'),654,506,360,160,120,t.ink,500);line(660,715,1016,715,'#a6aea3');info(660,756,356);}
       line(64,1270,1016,1270,'#b7bdb1');if(!card)text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.accent,600);
     }
@@ -3008,7 +3008,7 @@ window.ICO = {
         const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');if(template!=='classic'){paintTemplate(ctx,template,draft,i,posters);if(i===0&&template==='paper-editorial')$('wkTemplates').querySelector('[data-template="'+template+'"] img').src=canvas.toDataURL('image/jpeg',.7);}else{ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
         textBlock(ctx,'ENTICKET  /  WEEKLY',64,83,950,1,26,26,'#6c35a5');
         if(i===0){textBlock(ctx,draft.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2'),64,390,950,3,92,48);textBlock(ctx,draft.subtitle,64,860,950,3,36,28);textBlock(ctx,draft.week+' — '+draft.weekEnd,64,1160,950,1,36,28);}
-        else if(i===draft.cards.length+1){textBlock(ctx,'공연장에서\n만나요',64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
+        else if(i===draft.cards.length+1){textBlock(ctx,WD.DEFAULT_CLOSING_TITLE,64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
         else{const card=draft.cards[i-1],img=await image(await asset(card.assetId));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
           textBlock(ctx,card.title,64,1040,952,2,38,28);textBlock(ctx,card.schedule,64,1150,952,2,25,22);textBlock(ctx,card.venue+(card.price?' · '+card.price:''),64,1230,952,2,25,22);}
         if(i===0||i===draft.cards.length+1)textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');}

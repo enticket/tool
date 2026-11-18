@@ -113,6 +113,16 @@ with sync_playwright() as p:
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
  expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
  layer('posterReflection')
+ # Only the colour at the poster edge contributes to the wash.
+ assert page.evaluate("""()=>{
+   const poster=document.createElement('canvas');poster.width=poster.height=100;
+   const ctx=poster.getContext('2d');
+   const wash=()=>EnticketWeeklyDesign.createPosterReflection(poster).toDataURL();
+   ctx.fillStyle='#cc4422';ctx.fillRect(0,0,100,100);const original=wash();
+   ctx.fillStyle='#101010';ctx.fillRect(0,0,30,100);
+   if(wash()!==original)return false;
+   ctx.fillStyle='#336699';ctx.fillRect(40,0,60,100);return wash()!==original;
+ }""")
  def reflection_pixel():
   return page.locator('#wkLayerCanvas').evaluate("(c)=>Array.from(c.getContext('2d').getImageData(825,500,1,1).data)")
  visible_pixel=reflection_pixel()

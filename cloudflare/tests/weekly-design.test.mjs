@@ -63,7 +63,7 @@ test('closing artwork is independent of the line-up and respects existing closin
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[],closing:'엔티켓에서 만나요.'};
   const scene=()=>pageScene(draft,draft.cards.length+1);
   const empty=scene();
-  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['@en__ticket','이번 주의\n커튼콜.',draft.closing]);
+  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['@en__ticket','인천\n공연 소식',draft.closing]);
   const avatar=empty.find(l=>l.id==='profilePhoto');
   assert.equal(avatar.assetId,PROFILE_PHOTO);assert.equal(avatar.round,true);
   const card={performanceId:'p1',title:'실내악의 밤',schedule:'11.18 14:00',venue:'아트홀'};
@@ -112,7 +112,7 @@ test('closing ticket inherits the cover palette and preserves the profile photo'
 });
 
 test('editable closing copy adopts the follow invitation and the public ticketing domain',()=>{
-  for(const closing of ['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com']){
+  for(const closing of ['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com']){
     const draft={closing};
     assert.equal(refreshClosingCopy(draft),true);
     assert.equal(draft.closing,DEFAULT_CLOSING_COPY);
@@ -124,9 +124,10 @@ test('editable closing copy adopts the follow invitation and the public ticketin
     assert.equal(locked.closing,closing);
   }
   const draft={closing:'예매는 https://www.enticket.kr/show 에서. 도구는 tools.enticket.kr',
-    design:{pages:{closing:{layers:{closingCopy:{text:'내 문구 · enticket.kr'}},objects:[{type:'text',text:'자세히 보기 enticket.kr.'}]}}}};
+    design:{pages:{closing:{layers:{closingTitle:{text:'이번 주의\n커튼콜.'},closingCopy:{text:'내 문구 · enticket.kr'}},objects:[{type:'text',text:'자세히 보기 enticket.kr.'}]}}}};
   assert.equal(refreshClosingCopy(draft),true);
   assert.equal(draft.closing,'예매는 https://enticket.com/show 에서. 도구는 tools.enticket.kr');
+  assert.equal(draft.design.pages.closing.layers.closingTitle.text,'인천\n공연 소식');
   assert.equal(draft.design.pages.closing.layers.closingCopy.text,'내 문구 · enticket.com');
   assert.equal(draft.design.pages.closing.objects[0].text,'자세히 보기 enticket.com.');
 });

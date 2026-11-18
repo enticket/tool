@@ -6,8 +6,9 @@ export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
 export const reflectionAssetId=id=>'reflection:'+id;
 export const MAX_SCHEDULE_LENGTH=3000;
-export const DEFAULT_CLOSING_COPY='팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com';
-const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
+export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
+export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
+const oldClosingFooters=['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
 
 export function refreshClosingCopy(draft){
   if(draft.jobId)return false;
@@ -21,6 +22,8 @@ export function refreshClosingCopy(draft){
   }
   update(draft,'closing',true);
   const page=draft.design?.pages?.closing;
+  const title=page?.layers?.closingTitle;
+  if(title?.text==='이번 주의\n커튼콜.'){title.text=DEFAULT_CLOSING_TITLE;changed=true;}
   for(const [id,layer] of Object.entries(page?.layers||{}))update(layer,'text',id==='closingCopy');
   for(const object of page?.objects||[])update(object,'text');
   return changed;
@@ -193,7 +196,7 @@ function closingScene(draft,theme,page,ctx){
     {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,x:453,y:142,width:174,height:174},
     {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',x:540,y:338,width:760,
       fontSize:40,leading:1.15,align:'center',family:'sans',weight:750,color:coverColor('handle')},
-    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'이번 주의\n커튼콜.',
+    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:DEFAULT_CLOSING_TITLE,
       x:540,y:465,width:830,fontSize:137,leading:1.06,align:'center',family:'serif',color:coverColor('title')},
     footer
   ];
@@ -278,7 +281,7 @@ function performanceScene(d,index,theme,page,ctx,images){
   const reflectionX=posterRight+8;
   const reflectionWidth=Math.min(right-reflectionX,imageHeight*ratio*.85);
   if(image&&imageHeight>0&&reflectionWidth>=40){
-    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'물결 반사',type:'image',
+    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'빛 번짐',type:'image',
       assetId:reflectionAssetId(card.assetId),stretch:true,x:reflectionX,y:poster.y,width:reflectionWidth,height:imageHeight,
       opacity:Math.round((poster.opacity??100)*.68)});
   }
@@ -343,33 +346,40 @@ export function hitLayer(ctx,layer,x,y){
 }
 
 export function createPosterReflection(image){
-  // Sample the mirror in horizontal strips so lettering breaks into ripples of ink.
-  const width=320,height=720;
-  const mirror=document.createElement('canvas');
-  mirror.width=width;mirror.height=height;
-  const source=mirror.getContext('2d');
-  source.translate(width,0);source.scale(-1,1);
-  source.drawImage(image,0,0,width,height);
-  const reflection=document.createElement('canvas');
-  reflection.width=width;reflection.height=height;
-  const ctx=reflection.getContext('2d');
-  for(let y=0;y<height;y+=2){
-    const swell=Math.sin(y*.047+1.8*Math.sin(y*.016));
-    const ripple=Math.sin(y*.21+2.4*swell+.8*Math.sin(y*.067));
-    const dx=16*swell+11*ripple+3*Math.sin(y*.53);
-    const sampleY=Math.min(height-2,Math.max(0,y+9*swell+3*ripple));
-    ctx.globalAlpha=.8+.18*ripple;
-    ctx.drawImage(mirror,0,sampleY,width,2,dx-38,y,width+76,2);
+  // Average broad bands of the poster edge so no letters or figures are repeated.
+  const palette=document.createElement('canvas');
+  palette.width=1;palette.height=5;
+  const sampler=palette.getContext('2d');
+  sampler.imageSmoothingQuality='high';
+  sampler.drawImage(image,image.width*.4,0,image.width*.6,image.height,0,0,1,palette.height);
+  const colors=sampler.getImageData(0,0,1,palette.height).data;
+  const wash=document.createElement('canvas');
+  wash.width=256;wash.height=512;
+  const ctx=wash.getContext('2d'),w=wash.width,h=wash.height;
+  const pigment=ctx.createLinearGradient(0,0,0,h);
+  for(let i=0;i<palette.height;i++){
+    const [r,g,b,a]=colors.subarray(i*4,i*4+4);
+    pigment.addColorStop((i+.5)/palette.height,`rgba(${r},${g},${b},${a/255})`);
   }
-  ctx.globalAlpha=1;ctx.globalCompositeOperation='destination-in';
-  const side=ctx.createLinearGradient(0,0,width,0);
-  side.addColorStop(0,'rgba(0,0,0,.38)');side.addColorStop(.07,'rgba(0,0,0,.9)');
-  side.addColorStop(.35,'rgba(0,0,0,.76)');side.addColorStop(1,'transparent');
-  ctx.fillStyle=side;ctx.fillRect(0,0,width,height);
-  const ends=ctx.createLinearGradient(0,0,0,height);
-  ends.addColorStop(0,'transparent');ends.addColorStop(.14,'#000');ends.addColorStop(.83,'#000');ends.addColorStop(1,'transparent');
-  ctx.fillStyle=ends;ctx.fillRect(0,0,width,height);
-  return reflection;
+  ctx.fillStyle=pigment;ctx.fillRect(0,0,w,h);
+
+  // A broad soft wash with one narrow, curved glint. Fade both ends into the paper.
+  const mask=document.createElement('canvas');
+  mask.width=w;mask.height=h;
+  const m=mask.getContext('2d');
+  for(let y=0;y<h;y+=2){
+    const t=(y+1)/h;
+    const strength=Math.pow(Math.sin(Math.PI*t),1.7);
+    const crest=.36+.17*Math.sin(t*1.85*Math.PI-.65);
+    const strip=m.createLinearGradient(0,0,w,0);
+    for(const [stop,alpha] of [[0,0],[.055,.56],[crest-.10,.32],[crest,.65],[crest+.12,.28],[crest+.43,0]]){
+      strip.addColorStop(stop,`rgba(0,0,0,${strength*alpha})`);
+    }
+    m.fillStyle=strip;m.fillRect(0,y,w,2);
+  }
+  ctx.globalCompositeOperation='destination-in';
+  ctx.drawImage(mask,0,0);
+  return wash;
 }
 
 export function paintScene(ctx,scene,texture,images={}) {
