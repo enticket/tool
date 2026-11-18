@@ -76,8 +76,6 @@
 .wk-stage-bottom > div { gap:5px; } .wk-stage-bottom #wkZoomLabel { color:var(--txt-black-dark); font-size:11px; }
 .wk-page-heading { padding:10px 14px 0; gap:6px; font-size:12px; background:var(--bg-white-normal); }
 #wkCount { color:var(--txt-black-dark); font-size:11px; }
-#wkPageOrder { margin-left:auto; display:flex; gap:4px; }
-#wkPageOrder button { padding:3px 6px; font-size:11px; }
 #wkDesignView #wkFilmstrip { gap:6px; min-height:0; padding:8px 12px 10px; margin:0; background:var(--bg-white-normal); }
 #wkDesignView .wk-filmstrip button { flex:0 0 54px; min-width:0; padding:3px; border:1px solid transparent; border-radius:6px; font-size:10px; }
 #wkDesignView .wk-filmstrip button:hover { background:var(--bg-grey-lighter); }

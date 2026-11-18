@@ -115,12 +115,8 @@ function studioControls(){
   for(const id of ['wkDelete','wkForward','wkBackward','wkAlignCenter'])$(id).disabled=!mutable;
   $('wkDuplicate').disabled=!mutable||!['text','rect','ellipse','line'].includes(l?.type);
   $('wkLock').disabled=!enabled||!l;$('wkLock').textContent=l?.locked?'잠금 해제':'잠금';$('wkLock').setAttribute('aria-pressed',String(!!l?.locked));
-  const performance=selectedCard>0&&selectedCard<=(draft?.cards.length||0);
   $('wkShowPrevious').disabled=busy||!draft||selectedCard===0;
   $('wkShowNext').disabled=busy||!draft||selectedCard>=draft.cards.length+1;
-  $('wkPageOrder').hidden=!performance;
-  $('wkPagePrevious').disabled=busy||!!draft?.jobId||selectedCard<=1;
-  $('wkPageNext').disabled=busy||!!draft?.jobId||selectedCard>=(draft?.cards.length||0);
 }
 function reorderStudioPage(from,to){
   if(busy||draft?.jobId||from===to||from<1||to<1||from>draft.cards.length||to>draft.cards.length)return;
@@ -226,8 +222,6 @@ function initLayerEditor(){
   $('wkZoom').addEventListener('change',()=>{zoom=$('wkZoom').value;fitCanvas();});
   $('wkShowPrevious').addEventListener('click',()=>selectCard(selectedCard-1));
   $('wkShowNext').addEventListener('click',()=>selectCard(selectedCard+1));
-  $('wkPagePrevious').addEventListener('click',()=>reorderStudioPage(selectedCard,selectedCard-1));
-  $('wkPageNext').addEventListener('click',()=>reorderStudioPage(selectedCard,selectedCard+1));
   $('wkFilmstrip').addEventListener('dragstart',e=>{
     const tab=e.target.closest('[data-page]');if(!tab||busy||draft?.jobId){e.preventDefault();return;}
     e.dataTransfer.setData('application/x-enticket-page',tab.dataset.page);e.dataTransfer.effectAllowed='move';

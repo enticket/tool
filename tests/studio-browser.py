@@ -115,7 +115,7 @@ with sync_playwright() as p:
  page.locator('#wkRefresh').click();expect(page.locator('#wkCandidates input')).to_have_count(2)
  pane('performances');page.locator('#wkCandidates input').nth(1).check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  layer('poster');page.locator('#wkLayerWidth').fill('500')
- page.locator('#wkPagePrevious').click();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkStageTitle')).to_have_text('두 번째 공연')
+ page.locator('#wkFilmstrip [data-page="2"]').drag_to(page.locator('#wkFilmstrip [data-page="1"]'));expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkStageTitle')).to_have_text('두 번째 공연')
  page.locator('#wkFilmstrip [data-page="1"]').drag_to(page.locator('#wkFilmstrip [data-page="2"]'));expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  page.locator('#wkFilmstrip button').nth(1).click();layer('poster');expect(page.locator('#wkLayerWidth')).to_have_value('560')
  page.locator('#wkFilmstrip button').last.click();pane('performances');page.locator('#wkCandidates input').nth(1).uncheck();expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
