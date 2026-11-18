@@ -211,6 +211,15 @@ with sync_playwright() as p:
     assert not page.evaluate('gdrive.hasLocalStamp()')
     page.locator('#localStampInput').set_input_files(stamp_file)
     expect(page.locator('#osealWork')).to_be_visible()
+    for tab, button, output in [('excel','xlReset','xlOutput'), ('sms','smsReset','smsOutput'),
+                                ('settlement','settlementReset','output')]:
+        page.locator(f'.tab[data-tab="{tab}"]').click()
+        assert page.locator('#'+output).inner_text().strip()
+        page.locator('#'+button).click()
+        expect(page.locator('#'+output)).to_be_empty()
+    expect(page.locator('#sessions .node')).to_have_count(1)
+    expect(page.locator('#genSettlement')).to_be_disabled()
+    page.locator('[data-tab="oseal"]').click()
     page.reload(wait_until='networkidle')
     expect(page.locator('#panel-oseal')).to_be_visible()
     assert not page.evaluate('gdrive.hasLocalStamp()')

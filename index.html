@@ -1522,6 +1522,7 @@ window.ICO = {
       <div id="xlWarn" style="margin-top:10px"></div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="xlReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
   <section class="panel-view" id="panel-poster">
@@ -1621,6 +1622,7 @@ window.ICO = {
     </div>
     <div id="checkResult"></div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="settlementReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 4: 문자발송명단 ============ -->
   <section class="panel-view" id="panel-sms">
@@ -1647,6 +1649,7 @@ window.ICO = {
       </div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="smsReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 5: 원본대조필 ============ -->
   <section class="panel-view" id="panel-oseal">
@@ -3444,21 +3447,26 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
     return { rows: out, missing, unit:(seatUnit?"좌석":"예매"), rawCount: rows.length,
              fmt: detectSourceFormat(headers) };
   }
+  let resetVersion=0;
   function addFiles(fileList){
+    const batch=resetVersion;
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
     if(!files.length) return;
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=async e=>{
+        if(batch!==resetVersion) return;
         try{
           let bytes=new Uint8Array(e.target.result);
           if(OfficeCrypto.isEncrypted(bytes)){
             let pw=pwFromName(file.name); let dec=null, lastErr="";
             for(let attempt=0;attempt<4;attempt++){
+              if(batch!==resetVersion) return;
               if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
               try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
               catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
             }
+            if(batch!==resetVersion) return;
             if(!dec){ nodes.push({id:++seq,name:file.name,rows:[],missing:[],error:true,errMsg:"암호 해제 실패"}); render(); recompute(); return; }
             bytes=dec;
           }
@@ -3476,6 +3484,11 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
       reader.readAsArrayBuffer(file);
     });
   }
+  document.getElementById("xlReset").addEventListener("click",()=>{
+    resetVersion++; nodes=[];
+    maskPhoneChk.checked=false; inputEl.value="";
+    render(); recompute();
+  });
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
   function render(){
     nodesEl.innerHTML="";
@@ -4457,6 +4470,7 @@ function renderValidationCard(result) {
     function loadFile(file){
       const reader=new FileReader();
       reader.onload=e=>{
+        if(!sessions.includes(session)) return;
         const parsed=parseWorkbook(new Uint8Array(e.target.result));
         if(!parsed){ EnticketUI.alert("읽을 데이터가 없어요."); return; }
         data.name=file.name; data.headers=parsed.headers; data.rows=parsed.rows; data.map=parsed.map;
@@ -4784,7 +4798,8 @@ function renderValidationCard(result) {
     {key:'MMS',       label:'기타',      sub:'MMS문자홍보', defPrice:77},
     {key:'무료등록',  label:'',          sub:'무료공연등록비', defPrice:''},
   ];
-  const etcState={}; ETC_DEF.forEach(e=>etcState[e.key]={단가:(e.defPrice===''||e.defPrice==null)?'':String(e.defPrice),수량:''});
+  const etcState={};
+  function resetEtc(){ ETC_DEF.forEach(e=>etcState[e.key]={단가:String(e.defPrice ?? ""),수량:""}); renderEtc(); }
   function renderEtc(){
     const wrap=document.getElementById("etcWrap");
     wrap.innerHTML="";
@@ -4936,7 +4951,15 @@ function renderValidationCard(result) {
     inv.addEventListener("input",()=>{ inviteEdited=true; updateSettlementLive(); });
   })();
   // 초기화
-  renderEtc();
+  document.getElementById("settlementReset").addEventListener("click",()=>{
+    sessions=[]; mergeMap=Object.create(null); mergeOpen=false; inviteEdited=false; dragSource=null;
+    priceMode.checked=false;
+    document.querySelectorAll('#suppPanel input[id^="sf_"]').forEach(input=>input.value=input.defaultValue);
+    document.getElementById("suppBody").classList.remove("open");
+    document.getElementById("suppChev").style.transform="";
+    resetEtc(); makeSession();
+  });
+  resetEtc();
   makeSession();
 })();
 /* ===== 도구 4: 문자발송명단 (노드식 추합 + 중복제거) ===== */
@@ -5224,23 +5247,28 @@ function renderValidationCard(result) {
     return { headers, rows:dataRows, map:{ 이름, 전화 }, viewerBased, basis, pickBy, headerOk, fmt };
   }
   // 파일을 읽어 노드로 추가 (드래그/선택 시마다 호출)
+  let resetVersion=0;
   function addFiles(fileList){
+    const batch=resetVersion;
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
     if(!files.length) return;
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=async e=>{
+        if(batch!==resetVersion) return;
         let bytes=new Uint8Array(e.target.result);
         // 암호화(Agile) 파일이면 복호화 시도: 파일명 YYMMDD → 실패 시 직접 입력
         if(OfficeCrypto.isEncrypted(bytes)){
           let pw=pwFromName(file.name);
           let dec=null, lastErr="";
           for(let attempt=0;attempt<4;attempt++){
-            if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+            if(batch!==resetVersion) return;
+              if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
             try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
             catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
           }
-          if(!dec){ const node={ id:++seq, name:file.name, headers:[], rows:[], map:{이름:-1,전화:-1}, error:true, errMsg:"암호 해제 실패" }; nodes.push(node); render(); recompute(); return; }
+          if(batch!==resetVersion) return;
+            if(!dec){ const node={ id:++seq, name:file.name, headers:[], rows:[], map:{이름:-1,전화:-1}, error:true, errMsg:"암호 해제 실패" }; nodes.push(node); render(); recompute(); return; }
           bytes=dec;
         }
         const parsed=parseWorkbook(bytes);
@@ -5255,6 +5283,11 @@ function renderValidationCard(result) {
       reader.readAsArrayBuffer(file);
     });
   }
+  document.getElementById("smsReset").addEventListener("click",()=>{
+    resetVersion++; nodes=[];
+    document.getElementById("smsFileInput").value="";
+    render(); recompute();
+  });
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
   function render(){
     nodesEl.innerHTML="";
