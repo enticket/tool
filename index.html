@@ -667,7 +667,8 @@ th {
 tbody tr:last-child td { border-bottom: none; }
 tr:nth-child(even) td { background: transparent; }
 tbody tr:hover td { background: var(--bg-grey-lighter); }
-#output tbody tr:hover td[rowspan] { background: transparent; }
+#output tbody tr:hover td[rowspan]:not(:hover),
+#output tbody tr:has(> td[rowspan]:hover) > td:not(:hover) { background: transparent; }
 #output tr.grade-start td { border-top: 1px solid var(--color-border-neutral-strong); }
 tr.total td {
   background: var(--color-fill-accent) !important;

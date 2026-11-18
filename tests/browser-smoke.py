@@ -129,6 +129,19 @@ with sync_playwright() as p:
                   Number(type.nextElementSibling.textContent.replace(/[₩,]/g,''))];
         })""")
     assert preview_order() == expected_order
+    first = detail_rows.first
+    merged = first.locator('td[rowspan]')
+    ticket = first.locator('td.l')
+    background = 'e => getComputedStyle(e).backgroundColor'
+    ticket.hover()
+    highlighted = ticket.evaluate(background)
+    for index in range(2):
+        cell = merged.nth(index)
+        assert cell.evaluate(background) != highlighted
+        cell.hover()
+        assert cell.evaluate(background) == highlighted
+        assert ticket.evaluate(background) != highlighted
+
     price_mode.check()
     assert headers.all_text_contents()[1:3] == ['공연일시', '판매(원)']
     expect(table.get_by_role('columnheader', name='등급', exact=True)).to_have_count(0)
