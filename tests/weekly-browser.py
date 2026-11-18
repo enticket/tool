@@ -86,10 +86,10 @@ with sync_playwright() as p:
  page.locator('#wkClosePerformance').click()
  # Different dates of the same performance highlight together, including keyboard focus.
  linked=page.locator('#wkCalendar .wk-event')
- page.locator('#wkToday').focus();linked.first.hover();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(2)
+ page.locator('#wkNextMonth').focus();linked.first.hover();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(2)
  page.locator('#wkMonthTitle').hover();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(0)
  linked.first.focus();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(2)
- page.locator('#wkToday').focus();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(0)
+ page.locator('#wkNextMonth').focus();expect(page.locator('#wkCalendar .wk-linked-highlight')).to_have_count(0)
  # Pointer dragging stages only the selected date's sessions until explicit save.
  def drag_day(source,target):
   button=page.locator(f'#wkCalendar [data-date="2026-11-{source}"] .wk-event').first
