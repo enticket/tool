@@ -98,6 +98,18 @@ test('closing artwork is independent of the line-up and respects existing closin
   assert.equal(scene().find(l=>l.id==='ticketStock').width,930);
 });
 
+test('closing ticket inherits the cover palette and preserves the profile photo',()=>{
+  const palette={paper:'#ffe4ce',corner:'#a52d1d',title:'#962512',handle:'#252321',subtitle:'#342822'};
+  const design=normalizeDesign();
+  const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[],design};
+  const profile=pageScene(draft,1).find(layer=>layer.id==='profilePhoto');
+  for(const [id,color] of Object.entries(palette))design.layers[id]={color};
+  const closing=Object.fromEntries(pageScene(draft,1).map(layer=>[layer.id,layer]));
+  assert.deepEqual([closing.ticketStock.color,closing.paper.color,closing.closingTitle.color,closing.handle.color,closing.closingCopy.color],
+    [palette.paper,palette.corner,palette.title,palette.handle,palette.subtitle]);
+  assert.deepEqual(closing.profilePhoto,profile);
+});
+
 test('editable closing copy adopts the follow invitation and the public ticketing domain',()=>{
   for(const closing of ['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com']){
     const draft={closing};

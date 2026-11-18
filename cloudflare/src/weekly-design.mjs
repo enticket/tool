@@ -128,21 +128,21 @@ const ticketPath = 'M18 0 H942 L960 18 V868 A32 32 0 0 0 960 932 V1182 L942 1200
 
 function closingScene(draft,theme,page,ctx){
   const stock=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
-  const purple='#582783',ink='#302238';
+  const coverColor=id=>theme.find(l=>l.id===id).color;
   const footer={id:'closingCopy',name:'팔로우 안내 · 주소',type:'text',text:draft.closing,
-    x:540,y:1052,width:826,fontSize:32,leading:1.55,align:'center',family:'sans',weight:550,color:ink};
+    x:540,y:1052,width:826,fontSize:32,leading:1.55,align:'center',family:'sans',weight:550,color:coverColor('subtitle')};
   if(ctx){
     while(footer.fontSize>12&&layerBounds(ctx,footer).height>190)footer.fontSize--;
   }
   const base=[
-    {...stock,name:'바탕',color:purple},
+    {...stock,name:'바탕',color:coverColor('corner')},
     {id:'ticketStock',name:'절취선이 있는 티켓',type:'ticket',x:60,y:75,width:960,height:1200,color:stock.color,locked:true},
     texture,
     {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,x:453,y:142,width:174,height:174},
     {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',x:540,y:338,width:760,
-      fontSize:40,leading:1.15,align:'center',family:'sans',weight:750,color:ink},
+      fontSize:40,leading:1.15,align:'center',family:'sans',weight:750,color:coverColor('handle')},
     {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'이번 주의\n커튼콜.',
-      x:540,y:465,width:830,fontSize:137,leading:1.06,align:'center',family:'serif',color:purple},
+      x:540,y:465,width:830,fontSize:137,leading:1.06,align:'center',family:'serif',color:coverColor('title')},
     footer
   ];
   // Insert the new stock underneath artwork in previously saved full layer orders.
