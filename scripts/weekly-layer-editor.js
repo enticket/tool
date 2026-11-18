@@ -23,6 +23,7 @@ function pageModel(){
   if(key==='cover')return draft.design;
   if(!draft.design.pages[key]){
     draft.design.pages[key]={layers:{},objects:[],order:[]};
+    if(key==='closing')draft.design.pages[key].layout='ticket';
   }
   return draft.design.pages[key];
 }
@@ -103,7 +104,7 @@ function fillLayerProperties(){
   $('wkLayerAlignField').hidden=!text;$('wkLayerAlign').value=l.align||'left';
   $('wkLayerColorField').hidden=!l.color;$('wkLayerColor').value=l.color||'#000000';
   $('wkLayerGeometry').hidden=l.x===undefined;$('wkLayerX').value=l.x??0;$('wkLayerY').value=l.y??0;
-  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text'].includes(l.type);$('wkLayerWidth').value=l.width||950;$('wkLayerHeight').value=l.height||3;$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
+  $('wkLayerDimensions').hidden=!['rect','ellipse','image','line','text','ticket'].includes(l.type);$('wkLayerWidth').value=l.width||950;$('wkLayerHeight').value=l.height||3;$('wkLayerHeight').min=l.type==='line'?'1':'8';$('wkLayerHeightField').hidden=text;
   $('wkLayerRotationField').hidden=l.x===undefined;$('wkLayerRotation').value=l.angle||0;
   $('wkLayerOpacity').value=l.opacity??100;$('wkLayerOpacityValue').value=(l.opacity??100)+'%';
   $('wkLayerOpacityLabel').textContent=l.type==='texture'?'질감 강도':'불투명도';
@@ -144,7 +145,7 @@ function paintLayerPreview(){
   const b=WD.layerBounds(ctx,l);
   Object.assign(selection.style,{left:b.x/1080*100+'%',top:b.y/1350*100+'%',width:b.width/1080*100+'%',height:Math.max(b.height,3)/1350*100+'%',transform:`rotate(${l.angle||0}deg)`});
   selection.classList.toggle('is-locked',!!l.locked);
-  const transformable=!l.locked&&['text','rect','ellipse','line','image'].includes(l.type);
+  const transformable=!l.locked&&['text','rect','ellipse','line','image','ticket'].includes(l.type);
   for(const n of selection.querySelectorAll('button'))n.hidden=!transformable;
   if(inlineEdit){const scale=$('wkLayerStage').clientWidth/1080;Object.assign($('wkInlineText').style,{left:b.x/1080*100+'%',top:b.y/1350*100+'%',width:Math.max(b.width+20,120)/1080*100+'%',height:(b.height+40)/1350*100+'%',font:WD.fontFor({...l,fontSize:l.fontSize*scale}),lineHeight:String(l.leading||1.2),color:l.color,transform:`rotate(${l.angle||0}deg)`,textAlign:l.align||'left'});}
   const thumb=$('wkFilmstrip').children[selectedCard]?.querySelector('img');

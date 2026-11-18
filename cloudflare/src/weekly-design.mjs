@@ -38,8 +38,8 @@ export const LAYERS = [
 ];
 const invalid = () => { throw new Error('weekly_invalid_design'); };
 const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
-const extraSpec=id=> /^(poster|profilePhoto|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
-  ? {type:['poster','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
+const extraSpec=id=> /^(ticketStock|poster|profilePhoto|number|scheduleLabel|schedule|venueLabel|venue|price|closingTitle|closingCopy|closingBand|entry(?:Title|Date|Number|Line|Venue)[0-7])$/.test(id)
+  ? {type:id==='ticketStock'?'ticket':['poster','profilePhoto'].includes(id)?'image':id==='closingBand'?'rect':id.startsWith('entryLine')?'line':'text',x:0,y:0,color:'#111111',width:950,height:800} : null;
 function settings(values,spec,legacy=false,id='') {
   if(!record(values))invalid();const clean={};
   for(const [key,value]of Object.entries(values)) {
@@ -88,8 +88,19 @@ export function normalizeDesign(input) {
   const clean={};for(const [key,page]of Object.entries(pages)){
     if(key!=='closing'&&!/^performance:[a-zA-Z0-9_-]{1,40}$/.test(key))invalid();clean[key]=pageInput(page);
     if(page.layout!==undefined){
-      if(key!=='closing'||page.layout!=='program')invalid();
-      clean[key].layout=page.layout;
+      if(key!=='closing'||!['program','ticket'].includes(page.layout))invalid();
+    }
+    if(key==='closing'){
+      clean[key].layout='ticket';
+      // Older closing text was positioned from its left edge. Keep authored anchors.
+      if(page.layout!=='ticket'){
+        for(const [id,x,width,fontSize] of [['closingTitle',64,950,126],['handle',280,725,47],['closingCopy',283,730,28]]){
+          const layer=clean[key].layers[id];
+          if(layer&&(layer.x!==undefined||layer.align!==undefined)){
+            clean[key].layers[id]={x,width,fontSize,align:'left',...layer};
+          }
+        }
+      }
     }
   }
   return {version:2,...pageInput(input,true),pages:clean};
@@ -111,31 +122,37 @@ export function coverScene(draft) {
     date:draft.week.slice(5).replace('-','.')+'—'+draft.weekEnd.slice(5).replace('-','.')};
   return applyPage(LAYERS.map(base=>({...base,...(content[base.id]!==undefined?{text:content[base.id]}:{})})),design);
 }
+// One die line for the paper outline and perforations in both export formats.
+const ticketPath = 'M18 0 H942 L960 18 V868 A32 32 0 0 0 960 932 V1182 L942 1200 H18 L0 1182 V932 A32 32 0 0 0 0 868 V18 Z '+
+  Array.from({length:36},(_,i)=>`M${54+i*24} 899h12v2h-12Z`).join(' ');
+
 function closingScene(draft,theme,page,ctx){
-  const paper=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
-  const red=theme.find(l=>l.id==='title').color,ink=theme.find(l=>l.id==='subtitle').color;
-  const footer={id:'closingCopy',name:'마지막 안내',type:'text',text:draft.closing,
-    x:283,y:985,width:730,fontSize:28,leading:1.55,family:'sans',weight:500,color:ink};
+  const stock=theme.find(l=>l.id==='paper'),texture=theme.find(l=>l.id==='texture');
+  const purple='#582783',ink='#302238';
+  const footer={id:'closingCopy',name:'팔로우 안내 · 주소',type:'text',text:draft.closing,
+    x:540,y:1052,width:826,fontSize:32,leading:1.55,align:'center',family:'sans',weight:550,color:ink};
   if(ctx){
-    while(footer.fontSize>12&&layerBounds(ctx,footer).height>220)footer.fontSize--;
+    while(footer.fontSize>12&&layerBounds(ctx,footer).height>190)footer.fontSize--;
   }
-  // Earlier saved full stacking orders can include the background but omit the profile.
-  if(page?.order?.includes('paper')){
-    const missing=['profilePhoto','handle'].filter(id=>!page.order.includes(id));
-    page={...page,order:page.order.concat(missing)};
-  }
-  return applyPage([
-    paper,
-    {id:'corner',name:'붉은 곡선',type:'corner',x:140,y:80,color:red},
+  const base=[
+    {...stock,name:'바탕',color:purple},
+    {id:'ticketStock',name:'절취선이 있는 티켓',type:'ticket',x:60,y:75,width:960,height:1200,color:stock.color,locked:true},
     texture,
-    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'다음 주엔\n어떤 공연이?',
-      x:64,y:270,width:950,fontSize:126,leading:1.08,family:'serif',color:red},
-    {id:'bottomRule',name:'안내 구분선',type:'line',x:74,y:830,width:932,height:2,color:red},
-    {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,x:74,y:905,width:172,height:172},
-    {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',x:280,y:889,width:725,
-      fontSize:47,leading:1.15,family:'sans',weight:800,color:ink},
+    {id:'profilePhoto',name:'인스타 프로필 사진',type:'image',assetId:PROFILE_PHOTO,round:true,x:453,y:142,width:174,height:174},
+    {id:'handle',name:'인스타 계정',type:'text',text:'@en__ticket',x:540,y:338,width:760,
+      fontSize:40,leading:1.15,align:'center',family:'sans',weight:750,color:ink},
+    {id:'closingTitle',name:'뒷표지 제목',type:'text',text:'이번 주의\n커튼콜.',
+      x:540,y:465,width:830,fontSize:137,leading:1.06,align:'center',family:'serif',color:purple},
     footer
-  ],page);
+  ];
+  // Insert the new stock underneath artwork in previously saved full layer orders.
+  if(page?.order?.includes('paper')&&!page.order.includes('ticketStock')){
+    const order=[...page.order];
+    order.splice(order.indexOf('paper')+1,0,'ticketStock');
+    for(const layer of base)if(!order.includes(layer.id))order.push(layer.id);
+    page={...page,order};
+  }
+  return applyPage(base,page);
 }
 
 export function pageScene(d,index=0,ctx){
@@ -174,7 +191,7 @@ export function layerBounds(ctx,layer) {
     return {x:layer.x-(layer.align==='right'?width:layer.align==='center'?width/2:0),y:layer.y,width,height:rows.length*layer.fontSize*PT*(layer.leading||1.2)};
   }
   if(layer.type==='line')return {x:layer.x,y:layer.y,width:layer.width,height:layer.height||3};
-  if(['image','rect','ellipse'].includes(layer.type))return {x:layer.x,y:layer.y,width:layer.width,height:layer.height};
+  if(['image','rect','ellipse','ticket'].includes(layer.type))return {x:layer.x,y:layer.y,width:layer.width,height:layer.height};
   return {x:0,y:0,width:1080,height:1350};
 }
 export function hitLayer(ctx,layer,x,y){
@@ -191,7 +208,10 @@ export function paintScene(ctx,scene,texture,images={}) {
     ctx.globalAlpha=(layer.opacity??100)/100;
     if(layer.angle){const b=layerBounds(ctx,layer);ctx.translate(b.x+b.width/2,b.y+b.height/2);ctx.rotate(layer.angle*Math.PI/180);ctx.translate(-b.x-b.width/2,-b.y-b.height/2);}
     if(layer.type==='background')ctx.fillRect(0,0,1080,1350);
-    else if(layer.type==='corner') {
+    else if(layer.type==='ticket'){
+      ctx.translate(layer.x,layer.y);ctx.scale(layer.width/960,layer.height/1200);
+      ctx.fill(new Path2D(ticketPath),'evenodd');
+    } else if(layer.type==='corner') {
       ctx.translate(layer.x,layer.y);ctx.beginPath();ctx.moveTo(535,1350);ctx.bezierCurveTo(740,1280,950,1135,1080,1010);ctx.lineTo(1080,1350);ctx.closePath();ctx.fill();
     } else if(layer.type==='texture'&&texture) {
       ctx.globalAlpha=layer.opacity/100;ctx.globalCompositeOperation='multiply';ctx.drawImage(texture,0,0,1080,1350);
@@ -225,6 +245,7 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     const b=layerBounds(ctx,l);
     out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.angle?` transform="rotate(${l.angle} ${b.x+b.width/2} ${b.y+b.height/2})"`:''}>`);
     if(l.type==='background')out.push(`<rect width="1080" height="1350" fill="${l.color}"/>`);
+    else if(l.type==='ticket')out.push(`<path d="${ticketPath}" transform="translate(${l.x} ${l.y}) scale(${l.width/960} ${l.height/1200})" fill="${l.color}" fill-rule="evenodd"/>`);
     else if(l.type==='corner')out.push(`<path transform="translate(${l.x} ${l.y})" d="M535 1350 C740 1280 950 1135 1080 1010 L1080 1350 Z" fill="${l.color}"/>`);
     else if(l.type==='texture')out.push(`<image width="1080" height="1350" href="${textureData}" opacity="${l.opacity/100}" style="mix-blend-mode:multiply" preserveAspectRatio="none"/>`);
     else if(['line','rect'].includes(l.type))out.push(`<rect x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height||3}" fill="${l.color}"/>`);

@@ -62,7 +62,7 @@ test('closing artwork is independent of the line-up and respects existing closin
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[],closing:'엔티켓에서 만나요.'};
   const scene=()=>pageScene(draft,draft.cards.length+1);
   const empty=scene();
-  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['다음 주엔\n어떤 공연이?','@en__ticket',draft.closing]);
+  assert.deepEqual(empty.filter(l=>l.type==='text').map(l=>l.text),['@en__ticket','이번 주의\n커튼콜.',draft.closing]);
   const avatar=empty.find(l=>l.id==='profilePhoto');
   assert.equal(avatar.assetId,PROFILE_PHOTO);assert.equal(avatar.round,true);
   const card={performanceId:'p1',title:'실내악의 밤',schedule:'11.18 14:00',venue:'아트홀'};
@@ -80,6 +80,7 @@ test('closing artwork is independent of the line-up and respects existing closin
     const saved=scene();
     assert.equal(saved.find(l=>l.id==='closingTitle').text,'또 만나요.');
     assert.equal(saved.find(l=>l.id==='closingCopy').x,108);
+    assert.equal(saved.find(l=>l.id==='closingCopy').align,'left');
     assert.ok(saved.some(l=>l.id==='object-rule'));
     assert.ok(saved.every(l=>!l.id.startsWith('entry')));
     assert.deepEqual(pageScene(draft,0),cover);
@@ -88,8 +89,13 @@ test('closing artwork is independent of the line-up and respects existing closin
   assert.throws(()=>normalizeDesign({...draft.design,pages:{'performance:p0':{...closing,layout:'program'}}}));
   draft.design=normalizeDesign({...draft.design,pages:{closing:{layers:{},order:['paper','texture','closingTitle','closingCopy']}}});
   const stacked=scene().map(l=>l.id);
+  assert.equal(stacked.indexOf('ticketStock'),stacked.indexOf('paper')+1);
+  assert.ok(stacked.indexOf('closingTitle')>stacked.indexOf('ticketStock'));
   assert.ok(stacked.indexOf('profilePhoto')>stacked.indexOf('paper'));
   assert.ok(stacked.indexOf('handle')>stacked.indexOf('paper'));
+  draft.design=normalizeDesign({...draft.design,pages:{closing:{layout:'ticket',layers:{closingTitle:{x:556},ticketStock:{locked:false,width:930}}}}});
+  assert.equal(scene().find(l=>l.id==='closingTitle').align,'center');
+  assert.equal(scene().find(l=>l.id==='ticketStock').width,930);
 });
 
 test('editable closing copy adopts the follow invitation and the public ticketing domain',()=>{

@@ -132,6 +132,7 @@ with sync_playwright() as p:
  with page.expect_download() as dl:page.locator('#wkLayerDownload').click()
  archive=zipfile.ZipFile(dl.value.path());source=json.loads(archive.read('design.json'));assert source['design']==saved['design'];assert '<rect ' in archive.read('cover.svg').decode();assert 'rotate(' in archive.read('cover.svg').decode();assert 'data:image/jpeg;base64,' in archive.read('02.svg').decode();assert '이번 주, 놓치지 마세요' in archive.read('03.svg').decode()
  closing_svg=archive.read('03.svg').decode()
+ assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
  assert 'enticket.com' in closing_svg and 'clip-profilePhoto' in closing_svg
  assert base64.b64encode(profile).decode() in closing_svg and 'profilePhoto' not in archive.read('cover.svg').decode()
