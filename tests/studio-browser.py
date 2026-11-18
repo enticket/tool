@@ -111,6 +111,7 @@ with sync_playwright() as p:
  # Every slide uses the same canvas editor, including the poster and closing page.
  pane('performances');page.locator('#wkCandidates input').check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_visible()
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
+ expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
  layer('poster')
  width=float(page.locator('#wkLayerWidth').input_value());height=float(page.locator('#wkLayerHeight').input_value())
  assert width>600 and height>736 and abs(width/height-3/4)<.001
@@ -146,12 +147,15 @@ with sync_playwright() as p:
  assert 'id="ticketStock"' in closing_svg and 'fill-rule="evenodd"' in closing_svg
  profile=archive.read('enticket-instagram-profile.jpg')
  assert '세 연주자가 들려주는 실내악 이야기.' not in archive.read('02.svg').decode()
+ assert '11월 16일 (월) 오후 07시 30분' in archive.read('02.svg').decode()
  assert 'description' not in saved['cards'][0]
  assert 'enticket.com' in closing_svg and 'clip-profilePhoto' in closing_svg
  assert base64.b64encode(profile).decode() in closing_svg and 'profilePhoto' not in archive.read('cover.svg').decode()
  saved['closing']='enticket.kr · @en__ticket'
+ saved['cards'][0]['schedule']='11.16 19:30'
  saved_id=saved['id'];page.reload(wait_until='networkidle');page.locator('[data-tab="instagram"]').click();page.locator('[data-ig-view="weekly"]').click();expect(page.locator('#wkDraftList')).to_be_enabled(timeout=30000);page.locator('#wkDraftList').select_option(saved_id);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  expect(page.locator('#wkClosing')).to_have_value(default_closing)
+ expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
  layer('title');expect(page.locator('#wkLayerSize')).to_have_value('165');expect(page.locator('#wkLayerList [data-layer^="object-"]')).to_have_count(3)
  next_page=page.locator('#wkShowNext');previous_page=page.locator('#wkShowPrevious')
  expect(previous_page).to_be_disabled()

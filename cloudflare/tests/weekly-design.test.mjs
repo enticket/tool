@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,upgradeDesign,pageScene,pageKey,hitLayer,layerBounds,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
+import {normalizeDesign,coverScene,coverSvg,PT,weekLabel,weeklyScheduleText,refreshWeeklySchedules,textRows,
+  upgradeDesign,pageScene,pageKey,hitLayer,layerBounds,PROFILE_PHOTO,DEFAULT_CLOSING_COPY,refreshClosingCopy} from '../src/weekly-design.mjs';
 
 test('layer settings preserve exact point sizes and reject executable or unbounded fields',()=>{
   const design={version:1,layers:{title:{fontSize:165,x:90,color:'#ac1010'},texture:{opacity:81},handle:{visible:false}}};
@@ -178,4 +179,24 @@ test('poster fills the space left by performance details up to the footer or sid
   const edited=layout(card,3,4);
   assert.equal(edited.title.y,850);
   assert.equal(edited.poster.y+edited.poster.height+32,850);
+});
+test('weekly dates include the weekday, distinguish noon and midnight, and retain every session',()=>{
+  const schedule=weeklyScheduleText([
+    {date:'2026-12-31',time:'09:05'},{date:'2026-12-31',time:'12:00'},
+    {date:'2027-01-01',time:'00:00'},{date:'2027-01-01',time:'19:30'},
+    {date:'2027-01-02',time:''},{date:'2027-01-02',time:'14:00'}
+  ]);
+  const days=['12월 31일 (목) 오전 09시 5분 · 오후 12시','1월 1일 (금) 오전 12시 · 오후 07시 30분','1월 2일 (토)','1월 2일 (토) 오후 02시'];
+  assert.equal(schedule,days.join(' / '));
+  assert.deepEqual(textRows({measureText(s){return {width:s.length};}},{id:'schedule',text:schedule,width:780,fontSize:25}),days);
+  const layer={text:'01.01 00:00'};
+  const draft={week:'2026-12-28',cards:[{performanceId:'p',schedule:'12.31 09:05 / 12.31 12:00 / 01.01 00:00 / 01.01 19:30 / 01.02 / 01.02 14:00'},
+    {schedule:'12.31 09:05 / 특별 회차'},{schedule:'02.01'}],design:{pages:{'performance:p':{layers:{schedule:layer}}}}};
+  assert.equal(refreshWeeklySchedules({...draft,jobId:'locked'}),false);
+  assert.equal(refreshWeeklySchedules(draft),true);
+  assert.equal(draft.cards[0].schedule,schedule);
+  assert.equal(layer.text,'1월 1일 (금) 오전 12시');
+  assert.equal(draft.cards[1].schedule,'12.31 09:05 / 특별 회차');
+  assert.equal(draft.cards[2].schedule,'02.01');
+  assert.equal(refreshWeeklySchedules(draft),false);
 });

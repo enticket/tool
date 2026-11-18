@@ -4,6 +4,7 @@ export const DESIGN_VERSION = 2;
 export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
+export const MAX_SCHEDULE_LENGTH=3000;
 export const DEFAULT_CLOSING_COPY='팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com';
 const oldClosingFooters=['enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
 
@@ -45,7 +46,7 @@ function settings(values,spec,legacy=false,id='') {
   for(const [key,value]of Object.entries(values)) {
     if(['visible','locked','italic'].includes(key)){if(typeof value!=='boolean'||legacy&&key!=='visible')invalid();clean[key]=value;}
     else if(key==='color'&&spec.color){if(typeof value!=='string'||!/^#[0-9a-f]{6}$/i.test(value))invalid();clean[key]=value;}
-    else if(key==='text'&&spec.type==='text'&&(!legacy||!['title','subtitle','count'].includes(id))){if(typeof value!=='string'||value.length>(legacy?100:500))invalid();clean[key]=value;}
+    else if(key==='text'&&spec.type==='text'&&(!legacy||!['title','subtitle','count'].includes(id))){if(typeof value!=='string'||value.length>(legacy?100:id==='schedule'?MAX_SCHEDULE_LENGTH:500))invalid();clean[key]=value;}
     else if(!legacy&&key==='family'&&spec.type==='text'){if(!['serif','sans'].includes(value))invalid();clean[key]=value;}
     else if(!legacy&&key==='align'&&spec.type==='text'){if(!['left','center','right'].includes(value))invalid();clean[key]=value;}
     else {
@@ -116,6 +117,56 @@ export function weekLabel(date) {
   const d=new Date(date+'T00:00:00Z');
   return `${d.getUTCMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째'][Math.floor((d.getUTCDate()-1)/7)]} 주 · 인천`;
 }
+
+export function weeklyScheduleText(sessions){
+  const days=[];
+  for(const {date,time} of sessions){
+    let group=days.at(-1);
+    if(!group||group.date!==date||!time||!group.times.length){
+      group={date,times:[]};
+      days.push(group);
+    }
+    if(time){
+      const [hour,minute]=time.split(':').map(Number);
+      const clock=(hour<12?'오전 ':'오후 ')+String(hour%12||12).padStart(2,'0')+'시';
+      group.times.push(clock+(minute?' '+minute+'분':''));
+    }
+  }
+  return days.map(({date,times})=>{
+    const day=new Date(date+'T00:00:00Z');
+    const label=(day.getUTCMonth()+1)+'월 '+day.getUTCDate()+'일 ('+'일월화수목금토'[day.getUTCDay()]+')';
+    return times.length?label+' '+times.join(' · '):label;
+  }).join(' / ');
+}
+
+// Earlier drafts stored only MM.DD and a 24-hour clock. Resolve dates within the saved week.
+export function refreshWeeklySchedules(draft){
+  if(draft.jobId)return false;
+  const dates=new Map();
+  const day=new Date(draft.week+'T00:00:00Z');
+  for(let i=0;i<7;i++,day.setUTCDate(day.getUTCDate()+1)){
+    const iso=day.toISOString().slice(0,10);
+    dates.set(iso.slice(5).replace('-','.'),iso);
+  }
+  let changed=false;
+  function update(owner,key){
+    const value=owner?.[key];
+    if(!value||!/^\d{2}\.\d{2}\b/.test(value))return;
+    const sessions=[];
+    for(const part of value.split(' / ')){
+      const match=/^(\d{2}\.\d{2})(?: ((?:[01]\d|2[0-3]):[0-5]\d))?$/.exec(part);
+      if(!match||!dates.has(match[1]))return;
+      sessions.push({date:dates.get(match[1]),time:match[2]});
+    }
+    owner[key]=weeklyScheduleText(sessions);
+    changed=true;
+  }
+  for(const card of draft.cards){
+    update(card,'schedule');
+    update(draft.design?.pages?.['performance:'+card.performanceId]?.layers?.schedule,'text');
+  }
+  return changed;
+}
 export function coverScene(draft) {
   const design=normalizeDesign(draft.design);
   const content={title:draft.title,subtitle:draft.subtitle,count:`이번 주 공연 ${draft.cards.length}편`,
@@ -170,7 +221,7 @@ function performanceScene(d,index,theme,page,ctx,images){
   function height(layer){
     if(layer.visible===false||layer.type==='text'&&!layer.text)return 0;
     if(layer.type==='line')return layer.height;
-    return ctx?layerBounds(ctx,layer).height:layer.fontSize*PT*layer.leading*String(layer.text).split('\n').length;
+    return ctx?layerBounds(ctx,layer).height:layer.fontSize*PT*layer.leading*textParagraphs(layer).length;
   }
   function text(id,name,value,x,fontSize,color=ink,family='sans',extra={}){
     return add({id,name,type:'text',text:value||'',x,y:0,width:Math.max(8,right-(overrides[id]?.x??x)),fontSize,color,family,leading:1.2,...extra});
@@ -248,10 +299,15 @@ export function pageScene(d,index=0,ctx,images){
   return performanceScene(d,index,theme,page,ctx,images);
 }
 export function fontFor(layer) {return `${layer.italic?'italic ':''}${layer.weight||800} ${layer.fontSize*PT}px ${layer.family==='sans'?'system-ui, sans-serif':`"${SERIF}", serif`}`;}
+function textParagraphs(layer){
+  // Start each date on its own line and keep same-day times together.
+  const separator=layer.id==='schedule'?/\n| \/ (?=\d{1,2}월 \d{1,2}일 \([일월화수목금토]\))/: '\n';
+  return String(layer.text||'').split(separator);
+}
 export function textRows(ctx,layer) {
   ctx.font=fontFor(layer);
   const rows=[];
-  for(const paragraph of String(layer.text||'').split('\n')) {
+  for(const paragraph of textParagraphs(layer)) {
     let row='';
     for(const char of paragraph) {if(row&&ctx.measureText(row+char).width>layer.width){rows.push(row);row='';}row+=char;}
     rows.push(row);

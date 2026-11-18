@@ -2683,13 +2683,14 @@ window.ICO = {
   function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:WD.DEFAULT_CLOSING_COPY,caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
   function fillDraft(){
     if(WD.refreshClosingCopy(draft))dirty=true;
+    if(WD.refreshWeeklySchedules(draft))dirty=true;
     selectedCard=0;selectedLayer=null;clearRender();$('wkWeek').value=draft.week;
     for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
     $('wkDraftList').value=drafts.some(d=>d.id===draft.id)?draft.id:'';renderCandidates();renderCards();selectCard(0);controls();
     status(draft.jobId?(labels[draft.status]||draft.status)+' · 게시 상태와 저장된 이미지를 확인해 주세요.':'초안을 편집한 뒤 저장해 주세요.');
   }
   const weekSessions=p=>p.sessions.filter(s=>s.date>=draft.week&&s.date<=draft.weekEnd);
-  const scheduleText=p=>weekSessions(p).map(s=>s.date.slice(5).replace('-','.')+(s.time?' '+s.time:'')).join(' / ');
+  const scheduleText=p=>WD.weeklyScheduleText(weekSessions(p));
   function renderCandidates(){
     $('wkRange').textContent=draft.week.replaceAll('-','.')+' – '+draft.weekEnd.slice(5).replace('-','.');$('wkCandidates').replaceChildren();
     const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
@@ -2720,7 +2721,7 @@ window.ICO = {
       box.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',String(i)));box.addEventListener('dragover',e=>e.preventDefault());box.addEventListener('drop',e=>{e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(draft.jobId||!Number.isInteger(from)||from<0||from>=draft.cards.length)return;draft.cards.splice(i,0,draft.cards.splice(from,1)[0]);changed();renderCards();run(render);});
       const head=el('div',undefined,'wk-toolbar');head.append(el('strong',(i+1)+'. 공연 카드'));
       for(const [name,delta]of [['위로',-1],['아래로',1],['제외',0]]){const button=el('button',name,'btn ghost sm');button.type='button';button.disabled=!!draft.jobId||(delta!==0&&(i+delta<0||i+delta>=draft.cards.length));button.addEventListener('click',()=>{pull();const [c]=draft.cards.splice(i,1);if(delta)draft.cards.splice(i+delta,0,c);changed();renderCards();renderCandidates();run(render);});head.append(button);}box.append(head);
-      for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?600:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
+      for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?WD.MAX_SCHEDULE_LENGTH:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
     $('wkCount').textContent=(draft.cards.length+2)+'장';
     $('wkSelectedCount').textContent=draft.cards.length+' / 8';
   }
@@ -2905,9 +2906,10 @@ window.ICO = {
     const title=d.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2');
     const page=String(index+1).padStart(2,'0')+' / '+String(d.cards.length+2).padStart(2,'0');
     const info=(x,y,w,color=t.ink)=>{
-      text(card.schedule,x,y,w,94,29,color,500);
-      text(card.venue,x,y+104,w,80,29,color,600);
-      text(card.price,x,y+191,w,66,25,color,500);
+      const scheduleHeight=text(card.schedule,x,y,w,238,29,color,500);
+      const venueY=y+Math.max(104,scheduleHeight+10);
+      text(card.venue,x,venueY,w,80,29,color,600);
+      text(card.price,x,venueY+87,w,66,25,color,500);
     };
     rect(0,0,1080,1350,t.bg);
     if(id==='paper-editorial'){paintPaperTemplate(ctx,d,index);ctx.textBaseline='alphabetic';return;}
@@ -2944,7 +2946,7 @@ window.ICO = {
         rect(0,888,1080,462,'#fff');rect(56,926,8,50,violet);
         newsText(card.title,88,922,936,132,56,ink,900);
         line(56,1070,1024,1070,'#e1dfe4');
-        newsText('일시',56,1096,90,48,28,'#747078',500);newsText(card.schedule,165,1092,859,84,38,ink,700);
+        newsText('일시',56,1096,90,48,28,'#747078',500);text(card.schedule,165,1092,859,88,38,ink,700,'system-ui, sans-serif',22,1.16);
         newsText('장소',56,1192,90,48,28,'#747078',500);newsText(card.venue,165,1188,859,88,38,ink,700);
         if(card.price){newsText('가격',56,1282,90,42,26,'#747078',500);newsText(card.price,165,1278,665,55,30,ink,600);}
         newsText(String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),887,1290,140,35,23,'#747078',500);

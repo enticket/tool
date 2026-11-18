@@ -105,7 +105,7 @@ function fillLayerProperties(){
   if(!l){studioControls();return;}
   $('wkLayerName').textContent=l.name;$('wkLayerVisible').checked=l.visible;
   const text=l.type==='text';$('wkLayerTextField').hidden=!text||l.id==='count';
-  $('wkLayerText').value=l.text||'';$('wkLayerText').maxLength=selectedCard===0&&['title','subtitle'].includes(l.id)?220:l.id==='closingCopy'?300:l.id==='schedule'?500:220;
+  $('wkLayerText').value=l.text||'';$('wkLayerText').maxLength=selectedCard===0&&['title','subtitle'].includes(l.id)?220:l.id==='closingCopy'?300:l.id==='schedule'?WD.MAX_SCHEDULE_LENGTH:220;
   $('wkLayerSizeField').hidden=!text;$('wkLayerSize').value=l.fontSize||'';
   $('wkLayerFontField').hidden=!text;$('wkLayerFont').value=l.family||'serif';
   $('wkLayerAlignField').hidden=!text;$('wkLayerAlign').value=l.align||'left';

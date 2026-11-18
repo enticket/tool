@@ -240,7 +240,7 @@ with sync_playwright() as p:
  page.locator('#wkFilmstrip button').nth(1).click()
  pane('properties')
  fields=page.locator('#wkCards input');original=[fields.nth(i).input_value() for i in range(4)]
- stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11.16 14:00 / 11.17 19:30 / 11.18 19:30 / 11.19 19:30 / 11.22 15:00','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
+ stress=['2026 인천시립교향악단 기획연주회 — 가을밤에 만나는 영화 속 클래식','11월 16일 (월) 오후 02시 / 11월 17일 (화) 오후 07시 30분 / 11월 18일 (수) 오후 07시 30분 / 11월 19일 (목) 오후 07시 30분 / 11월 22일 (일) 오후 03시','인천문화예술회관 대공연장 · 인천광역시 남동구','R석 50,000원 · S석 30,000원']
  for i,value in enumerate(stress):fields.nth(i).fill(value)
  for template in ['editorial','midnight','ticket','gallery','poster-news']:
   page.locator('[data-studio-pane="templates"]').click()
