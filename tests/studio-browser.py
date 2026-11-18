@@ -9,7 +9,9 @@ from playwright.sync_api import sync_playwright,expect
 from browser_support import install_library_routes
 
 artifact_dir=Path(os.environ.get('ARTIFACT_DIR','/tmp/enticket-studio-preview'));artifact_dir.mkdir(parents=True,exist_ok=True)
-out=io.BytesIO();poster=Image.new('RGB',(900,1200),'#fbcc87');ImageDraw.Draw(poster).text((100,100),'ENTICKET / LIVE / 2026',fill='black');poster.save(out,'JPEG');poster_bytes=out.getvalue()
+out=io.BytesIO();poster=Image.new('RGB',(900,1200),'#fbcc87');ImageDraw.Draw(poster).text((100,100),'ENTICKET / LIVE / 2026',fill='black')
+ImageDraw.Draw(poster).rectangle((810,420,899,780),fill='#143cd5')
+poster.save(out,'JPEG');poster_bytes=out.getvalue()
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_PATH','/usr/bin/chromium'))
  page=browser.new_page(viewport={'width':1440,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('dialog',lambda d:d.accept())
@@ -113,15 +115,20 @@ with sync_playwright() as p:
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
  expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
  layer('posterReflection')
- # Only the colour at the poster edge contributes to the wash.
+ # Asymmetric markers must reflect at the same height, distance and scale across the seam.
  assert page.evaluate("""()=>{
-   const poster=document.createElement('canvas');poster.width=poster.height=100;
+   const poster=document.createElement('canvas');poster.width=100;poster.height=80;
    const ctx=poster.getContext('2d');
-   const wash=()=>EnticketWeeklyDesign.createPosterReflection(poster).toDataURL();
-   ctx.fillStyle='#cc4422';ctx.fillRect(0,0,100,100);const original=wash();
-   ctx.fillStyle='#101010';ctx.fillRect(0,0,30,100);
-   if(wash()!==original)return false;
-   ctx.fillStyle='#336699';ctx.fillRect(40,0,60,100);return wash()!==original;
+   ctx.fillStyle='#0000ff';ctx.fillRect(0,0,100,80);
+   ctx.fillStyle='#ff0000';ctx.fillRect(84,7,8,11);
+   ctx.fillStyle='#00ff00';ctx.fillRect(68,50,12,12);
+   const mirror=EnticketWeeklyDesign.createPosterReflection(poster,40,80).getContext('2d');
+   const sample=(x,y)=>mirror.getImageData(x,y,1,1).data;
+   for(let y=0;y<80;y+=3)for(let x=0;x<36;x++){
+     const original=ctx.getImageData(99-x,y,1,1).data,reflected=sample(x,y);
+     if(!reflected[3]||original.slice(0,3).some((v,i)=>v!==reflected[i]))return false;
+   }
+   return sample(0,30)[3]>245&&sample(15,30)[3]>sample(28,30)[3]&&sample(39,30)[3]<8;
  }""")
  def reflection_pixel():
   return page.locator('#wkLayerCanvas').evaluate("(c)=>Array.from(c.getContext('2d').getImageData(825,500,1,1).data)")
@@ -169,6 +176,13 @@ with sync_playwright() as p:
  reflection=ElementTree.fromstring(performance_svg).find('.//{*}g[@id="posterReflection"]/{*}image')
  assert reflection is not None and reflection.get('href').startswith('data:image/png;base64,')
  assert reflection.get('preserveAspectRatio')=='none'
+ reflected=Image.open(io.BytesIO(base64.b64decode(reflection.get('href').split(',')[1]))).convert('RGBA')
+ scale=float(reflection.get('height'))/poster.height
+ near=reflected.getpixel((round(30*scale),reflected.height//2))
+ far=reflected.getpixel((round(150*scale),reflected.height//2))
+ above=reflected.getpixel((round(30*scale),reflected.height//6))
+ assert near[2]>near[0]+100 and far[0]>far[2]+60 and above[0]>above[2]+60
+ assert near[3]>far[3]
  assert '세 연주자가 들려주는 실내악 이야기.' not in performance_svg
  assert '11월 16일 (월) 오후 07시 30분' in performance_svg
  assert 'id="date"' not in performance_svg and '@en__ticket' not in performance_svg

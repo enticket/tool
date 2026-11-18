@@ -183,18 +183,26 @@ test('poster fills the space left by performance details up to the footer or sid
   assert.equal(edited.poster.y+edited.poster.height+32,850);
 });
 
-test('water reflection follows the painted edge, preserves saved stacking and only uses spare space',()=>{
+test('mirror reflection follows the painted edge, preserves saved stacking and only uses spare space',()=>{
   const card={assetId:'img',performanceId:'show',title:'음악회',schedule:'11.20',venue:'아트홀'};
   const page={layers:{poster:{width:600,height:560}},order:['paper','texture','poster','number']};
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card],design:{...normalizeDesign(),pages:{'performance:show':page}}};
   const scene=()=>pageScene(draft,1,undefined,{img:{width:3,height:4}});
   let layers=scene();
   const reflection=layers.find(l=>l.id==='posterReflection'),poster=layers.find(l=>l.id==='poster');
-  assert.equal(reflection.x,poster.x+560*3/4+8);
+  assert.equal(reflection.x,poster.x+560*3/4);
   assert.equal(reflection.y,poster.y);
   assert.equal(reflection.height,560);
   assert.ok(reflection.x+reflection.width<=1014);
   assert.equal(layers.indexOf(reflection)+1,layers.indexOf(poster));
+  page.layers.poster.angle=90;
+  const turned=scene().find(l=>l.id==='posterReflection');
+  assert.equal(turned.sourceAngle,90);
+  assert.ok(Math.abs(turned.x-(poster.x+580))<1e-8);
+  assert.ok(Math.abs(turned.y-(poster.y-20))<1e-8);
+  assert.ok(Math.abs(turned.height-420)<1e-8);
+  delete page.layers.poster.angle;
+
   page.layers.posterReflection={opacity:38,visible:false};
   layers=scene();
   assert.equal(layers.find(l=>l.id==='posterReflection').visible,false);

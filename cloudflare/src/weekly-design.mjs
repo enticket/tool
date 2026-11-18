@@ -276,14 +276,20 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
   if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
   const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
-  const angle=(poster.angle||0)*Math.PI/180;
-  const posterRight=angle?poster.x+(poster.width+Math.abs(poster.width*Math.cos(angle))+Math.abs(poster.height*Math.sin(angle)))/2:poster.x+imageHeight*ratio;
-  const reflectionX=posterRight+8;
-  const reflectionWidth=Math.min(right-reflectionX,imageHeight*ratio*.85);
-  if(image&&imageHeight>0&&reflectionWidth>=40){
-    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'빛 번짐',type:'image',
-      assetId:reflectionAssetId(card.assetId),stretch:true,x:reflectionX,y:poster.y,width:reflectionWidth,height:imageHeight,
-      opacity:Math.round((poster.opacity??100)*.68)});
+  const imageWidth=imageHeight*ratio;
+  // Rotation uses the editor frame's centre, including any empty space in that frame.
+  const angle=(poster.angle||0)*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
+  const dx=(imageWidth-poster.width)/2,dy=(imageHeight-poster.height)/2;
+  const rotatedWidth=Math.abs(cos)*imageWidth+Math.abs(sin)*imageHeight;
+  const rotatedHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
+  const mirrorX=poster.x+poster.width/2+cos*dx-sin*dy+rotatedWidth/2;
+  const mirrorY=poster.y+poster.height/2+sin*dx+cos*dy-rotatedHeight/2;
+  const mirrorWidth=Math.min(right-mirrorX,rotatedWidth);
+  if(image&&imageHeight>0&&mirrorWidth>=8){
+    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'거울 반사',type:'image',
+      assetId:reflectionAssetId(card.assetId),mirrorOf:card.assetId,sourceAngle:poster.angle||0,
+      stretch:true,x:mirrorX,y:mirrorY,width:mirrorWidth,height:rotatedHeight,
+      opacity:Math.round((poster.opacity??100)*.82)});
   }
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){
@@ -345,41 +351,36 @@ export function hitLayer(ctx,layer,x,y){
   const pad=layer.type==='line'?10:0;return px>=b.x-pad&&px<=b.x+b.width+pad&&py>=b.y-pad&&py<=b.y+b.height+pad;
 }
 
-export function createPosterReflection(image){
-  // Average broad bands of the poster edge so no letters or figures are repeated.
-  const palette=document.createElement('canvas');
-  palette.width=1;palette.height=5;
-  const sampler=palette.getContext('2d');
-  sampler.imageSmoothingQuality='high';
-  sampler.drawImage(image,image.width*.4,0,image.width*.6,image.height,0,0,1,palette.height);
-  const colors=sampler.getImageData(0,0,1,palette.height).data;
-  const wash=document.createElement('canvas');
-  wash.width=256;wash.height=512;
-  const ctx=wash.getContext('2d'),w=wash.width,h=wash.height;
-  const pigment=ctx.createLinearGradient(0,0,0,h);
-  for(let i=0;i<palette.height;i++){
-    const [r,g,b,a]=colors.subarray(i*4,i*4+4);
-    pigment.addColorStop((i+.5)/palette.height,`rgba(${r},${g},${b},${a/255})`);
-  }
-  ctx.fillStyle=pigment;ctx.fillRect(0,0,w,h);
+export function createPosterReflection(image,width=image.width,height=image.height,angle=0){
+  const mirror=document.createElement('canvas');
+  mirror.width=Math.max(1,Math.ceil(width));mirror.height=Math.max(1,Math.ceil(height));
+  const ctx=mirror.getContext('2d'),radians=angle*Math.PI/180;
+  const cos=Math.abs(Math.cos(radians)),sin=Math.abs(Math.sin(radians));
+  const scale=height/(image.height*cos+image.width*sin);
+  const fullWidth=(image.width*cos+image.height*sin)*scale;
 
-  // A broad soft wash with one narrow, curved glint. Fade both ends into the paper.
-  const mask=document.createElement('canvas');
-  mask.width=w;mask.height=h;
-  const m=mask.getContext('2d');
-  for(let y=0;y<h;y+=2){
-    const t=(y+1)/h;
-    const strength=Math.pow(Math.sin(Math.PI*t),1.7);
-    const crest=.36+.17*Math.sin(t*1.85*Math.PI-.65);
-    const strip=m.createLinearGradient(0,0,w,0);
-    for(const [stop,alpha] of [[0,0],[.055,.56],[crest-.10,.32],[crest,.65],[crest+.12,.28],[crest+.43,0]]){
-      strip.addColorStop(stop,`rgba(0,0,0,${strength*alpha})`);
-    }
-    m.fillStyle=strip;m.fillRect(0,y,w,2);
+  // Reflect the whole painted poster. The canvas clips the far side to the available space.
+  ctx.scale(mirror.width/width,mirror.height/height);
+  ctx.save();
+  ctx.translate(fullWidth/2,height/2);ctx.scale(-1,1);ctx.rotate(radians);
+  ctx.drawImage(image,-image.width*scale/2,-image.height*scale/2,image.width*scale,image.height*scale);
+  ctx.restore();
+  const fade=ctx.createLinearGradient(0,0,Math.min(width,fullWidth),0);
+  fade.addColorStop(0,'#000');fade.addColorStop(.3,'rgba(0,0,0,.84)');
+  fade.addColorStop(.7,'rgba(0,0,0,.34)');fade.addColorStop(1,'transparent');
+  ctx.globalCompositeOperation='destination-in';ctx.fillStyle=fade;ctx.fillRect(0,0,width,height);
+  return mirror;
+}
+
+const reflectionCache=new WeakMap();
+function reflectionBitmap(image,layer){
+  const {width,height,sourceAngle}=layer;
+  let entry=reflectionCache.get(image);
+  if(!entry||entry.width!==width||entry.height!==height||entry.angle!==sourceAngle){
+    entry={width,height,angle:sourceAngle,canvas:createPosterReflection(image,width,height,sourceAngle)};
+    reflectionCache.set(image,entry);
   }
-  ctx.globalCompositeOperation='destination-in';
-  ctx.drawImage(mask,0,0);
-  return wash;
+  return entry.canvas;
 }
 
 export function paintScene(ctx,scene,texture,images={}) {
@@ -399,6 +400,9 @@ export function paintScene(ctx,scene,texture,images={}) {
       ctx.globalAlpha=layer.opacity/100;ctx.globalCompositeOperation='multiply';ctx.drawImage(texture,0,0,1080,1350);
     } else if(['line','rect'].includes(layer.type))ctx.fillRect(layer.x,layer.y,layer.width,layer.height||3);
     else if(layer.type==='ellipse'){ctx.beginPath();ctx.ellipse(layer.x+layer.width/2,layer.y+layer.height/2,layer.width/2,layer.height/2,0,0,2*Math.PI);ctx.fill();}
+    else if(layer.mirrorOf&&images[layer.mirrorOf]){
+      ctx.drawImage(reflectionBitmap(images[layer.mirrorOf],layer),layer.x,layer.y,layer.width,layer.height);
+    }
     else if(layer.type==='image'&&images[layer.assetId]){
       const img=images[layer.assetId],scale=Math.min(layer.width/img.width,layer.height/img.height);
       if(layer.round){
