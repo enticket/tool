@@ -1386,7 +1386,11 @@ td.c { text-align: center; }
 }
 #wkCalendarView.has-unsaved-moves .wk-moved { box-shadow: inset 0 0 0 2px var(--color-text-warning); }
 #wkUnsavedMoves { margin-right: auto; color: var(--color-text-warning); }
-#wkCalendar { --saturday-ink: #225ca8; }
+#wkCalendar {
+  --saturday-ink: #225ca8;
+  border-width: 2px;
+  border-color: var(--color-border-neutral-strong);
+}
 @media (prefers-color-scheme: dark) {
   #wkCalendar { --saturday-ink: #91bfff; }
 }
