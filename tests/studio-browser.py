@@ -128,7 +128,9 @@ with sync_playwright() as p:
      const original=ctx.getImageData(99-x,y,1,1).data,reflected=sample(x,y);
      if(!reflected[3]||original.slice(0,3).some((v,i)=>v!==reflected[i]))return false;
    }
-   return sample(0,30)[3]>245&&sample(15,30)[3]>sample(28,30)[3]&&sample(39,30)[3]<8;
+   const middle=sample(0,30)[3];
+   return middle>245&&sample(0,0)[3]<middle*.45&&sample(0,79)[3]<middle*.45
+     &&sample(15,30)[3]>sample(28,30)[3]&&sample(39,30)[3]<8;
  }""")
  def reflection_pixel():
   return page.locator('#wkLayerCanvas').evaluate("(c)=>Array.from(c.getContext('2d').getImageData(825,500,1,1).data)")

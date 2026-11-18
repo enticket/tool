@@ -284,12 +284,12 @@ function performanceScene(d,index,theme,page,ctx,images){
   const rotatedHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
   const mirrorX=poster.x+poster.width/2+cos*dx-sin*dy+rotatedWidth/2;
   const mirrorY=poster.y+poster.height/2+sin*dx+cos*dy-rotatedHeight/2;
-  const mirrorWidth=Math.min(right-mirrorX,rotatedWidth);
+  const mirrorWidth=Math.min((right-mirrorX)*.86,rotatedWidth*.5);
   if(image&&imageHeight>0&&mirrorWidth>=8){
     base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'거울 반사',type:'image',
       assetId:reflectionAssetId(card.assetId),mirrorOf:card.assetId,sourceAngle:poster.angle||0,
       stretch:true,x:mirrorX,y:mirrorY,width:mirrorWidth,height:rotatedHeight,
-      opacity:Math.round((poster.opacity??100)*.82)});
+      opacity:Math.round((poster.opacity??100)*.40)});
   }
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){
@@ -366,9 +366,13 @@ export function createPosterReflection(image,width=image.width,height=image.heig
   ctx.drawImage(image,-image.width*scale/2,-image.height*scale/2,image.width*scale,image.height*scale);
   ctx.restore();
   const fade=ctx.createLinearGradient(0,0,Math.min(width,fullWidth),0);
-  fade.addColorStop(0,'#000');fade.addColorStop(.3,'rgba(0,0,0,.84)');
-  fade.addColorStop(.7,'rgba(0,0,0,.34)');fade.addColorStop(1,'transparent');
+  fade.addColorStop(0,'#000');fade.addColorStop(.25,'rgba(0,0,0,.63)');
+  fade.addColorStop(.55,'rgba(0,0,0,.26)');fade.addColorStop(.8,'rgba(0,0,0,.075)');fade.addColorStop(1,'transparent');
   ctx.globalCompositeOperation='destination-in';ctx.fillStyle=fade;ctx.fillRect(0,0,width,height);
+  const ends=ctx.createLinearGradient(0,0,0,height);
+  ends.addColorStop(0,'rgba(0,0,0,.28)');ends.addColorStop(.10,'#000');
+  ends.addColorStop(.88,'#000');ends.addColorStop(1,'rgba(0,0,0,.22)');
+  ctx.fillStyle=ends;ctx.fillRect(0,0,width,height);
   return mirror;
 }
 

@@ -193,6 +193,8 @@ test('mirror reflection follows the painted edge, preserves saved stacking and o
   assert.equal(reflection.x,poster.x+560*3/4);
   assert.equal(reflection.y,poster.y);
   assert.equal(reflection.height,560);
+  assert.equal(reflection.opacity,40);
+  assert.equal(reflection.width,210);
   assert.ok(reflection.x+reflection.width<=1014);
   assert.equal(layers.indexOf(reflection)+1,layers.indexOf(poster));
   page.layers.poster.angle=90;
