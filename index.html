@@ -668,7 +668,7 @@ tbody tr:last-child td { border-bottom: none; }
 tr:nth-child(even) td { background: transparent; }
 tbody tr:hover td { background: var(--bg-grey-lighter); }
 #output tbody tr:hover td[rowspan] { background: transparent; }
-#output tr.grade-start td { border-top: 2px solid var(--txt-black-dark); }
+#output tr.grade-start td { border-top: 1px solid var(--color-border-neutral-strong); }
 tr.total td {
   background: var(--color-fill-accent) !important;
   font-weight: var(--font-weight-700);
@@ -3848,7 +3848,7 @@ data.rounds.forEach((rd,ri)=>{
     else row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
     if(it.gradeStart){
       for(let col=COL.H; col<=COL.AK; col++){
-        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'medium',color:{rgb:'548235'}};
+        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'thin',color:{rgb:'7FA65D'}};
       }
     }
     r++;
