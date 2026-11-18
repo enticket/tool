@@ -195,11 +195,13 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
     const layers=scene(index),front=layers.find(l=>l.id==='poster');
     const backs=layers.filter(l=>l.id.startsWith('nextPoster')).reverse();
     assert.deepEqual(backs.map(l=>l.assetId),cards.slice(index).map(c=>c.assetId));
-    let previousEdge=front.x+front.width;
+    let previousEdge=front.x+front.width,previousGap=Infinity;
     for(const layer of backs){
       const edge=layer.x+layer.width;
       assert.equal(layer.opacity,100);
-      assert.ok(layer.x<previousEdge&&edge>previousEdge&&edge<=1014.001);
+      const gap=edge-previousEdge;
+      assert.ok(layer.x<previousEdge&&gap>0&&gap<previousGap&&edge<=1014.001);
+      previousGap=gap;
       assert.ok(layer.y+layer.height<=layers.find(l=>l.id==='title').y);
       assert.ok(layers.indexOf(layer)<layers.indexOf(front));
       previousEdge=edge;
@@ -220,7 +222,9 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
   const full=scene(1),front=full.find(l=>l.id==='poster');
   const frontsBottom=front.y+front.width*9/16;
   const edges=full.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.y+l.height);
-  assert.ok(edges.every((edge,i)=>edge>(edges[i-1]??frontsBottom)&&edge<full.find(l=>l.id==='title').y));
+  const bottomGaps=edges.map((edge,i)=>edge-(edges[i-1]??frontsBottom));
+  assert.ok(bottomGaps.every((gap,i)=>gap>0&&gap<(bottomGaps[i-1]??Infinity)));
+  assert.ok(edges.at(-1)<full.find(l=>l.id==='title').y);
   page.layers.poster.visible=false;
   assert.ok(!scene(1).some(l=>l.id.startsWith('nextPoster')));
 });

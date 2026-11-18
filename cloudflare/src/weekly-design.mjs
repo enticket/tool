@@ -289,18 +289,25 @@ function performanceScene(d,index,theme,page,ctx,images){
     const frontWidth=Math.abs(cos)*imageWidth+Math.abs(sin)*imageHeight;
     const frontHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
     const edge=centerX+frontWidth/2;
-    const step=Math.min(148,frontWidth*.35,Math.max(0,right-edge)/upcoming.length);
+    // Each successive poster exposes three quarters as much of its edge.
+    const gapWeights=upcoming.map((_,i)=>.75**i);
+    const totalWeight=gapWeights.reduce((sum,weight)=>sum+weight,0);
+    const spread=Math.min(Math.max(0,right-edge),Math.min(148,frontWidth*.35)*totalWeight);
+    const revealBelow=spread<8*upcoming.length;
     const numberBottom=number.visible===false?0:number.y+height(number)+14;
     const top=Math.max(centerY-frontHeight/2,numberBottom);
     const bottom=Math.min(centerY+frontHeight/2,poster.y+imageHeight);
     const span=Math.max(8,bottom-top);
+    let cumulativeWeight=0;
     for(const [i,next] of upcoming.entries()){
+      cumulativeWeight+=gapWeights[i];
+      const reveal=cumulativeWeight/totalWeight;
       const slot=i+1,depth=slot/upcoming.length;
       const width=Math.max(8,frontWidth*(.88-.12*depth));
       const height=Math.max(8,span*(.95-.17*depth));
-      const x=edge+step*slot-width;
+      const x=edge+spread*reveal-width;
       // A full-width saved poster can still reveal the lineup along its bottom edge.
-      const y=step<8?bottom-height+18*depth:top+(span-height)/2;
+      const y=revealBelow?bottom-height+18*reveal:top+(span-height)/2;
       stack.push({id:'nextPoster'+slot,name:'다음 공연 · '+next.title,type:'image',assetId:next.assetId,
         crop:true,posterShadow:true,x,y,width,height});
     }
