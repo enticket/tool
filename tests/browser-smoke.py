@@ -209,7 +209,9 @@ with sync_playwright() as p:
     assert (ROOT / 'sealed.pdf').read_bytes().startswith(b'%PDF-')
     print('PASS: local stamp + generated settlement -> sealed XLSX and PDF')
 
-    page.locator('#localStampClear').click()
+    page.locator('#panel-oseal .ig-footer #osealReset').click()
+    expect(page.locator('#osealPreview')).to_be_empty()
+    expect(page.locator('#osealStatus')).to_be_empty()
     expect(page.locator('#osealWork')).to_be_hidden()
     expect(page.locator('#osealBtnRow')).to_be_hidden()
     assert not page.evaluate('gdrive.hasLocalStamp()')

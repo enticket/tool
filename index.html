@@ -1691,6 +1691,7 @@ window.ICO = {
       </div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="osealReset">초기화</button></div></div>
   </section>
   <section class="panel-view" id="panel-instagram" data-cloud-only hidden>
     <h2>인스타그램</h2>
@@ -1932,6 +1933,7 @@ window.ICO = {
       }
     });
     clear.addEventListener("click", reset);
+    document.getElementById("osealReset").addEventListener("click", reset);
     window.gdrive = {
       isLocal: true,
       isLoggedIn: () => false,
@@ -5927,6 +5929,7 @@ window.OrigSeal = (function(){
     preview.innerHTML='';
     setStatus(""); updateGate();
   }
+  if(!window.gdrive?.isLocal) document.getElementById("osealReset").addEventListener("click", invalidate);
   document.addEventListener("enticket-auth", invalidate);
   document.addEventListener("enticket-stamp", invalidate);
   updateGate();
