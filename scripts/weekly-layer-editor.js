@@ -209,8 +209,6 @@ async function downloadLayerSource(){
   for(let i=0;i<draft.cards.length+2;i++){
     const scene=WD.pageScene(draft,i,canvasContext(),paperImages);
     WD.validateScene(canvasContext(),scene);
-    const mirror=scene.find(layer=>layer.mirrorOf);
-    if(mirror)imageData[mirror.assetId]=WD.createPosterReflection(paperImages[mirror.mirrorOf],mirror.width,mirror.height,mirror.sourceAngle).toDataURL('image/png');
     files[i===0?'cover.svg':String(i+1).padStart(2,'0')+'.svg']=new TextEncoder().encode(WD.coverSvg(canvasContext(),scene,{fontData,textureData,imageData}));
   }
   if(exportEpoch!==generation)throw Error('로그인 상태가 변경되었습니다.');

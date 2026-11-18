@@ -114,34 +114,26 @@ with sync_playwright() as p:
  pane('performances');page.locator('#wkCandidates input').check();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000);expect(page.locator('#wkLayerStage')).to_be_visible()
  expect(page.locator('#wkLayerList [data-layer="description"]')).to_have_count(0)
  expect(page.locator('#wkCards input').nth(1)).to_have_value('11월 16일 (월) 오후 07시 30분')
- layer('posterReflection')
- # Asymmetric markers must reflect at the same height, distance and scale across the seam.
- assert page.evaluate("""()=>{
-   const poster=document.createElement('canvas');poster.width=100;poster.height=80;
-   const ctx=poster.getContext('2d');
-   ctx.fillStyle='#0000ff';ctx.fillRect(0,0,100,80);
-   ctx.fillStyle='#ff0000';ctx.fillRect(84,7,8,11);
-   ctx.fillStyle='#00ff00';ctx.fillRect(68,50,12,12);
-   const mirror=EnticketWeeklyDesign.createPosterReflection(poster,40,80).getContext('2d');
-   const sample=(x,y)=>mirror.getImageData(x,y,1,1).data;
-   for(let y=0;y<80;y+=3)for(let x=0;x<36;x++){
-     const original=ctx.getImageData(99-x,y,1,1).data,reflected=sample(x,y);
-     if(!reflected[3]||original.slice(0,3).some((v,i)=>v!==reflected[i]))return false;
-   }
-   const middle=sample(0,30)[3];
-   return middle>245&&sample(0,0)[3]<middle*.45&&sample(0,79)[3]<middle*.45
-     &&sample(15,30)[3]>sample(28,30)[3]&&sample(39,30)[3]<8;
- }""")
- def reflection_pixel():
-  return page.locator('#wkLayerCanvas').evaluate("(c)=>Array.from(c.getContext('2d').getImageData(825,500,1,1).data)")
- visible_pixel=reflection_pixel()
- page.locator('#wkLayerVisible').uncheck()
- assert reflection_pixel()!=visible_pixel
- page.locator('#wkLayerVisible').check()
- assert reflection_pixel()==visible_pixel
  layer('poster')
  width=float(page.locator('#wkLayerWidth').input_value());height=float(page.locator('#wkLayerHeight').input_value())
+ x=float(page.locator('#wkLayerX').input_value());y=float(page.locator('#wkLayerY').input_value())
  assert width>600 and height>736 and abs(width/height-3/4)<.001
+ layer('posterReflection')
+ expect(page.locator('#wkLayerOpacity')).to_have_value('24')
+ # The right-hand blue patch should show faintly on the exposed sheet, with full ink on the front.
+ def poster_pixels():
+  return page.locator('#wkLayerCanvas').evaluate("""(canvas,[edge,y])=>{
+   const ctx=canvas.getContext('2d');
+   return [edge-10,edge+35].map(x=>Array.from(ctx.getImageData(x,y,1,1).data));
+  }""",[round(x+width),round(y+height*.5)])
+ front,stacked=poster_pixels()
+ page.locator('#wkLayerVisible').uncheck()
+ same_front,paper=poster_pixels()
+ assert front==same_front and front[2]>front[0]+100
+ assert paper[0]-stacked[0]>20 and abs(paper[2]-stacked[2])<15
+ page.locator('#wkLayerVisible').check()
+ assert poster_pixels()==[front,stacked]
+ layer('poster')
  page.locator('#wkLayerWidth').fill('560');page.locator('#wkLayerX').fill('80')
  pane('elements');page.locator('[data-add-object="text"]').click();page.locator('#wkInlineText').fill('현장에서 만나요');page.locator('#wkInlineText').press('Control+Enter');page.locator('#wkLayerSize').fill('24');page.locator('#wkLayerX').fill('80');page.locator('#wkLayerY').fill('1200')
  # Page order preserves each performance's scene; deleting a page removes its overrides.
@@ -175,16 +167,17 @@ with sync_playwright() as p:
  profile=archive.read('enticket-instagram-profile.jpg')
  performance_svg=archive.read('02.svg').decode()
  from xml.etree import ElementTree
- reflection=ElementTree.fromstring(performance_svg).find('.//{*}g[@id="posterReflection"]/{*}image')
- assert reflection is not None and reflection.get('href').startswith('data:image/png;base64,')
- assert reflection.get('preserveAspectRatio')=='none'
- reflected=Image.open(io.BytesIO(base64.b64decode(reflection.get('href').split(',')[1]))).convert('RGBA')
- scale=float(reflection.get('height'))/poster.height
- near=reflected.getpixel((round(30*scale),reflected.height//2))
- far=reflected.getpixel((round(150*scale),reflected.height//2))
- above=reflected.getpixel((round(30*scale),reflected.height//6))
- assert near[2]>near[0]+100 and far[0]>far[2]+60 and above[0]>above[2]+60
- assert near[3]>far[3]
+ groups=ElementTree.fromstring(performance_svg).findall('{*}g')
+ ids=[g.get('id') for g in groups]
+ back=groups[ids.index('posterReflection')]
+ assert ids.index('posterReflection')<ids.index('poster')
+ assert back.get('{http://www.inkscape.org/namespaces/inkscape}label')=='겹친 포스터'
+ assert float(back.get('opacity'))==.24 and back.get('transform').startswith('rotate(1.5 ')
+ back_image=back.find('{*}image')
+ front_image=groups[ids.index('poster')].find('{*}image')
+ assert back_image.get('href')==front_image.get('href')
+ assert back_image.get('preserveAspectRatio')=='xMidYMid meet'
+ assert float(back_image.get('x'))<float(front_image.get('x'))+float(front_image.get('width'))
  assert '세 연주자가 들려주는 실내악 이야기.' not in performance_svg
  assert '11월 16일 (월) 오후 07시 30분' in performance_svg
  assert 'id="date"' not in performance_svg and '@en__ticket' not in performance_svg

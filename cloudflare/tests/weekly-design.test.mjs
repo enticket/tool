@@ -183,36 +183,47 @@ test('poster fills the space left by performance details up to the footer or sid
   assert.equal(edited.poster.y+edited.poster.height+32,850);
 });
 
-test('mirror reflection follows the painted edge, preserves saved stacking and only uses spare space',()=>{
+test('back sheet follows the painted poster, respects saved layer settings and clears the details',()=>{
   const card={assetId:'img',performanceId:'show',title:'음악회',schedule:'11.20',venue:'아트홀'};
   const page={layers:{poster:{width:600,height:560}},order:['paper','texture','poster','number']};
   const draft={week:'2026-11-16',weekEnd:'2026-11-22',cards:[card],design:{...normalizeDesign(),pages:{'performance:show':page}}};
-  const scene=()=>pageScene(draft,1,undefined,{img:{width:3,height:4}});
-  let layers=scene();
-  const reflection=layers.find(l=>l.id==='posterReflection'),poster=layers.find(l=>l.id==='poster');
-  assert.equal(reflection.x,poster.x+560*3/4);
-  assert.equal(reflection.y,poster.y);
-  assert.equal(reflection.height,560);
-  assert.equal(reflection.opacity,40);
-  assert.equal(reflection.width,210);
-  assert.ok(reflection.x+reflection.width<=1014);
-  assert.equal(layers.indexOf(reflection)+1,layers.indexOf(poster));
+  const scene=(width=3,height=4)=>pageScene(draft,1,undefined,{img:{width,height}});
+  function bounds(layer){
+    const radians=layer.angle*Math.PI/180,c=Math.abs(Math.cos(radians)),s=Math.abs(Math.sin(radians));
+    const halfWidth=(c*layer.width+s*layer.height)/2,halfHeight=(s*layer.width+c*layer.height)/2;
+    const cx=layer.x+layer.width/2,cy=layer.y+layer.height/2;
+    return {left:cx-halfWidth,right:cx+halfWidth,top:cy-halfHeight,bottom:cy+halfHeight};
+  }
+  const layers=scene(),back=layers.find(l=>l.id==='posterReflection'),front=layers.find(l=>l.id==='poster');
+  assert.equal(back.assetId,front.assetId);
+  assert.equal(back.name,'겹친 포스터');
+  assert.equal(back.opacity,24);
+  assert.equal(back.width,420*.94);
+  assert.equal(back.height,560*.94);
+  assert.equal(layers.indexOf(back)+1,layers.indexOf(front));
+  const box=bounds(back),paintedRight=front.x+420;
+  assert.ok(box.left<paintedRight&&box.right>paintedRight);
+  assert.ok(box.right<=1014&&box.top>front.y&&box.bottom<layers.find(l=>l.id==='title').y);
+
   page.layers.poster.angle=90;
   const turned=scene().find(l=>l.id==='posterReflection');
-  assert.equal(turned.sourceAngle,90);
-  assert.ok(Math.abs(turned.x-(poster.x+580))<1e-8);
-  assert.ok(Math.abs(turned.y-(poster.y-20))<1e-8);
-  assert.ok(Math.abs(turned.height-420)<1e-8);
+  assert.equal(turned.angle,91.5);
+  // The painted art is left-aligned inside a 600px frame, including after rotation.
+  assert.ok(Math.abs(bounds(turned).right-(front.x+580+560*.12))<.001);
+  assert.ok(Math.abs(bounds(turned).bottom-(front.y+400+12))<.001);
   delete page.layers.poster.angle;
 
   page.layers.posterReflection={opacity:38,visible:false};
-  layers=scene();
-  assert.equal(layers.find(l=>l.id==='posterReflection').visible,false);
-  assert.equal(layers.find(l=>l.id==='posterReflection').opacity,38);
+  const saved=scene().find(l=>l.id==='posterReflection');
+  assert.equal(saved.visible,false);
+  assert.equal(saved.opacity,38);
   page.layers.poster.visible=false;
   assert.ok(!scene().some(l=>l.id==='posterReflection'));
   delete page.layers.poster;
-  assert.ok(!pageScene(draft,1,undefined,{img:{width:16,height:9}}).some(l=>l.id==='posterReflection'));
+  delete page.layers.posterReflection;
+  const wide=scene(16,9),wideBack=bounds(wide.find(l=>l.id==='posterReflection'));
+  assert.ok(wideBack.right<=1014.001&&wideBack.bottom<wide.find(l=>l.id==='title').y);
+  assert.ok(!pageScene(draft,1).some(l=>l.id==='posterReflection'));
   assert.ok(!pageScene(draft,0).some(l=>l.id==='posterReflection'));
   assert.ok(!pageScene(draft,2).some(l=>l.id==='posterReflection'));
 });

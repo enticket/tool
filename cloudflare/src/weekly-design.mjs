@@ -4,7 +4,6 @@ export const DESIGN_VERSION = 2;
 export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
-export const reflectionAssetId=id=>'reflection:'+id;
 export const MAX_SCHEDULE_LENGTH=3000;
 export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
 export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
@@ -277,19 +276,26 @@ function performanceScene(d,index,theme,page,ctx,images){
   if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
   const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
   const imageWidth=imageHeight*ratio;
-  // Rotation uses the editor frame's centre, including any empty space in that frame.
-  const angle=(poster.angle||0)*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
-  const dx=(imageWidth-poster.width)/2,dy=(imageHeight-poster.height)/2;
-  const rotatedWidth=Math.abs(cos)*imageWidth+Math.abs(sin)*imageHeight;
-  const rotatedHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
-  const mirrorX=poster.x+poster.width/2+cos*dx-sin*dy+rotatedWidth/2;
-  const mirrorY=poster.y+poster.height/2+sin*dx+cos*dy-rotatedHeight/2;
-  const mirrorWidth=Math.min((right-mirrorX)*.86,rotatedWidth*.5);
-  if(image&&imageHeight>0&&mirrorWidth>=8){
-    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'거울 반사',type:'image',
-      assetId:reflectionAssetId(card.assetId),mirrorOf:card.assetId,sourceAngle:poster.angle||0,
-      stretch:true,x:mirrorX,y:mirrorY,width:mirrorWidth,height:rotatedHeight,
-      opacity:Math.round((poster.opacity??100)*.40)});
+  if(image&&imageHeight>0){
+    // Anchor the back sheet to the painted image, even inside a larger rotated frame.
+    const radians=(poster.angle||0)*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
+    const dx=(imageWidth-poster.width)/2,dy=(imageHeight-poster.height)/2;
+    const centerX=poster.x+poster.width/2+cos*dx-sin*dy;
+    const centerY=poster.y+poster.height/2+sin*dx+cos*dy;
+    const frontWidth=Math.abs(cos)*imageWidth+Math.abs(sin)*imageHeight;
+    const frontHeight=Math.abs(sin)*imageWidth+Math.abs(cos)*imageHeight;
+    const edgeX=centerX+frontWidth/2;
+    const reveal=Math.min(86,frontWidth*.12,Math.max(0,right-edgeX));
+    const width=imageWidth*.94,height=imageHeight*.94;
+    const angle=((poster.angle||0)+1.5+180)%360-180;
+    const backRadians=angle*Math.PI/180;
+    const backWidth=Math.abs(Math.cos(backRadians))*width+Math.abs(Math.sin(backRadians))*height;
+    const backHeight=Math.abs(Math.sin(backRadians))*width+Math.abs(Math.cos(backRadians))*height;
+    // Keep the layer ID used by saved drafts. Both sheets use the original artwork.
+    base.splice(base.indexOf(poster),0,{id:'posterReflection',name:'겹친 포스터',type:'image',assetId:card.assetId,
+      x:edgeX+reveal-(backWidth+width)/2,
+      y:centerY+frontHeight/2+Math.min(12,imageHeight*.025)-(backHeight+height)/2,
+      width,height,angle,opacity:Math.round((poster.opacity??100)*.24)});
   }
   let y=Math.max(102,poster.y+imageHeight)+32;
   for(const row of rows){
@@ -351,42 +357,6 @@ export function hitLayer(ctx,layer,x,y){
   const pad=layer.type==='line'?10:0;return px>=b.x-pad&&px<=b.x+b.width+pad&&py>=b.y-pad&&py<=b.y+b.height+pad;
 }
 
-export function createPosterReflection(image,width=image.width,height=image.height,angle=0){
-  const mirror=document.createElement('canvas');
-  mirror.width=Math.max(1,Math.ceil(width));mirror.height=Math.max(1,Math.ceil(height));
-  const ctx=mirror.getContext('2d'),radians=angle*Math.PI/180;
-  const cos=Math.abs(Math.cos(radians)),sin=Math.abs(Math.sin(radians));
-  const scale=height/(image.height*cos+image.width*sin);
-  const fullWidth=(image.width*cos+image.height*sin)*scale;
-
-  // Reflect the whole painted poster. The canvas clips the far side to the available space.
-  ctx.scale(mirror.width/width,mirror.height/height);
-  ctx.save();
-  ctx.translate(fullWidth/2,height/2);ctx.scale(-1,1);ctx.rotate(radians);
-  ctx.drawImage(image,-image.width*scale/2,-image.height*scale/2,image.width*scale,image.height*scale);
-  ctx.restore();
-  const fade=ctx.createLinearGradient(0,0,Math.min(width,fullWidth),0);
-  fade.addColorStop(0,'#000');fade.addColorStop(.25,'rgba(0,0,0,.63)');
-  fade.addColorStop(.55,'rgba(0,0,0,.26)');fade.addColorStop(.8,'rgba(0,0,0,.075)');fade.addColorStop(1,'transparent');
-  ctx.globalCompositeOperation='destination-in';ctx.fillStyle=fade;ctx.fillRect(0,0,width,height);
-  const ends=ctx.createLinearGradient(0,0,0,height);
-  ends.addColorStop(0,'rgba(0,0,0,.28)');ends.addColorStop(.10,'#000');
-  ends.addColorStop(.88,'#000');ends.addColorStop(1,'rgba(0,0,0,.22)');
-  ctx.fillStyle=ends;ctx.fillRect(0,0,width,height);
-  return mirror;
-}
-
-const reflectionCache=new WeakMap();
-function reflectionBitmap(image,layer){
-  const {width,height,sourceAngle}=layer;
-  let entry=reflectionCache.get(image);
-  if(!entry||entry.width!==width||entry.height!==height||entry.angle!==sourceAngle){
-    entry={width,height,angle:sourceAngle,canvas:createPosterReflection(image,width,height,sourceAngle)};
-    reflectionCache.set(image,entry);
-  }
-  return entry.canvas;
-}
-
 export function paintScene(ctx,scene,texture,images={}) {
   ctx.clearRect(0,0,1080,1350);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1080,1350);
   for(const layer of scene) {
@@ -404,15 +374,12 @@ export function paintScene(ctx,scene,texture,images={}) {
       ctx.globalAlpha=layer.opacity/100;ctx.globalCompositeOperation='multiply';ctx.drawImage(texture,0,0,1080,1350);
     } else if(['line','rect'].includes(layer.type))ctx.fillRect(layer.x,layer.y,layer.width,layer.height||3);
     else if(layer.type==='ellipse'){ctx.beginPath();ctx.ellipse(layer.x+layer.width/2,layer.y+layer.height/2,layer.width/2,layer.height/2,0,0,2*Math.PI);ctx.fill();}
-    else if(layer.mirrorOf&&images[layer.mirrorOf]){
-      ctx.drawImage(reflectionBitmap(images[layer.mirrorOf],layer),layer.x,layer.y,layer.width,layer.height);
-    }
     else if(layer.type==='image'&&images[layer.assetId]){
       const img=images[layer.assetId],scale=Math.min(layer.width/img.width,layer.height/img.height);
       if(layer.round){
         ctx.beginPath();ctx.arc(layer.x+layer.width/2,layer.y+layer.height/2,Math.min(layer.width,layer.height)/2,0,2*Math.PI);ctx.clip();
       }
-      const width=layer.stretch?layer.width:img.width*scale,height=layer.stretch?layer.height:img.height*scale;
+      const width=img.width*scale,height=img.height*scale;
       const x=layer.topLeft?layer.x:layer.x+(layer.width-width)/2;
       const y=layer.topLeft?layer.y:layer.y+(layer.height-height)/2;
       ctx.drawImage(img,x,y,width,height);
@@ -445,7 +412,7 @@ export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
     else if(l.type==='ellipse')out.push(`<ellipse cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" rx="${l.width/2}" ry="${l.height/2}" fill="${l.color}"/>`);
     else if(l.type==='image'&&imageData[l.assetId]){
       if(l.round)out.push(`<defs><clipPath id="clip-${l.id}"><circle cx="${l.x+l.width/2}" cy="${l.y+l.height/2}" r="${Math.min(l.width,l.height)/2}"/></clipPath></defs>`);
-      const aspect=l.stretch?'none':l.topLeft?'xMinYMin meet':'xMidYMid meet';
+      const aspect=l.topLeft?'xMinYMin meet':'xMidYMid meet';
       out.push(`<image x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" href="${imageData[l.assetId]}" preserveAspectRatio="${aspect}"${l.round?` clip-path="url(#clip-${l.id})"`:''}/>`);
     }
     else if(l.type==='text') {
