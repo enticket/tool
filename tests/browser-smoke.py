@@ -102,14 +102,26 @@ with sync_playwright() as p:
     settlement_fixture = page.evaluate("""() => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-        ['공연명','공연일','공연시간','권종','판매가격','수량'],
-        ['이관검증','2026-10-14','19:00','일반',10000,3]
+        ['공연명','공연일','공연시간','권종','판매가격','수량','좌석등급'],
+        ['이관검증','2026-10-14','19:00','일반',10000,2,'R석'],
+        ['이관검증','2026-10-14','19:00','단체',10000,1,'S석']
       ]), '판매');
       return XLSX.write(wb, {type:'base64', bookType:'xlsx'});
     }""")
     page.locator('#sessions input[type=file]').first.set_input_files({
         'name':'sales.xlsx', 'mimeType':file['mimeType'], 'buffer':base64.b64decode(settlement_fixture)})
     expect(page.locator('#genSettlement')).to_be_enabled()
+    price_mode = page.get_by_role('switch', name='금액별 정산')
+    table = page.locator('#output table')
+    expect(table.get_by_role('cell', name='R석 · 일반', exact=True)).to_be_visible()
+    price_mode.check()
+    expect(table.get_by_role('columnheader', name='권종', exact=True)).to_have_count(0)
+    expect(table.locator('tbody tr:not(.total)')).to_have_count(1)
+    expect(table.locator('tbody tr').first.locator('td').nth(2)).to_have_text('₩10,000')
+    expect(table).not_to_contain_text('R석')
+    expect(page.locator('#livePayout')).to_have_text('₩28,020')
+    price_mode.uncheck()
+    expect(table.get_by_role('cell', name='S석 · 단체', exact=True)).to_be_visible()
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     expect(page.locator('#saveSettlementDrive')).to_be_hidden()
     page.evaluate('''()=>{
