@@ -1393,6 +1393,14 @@ td.c { text-align: center; }
 #wkCalendar > .wk-day:nth-child(7n+6) .wk-day-date { color: var(--saturday-ink); }
 #wkCalendar > .wk-outside:nth-child(7n+6) { color: color-mix(in srgb, var(--saturday-ink) 65%, var(--bg-white-normal)); }
 #wkCalendar > .wk-day:nth-child(7n+6) .wk-today { background: #225ca8; color: white; }
+#wkCalendar { --sunday-ink: #ae3544; }
+@media (prefers-color-scheme: dark) {
+  #wkCalendar { --sunday-ink: #ff9ca8; }
+}
+#wkCalendar > .wk-day-name:nth-child(7),
+#wkCalendar > .wk-day:nth-child(7n) .wk-day-date { color: var(--sunday-ink); }
+#wkCalendar > .wk-outside:nth-child(7n) { color: color-mix(in srgb, var(--sunday-ink) 65%, var(--bg-white-normal)); }
+#wkCalendar > .wk-day:nth-child(7n) .wk-today { background: #ae3544; color: white; }
 /* WEEKLY_STUDIO_CSS */
 /* SHARED_CONTROLS_CSS */
 </style>
