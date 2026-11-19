@@ -371,7 +371,7 @@ function performanceScene(d,index,theme,page,ctx,images){
       // Saved full-width posters can still reveal their neighbors at the bottom.
       const y=spread<8?bottom-height+18:top+(span-height)/2;
       stack.push({id:'nextPoster'+(stack.length+1),name:(onLeft?'이전 공연 · ':'다음 공연 · ')+other.title,
-        type:'image',assetId:other.assetId,topLeft:true,posterShadow:'neighbor',x,y,width,height});
+        type:'image',assetId:other.assetId,topLeft:true,posterShadow:'neighbor',angle:onLeft?-5:5,x,y,width,height});
     }
     addSide(upcoming,false);
     addSide(previous,true);

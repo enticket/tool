@@ -1,6 +1,6 @@
 from browser_support import accept_app_messages
 """Weekly editor against synthetic providers; no production account calls."""
-import os,json,io,base64,zipfile
+import os,json,io,base64,zipfile,math
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from email import policy
@@ -211,10 +211,13 @@ with sync_playwright() as p:
  def exposed_pixel():
   return page.locator('#wkLayerCanvas').evaluate("(canvas)=>Array.from(canvas.getContext('2d').getImageData(710,480,1,1).data)")
  # Compare the same paper pixels while hiding the cropped poster behind the main poster.
- right=float(page.locator('#wkLayerX').input_value())+float(page.locator('#wkLayerWidth').input_value())
+ width=float(page.locator('#wkLayerWidth').input_value());right=float(page.locator('#wkLayerX').input_value())+width
+ angle=math.radians(float(page.locator('#wkLayerRotation').input_value()))
  top=float(page.locator('#wkLayerY').input_value());height=float(page.locator('#wkLayerHeight').input_value())
  def shadow_samples():
-  points=[[right-12,top-4],[right+4,top+height/2],[right-12,top+height+4]]
+  cx,cy=right-width/2,top+height/2
+  points=[[round(cx+x*math.cos(angle)-y*math.sin(angle)),round(cy+x*math.sin(angle)+y*math.cos(angle))]
+          for x,y in [(width/2-24,-height/2-4),(width/2+4,0),(width/2-24,height/2+4)]]
   return page.locator('#wkLayerCanvas').evaluate("(c,p)=>p.map(([x,y])=>c.getContext('2d').getImageData(x,y,1,1).data[0])",points)
  pixel=exposed_pixel();shaded=shadow_samples()
  assert max(abs(x-y) for x,y in zip(pixel,[39,178,133,255]))<4,pixel
@@ -249,6 +252,7 @@ with sync_playwright() as p:
   assert ids.index('nextPoster1')<ids.index('poster') and float(back.get('opacity'))==1
   assert back.get('filter')=='url(#poster-shadow-neighbor)'
   assert groups[ids.index('poster')].get('filter')=='url(#poster-shadow-main)'
+  assert back.find('{*}image').get('transform').startswith('rotate(5 ')
   assert back.find('{*}image').get('preserveAspectRatio')=='xMinYMin meet'
   assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
   assert b'nextPoster1' in stack_source.read('03.svg')
