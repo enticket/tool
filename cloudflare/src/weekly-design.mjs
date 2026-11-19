@@ -287,14 +287,9 @@ function performanceScene(d,index,theme,page,ctx,images){
     return layer;
   }
 
-  const earlier=image?d.cards.slice(0,index-1).filter(c=>images[c.assetId]):[];
-  const later=image?d.cards.slice(index).filter(c=>images[c.assetId]):[];
-  const backCount=Math.min(4,earlier.length+later.length);
-  // Leave room on the right for the next card in the circular reading order.
-  const previous=earlier.slice().reverse().slice(0,Math.max(1,Math.min(2,backCount-1)));
-  const upcoming=later.concat(earlier.slice(0,earlier.length-previous.length)).slice(0,backCount-previous.length);
+  const previous=d.cards[index-2],upcoming=d.cards[index];
   const centerX=(left+right)/2;
-  const sideReveal=backCount*13;
+  const sideReveal=Math.min(2,d.cards.length-1)*13;
   const titleSize=36.8,detailSize=20,labelSize=18.4;
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
     x:left,y:54,width:right-left-2*sideReveal,height:ruleY});
@@ -346,7 +341,7 @@ function performanceScene(d,index,theme,page,ctx,images){
     poster.x=Math.min(centerX-imageWidth/2,1080-poster.width);
   }
   const stack=[];
-  if(imageHeight>0&&backCount){
+  if(image&&imageHeight>0){
     // A resized or rotated frame can contain empty space around the front image.
     const radians=(poster.angle||0)*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
     const dx=(imageWidth-poster.width)/2,dy=(imageHeight-poster.height)/2;
@@ -358,26 +353,20 @@ function performanceScene(d,index,theme,page,ctx,images){
     const top=Math.max(centerY-frontHeight/2,numberBottom);
     const bottom=Math.min(centerY+frontHeight/2,poster.y+imageHeight);
     const span=Math.max(8,bottom-top);
-    function addSide(cards,onLeft){
-      if(!cards.length)return;
+    function addSide(other,onLeft){
+      const neighborImage=other&&images[other.assetId];
+      if(!neighborImage)return;
       const edge=centerX+(onLeft?-frontWidth:frontWidth)/2;
       const room=Math.max(0,onLeft?edge-left:right-edge);
-      const weights=cards.map((_,i)=>.75**i);
-      const totalWeight=weights.reduce((sum,weight)=>sum+weight,0);
-      const spread=.9*Math.min(room,Math.min(148,frontWidth*.35)*totalWeight);
-      let cumulativeWeight=0;
-      for(const [i,other] of cards.entries()){
-        cumulativeWeight+=weights[i];
-        const reveal=cumulativeWeight/totalWeight;
-        const aspect=images[other.assetId].width/images[other.assetId].height;
-        const width=Math.min(frontWidth*(.78-.07*i),span*(.74-.065*i)*aspect);
-        const height=width/aspect;
-        const x=onLeft?edge-spread*reveal:edge+spread*reveal-width;
-        // Saved full-width posters can still reveal their neighbors at the bottom.
-        const y=spread<8*cards.length?bottom-height+18*reveal:top+(span-height)/2;
-        stack.push({id:'nextPoster'+(stack.length+1),name:(onLeft?'이전 공연 · ':'다음 공연 · ')+other.title,
-          type:'image',assetId:other.assetId,topLeft:true,posterShadow:true,x,y,width,height});
-      }
+      const aspect=neighborImage.width/neighborImage.height;
+      const width=Math.min(frontWidth*.78,span*.74*aspect);
+      const height=width/aspect;
+      const spread=.9*Math.min(room,148,frontWidth*.35,width);
+      const x=onLeft?edge-spread:edge+spread-width;
+      // Saved full-width posters can still reveal their neighbors at the bottom.
+      const y=spread<8?bottom-height+18:top+(span-height)/2;
+      stack.push({id:'nextPoster'+(stack.length+1),name:(onLeft?'이전 공연 · ':'다음 공연 · ')+other.title,
+        type:'image',assetId:other.assetId,topLeft:true,posterShadow:true,x,y,width,height});
     }
     addSide(upcoming,false);
     addSide(previous,true);

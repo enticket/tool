@@ -208,25 +208,18 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
   for(let index=1;index<=cards.length;index++){
     const layers=scene(index),front=layers.find(l=>l.id==='poster');
     const backs=layers.filter(l=>l.id.startsWith('nextPoster')).reverse();
-    const leftCount=Math.min(2,index-1);
-    const rightCount=4-leftCount;
-    const rightIds=Array.from({length:rightCount},(_,i)=>cards[(index+i)%8].assetId);
-    const leftIds=Array.from({length:leftCount},(_,i)=>cards[index-2-i].assetId);
-    assert.deepEqual(backs.map(l=>l.assetId),[...rightIds,...leftIds]);
-    for(const [onLeft,side] of [[false,backs.slice(0,rightCount)],[true,backs.slice(rightCount)]]){
-      let previousEdge=onLeft?front.x:front.x+front.width,previousGap=Infinity;
-      for(const layer of side){
-        const edge=onLeft?layer.x:layer.x+layer.width;
-        const gap=onLeft?previousEdge-edge:edge-previousEdge;
-        assert.ok(gap>0&&gap<previousGap);
-        assert.ok(onLeft?layer.x+layer.width>previousEdge:layer.x<previousEdge);
-        assert.ok(edge>=66&&edge<=1014.001);
-        assert.equal(layer.opacity,100);
-        assert.ok(layer.width<=front.width*.781);
-        assert.ok(layer.y+layer.height<=layers.find(l=>l.id==='title').y);
-        assert.ok(layers.indexOf(layer)<layers.indexOf(front));
-        previousEdge=edge;previousGap=gap;
-      }
+    const neighbors=[cards[index],cards[index-2]].filter(Boolean);
+    assert.deepEqual(backs.map(l=>l.assetId),neighbors.map(c=>c.assetId));
+    for(const layer of backs){
+      const leftSide=layer.assetId===cards[index-2]?.assetId;
+      const edge=leftSide?layer.x:layer.x+layer.width;
+      assert.ok(leftSide?edge<front.x:edge>front.x+front.width);
+      assert.ok(layer.x+layer.width>front.x&&layer.x<front.x+front.width);
+      assert.ok(edge>=66&&edge<=1014.001);
+      assert.equal(layer.opacity,100);
+      assert.ok(layer.width<=front.width*.781);
+      assert.ok(layer.y+layer.height<=layers.find(l=>l.id==='title').y);
+      assert.ok(layers.indexOf(layer)<layers.indexOf(front));
     }
     assert.ok(!layers.some(l=>l.id==='posterReflection'));
   }
@@ -238,7 +231,8 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
   assert.equal(next.assetId,'img2');
   assert.equal(next.locked,true);
   delete images.img2;
-  assert.equal(scene(1).find(l=>l.id==='nextPoster1').assetId,'img1');
+  assert.ok(!scene(1).some(l=>l.id.startsWith('nextPoster')));
+  images.img2={width:3,height:4};
   page.layers.poster={width:948,height:600};
   images.img0={width:16,height:9};
   const full=scene(1),front=full.find(l=>l.id==='poster');
@@ -258,10 +252,10 @@ test('short lineups only show distinct available neighbors',()=>{
     for(let page=1;page<=n;page++){
       const scene=pageScene(draft,page,undefined,images),front=scene.find(l=>l.id==='poster');
       const backs=scene.filter(l=>l.id.startsWith('nextPoster'));
-      assert.equal(new Set([front,...backs].map(l=>l.assetId)).size,n);
-      assert.equal(backs.length,n-1);
+      const expected=draft.cards.slice(Math.max(0,page-2),page+1).map(c=>c.assetId);
+      assert.deepEqual([front,...backs].map(l=>l.assetId).sort(),expected.sort());
       assert.equal(backs.some(l=>l.x<front.x),page>1);
-      assert.equal(backs.some(l=>l.x+l.width>front.x+front.width),n>2||(n===2&&page===1));
+      assert.equal(backs.some(l=>l.x+l.width>front.x+front.width),page<n);
     }
   }
 });
@@ -286,7 +280,7 @@ test('featured templates have distinct covers and keep the weekly lineup on the 
     for(const index of [1,4,8]){
       const detail=scene(index);
       assert.equal(detail.find(l=>l.id==='poster').assetId,cards[index-1].assetId);
-      assert.deepEqual(detail.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.assetId),({1:[1,2,3,4],4:[4,5,2,1],8:[0,1,6,5]})[index].map(i=>cards[i].assetId));
+      assert.deepEqual(detail.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.assetId),({1:[1],4:[4,2],8:[6]})[index].map(i=>cards[i].assetId));
     }
   }
   assert.equal(coverLayouts.size,4);
