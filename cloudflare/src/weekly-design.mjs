@@ -7,7 +7,11 @@ export const SERIF = 'Enticket Myeongjo';
 export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
 export const MAX_SCHEDULE_LENGTH=3000;
-const posterShadow={offset:12,deviation:8,rgb:'42,32,29',opacity:.43};
+const posterShadows={
+  main:{deviation:16,opacity:.78},
+  neighbor:{deviation:8,opacity:.43}
+};
+const shadowRgb='16,15,19';
 export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
 export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
 const oldClosingFooters=['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
@@ -291,7 +295,7 @@ function performanceScene(d,index,theme,page,ctx,images){
   const centerX=(left+right)/2;
   const sideReveal=Math.min(2,d.cards.length-1)*13;
   const titleSize=36.8,detailSize=20,labelSize=18.4;
-  const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
+  const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:'main',
     x:left,y:54,width:right-left-2*sideReveal,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,labelSize,red,'sans',{width:200,align:'right',y:18});
@@ -366,7 +370,7 @@ function performanceScene(d,index,theme,page,ctx,images){
       // Saved full-width posters can still reveal their neighbors at the bottom.
       const y=spread<8?bottom-height+18:top+(span-height)/2;
       stack.push({id:'nextPoster'+(stack.length+1),name:(onLeft?'이전 공연 · ':'다음 공연 · ')+other.title,
-        type:'image',assetId:other.assetId,topLeft:true,posterShadow:true,x,y,width,height});
+        type:'image',assetId:other.assetId,topLeft:true,posterShadow:'neighbor',x,y,width,height});
     }
     addSide(upcoming,false);
     addSide(previous,true);
@@ -470,9 +474,10 @@ export function paintScene(ctx,scene,texture,images={}) {
     else if(layer.type==='image'&&images[layer.assetId]){
       const img=images[layer.assetId];
       if(layer.posterShadow){
-        ctx.shadowColor=`rgba(${posterShadow.rgb},${posterShadow.opacity})`;
-        ctx.shadowOffsetX=posterShadow.offset;ctx.shadowOffsetY=-posterShadow.offset;
-        ctx.shadowBlur=2*posterShadow.deviation;
+        const shadow=posterShadows[layer.posterShadow];
+        ctx.shadowColor=`rgba(${shadowRgb},${shadow.opacity})`;
+        ctx.shadowOffsetX=ctx.shadowOffsetY=0;
+        ctx.shadowBlur=2*shadow.deviation;
       }
       if(layer.crop){
         // Crop the source so the exposed edges can cast a shadow outside the frame.
@@ -506,13 +511,14 @@ export function validateScene(ctx,scene) {
 const xml=value=>String(value).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
 export function coverSvg(ctx,scene,{textureData,fontData,imageData={}}) {
   // Every object is a named group. Text remains text; the paper texture alone is raster.
-  const shadowFilter=scene.some(l=>l.posterShadow)
-    ? `<filter id="poster-shadow" filterUnits="userSpaceOnUse" x="-48" y="-48" width="1176" height="1446" color-interpolation-filters="sRGB"><feDropShadow dx="${posterShadow.offset}" dy="${-posterShadow.offset}" stdDeviation="${posterShadow.deviation}" flood-color="rgb(${posterShadow.rgb})" flood-opacity="${posterShadow.opacity}"/></filter>` : '';
+  const shadowFilter=Object.entries(posterShadows)
+    .filter(([role])=>scene.some(l=>l.posterShadow===role))
+    .map(([role,shadow])=>`<filter id="poster-shadow-${role}" filterUnits="userSpaceOnUse" x="-64" y="-64" width="1208" height="1478" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="${shadow.deviation}" flood-color="rgb(${shadowRgb})" flood-opacity="${shadow.opacity}"/></filter>`).join('');
   const out=[`<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="1080" height="1350" viewBox="0 0 1080 1350"><defs><style>@font-face{font-family:'${SERIF}';font-weight:800;src:url('${fontData}') format('woff2')}</style>${shadowFilter}</defs><rect width="1080" height="1350" fill="#ffffff"/>`];
   for(const l of scene) {
     const b=layerBounds(ctx,l);
     const rotation=l.angle?` transform="rotate(${l.angle} ${b.x+b.width/2} ${b.y+b.height/2})"`:'';
-    out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.posterShadow?' filter="url(#poster-shadow)"':rotation}>`);
+    out.push(`<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${xml(l.name)}"${l.visible?'':' display="none"'}${l.type==='texture'?'':` opacity="${(l.opacity??100)/100}"`}${l.posterShadow?` filter="url(#poster-shadow-${l.posterShadow})"`:rotation}>`);
     if(l.type==='background')out.push(`<rect width="1080" height="1350" fill="${l.color}"/>`);
     else if(l.type==='motif'){
       const art=weeklyMotifs[l.motif];

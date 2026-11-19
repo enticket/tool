@@ -220,7 +220,8 @@ with sync_playwright() as p:
  assert max(abs(x-y) for x,y in zip(pixel,[39,178,133,255]))<4,pixel
  page.locator('#wkLayerVisible').uncheck()
  paper=shadow_samples()
- assert paper[0]-shaded[0]>20 and paper[1]-shaded[1]>20 and abs(paper[2]-shaded[2])<5,(paper,shaded)
+ assert all(base-shadow>12 for base,shadow in zip(paper,shaded)),(paper,shaded)
+ assert abs((paper[0]-shaded[0])-(paper[2]-shaded[2]))<10,(paper,shaded)
  assert exposed_pixel()!=pixel
  page.locator('#wkLayerVisible').check()
  assert exposed_pixel()==pixel
@@ -236,13 +237,15 @@ with sync_playwright() as p:
  from xml.etree import ElementTree
  with zipfile.ZipFile(stack_download.value.path()) as stack_source:
   svg=ElementTree.fromstring(stack_source.read('02.svg'))
-  shadow=svg.find('.//{*}filter[@id="poster-shadow"]/{*}feDropShadow')
-  assert float(shadow.get('dx'))==-float(shadow.get('dy'))>0
+  shadows=[svg.find(f'.//{{*}}filter[@id="poster-shadow-{role}"]/{{*}}feDropShadow') for role in ('main','neighbor')]
+  assert all(float(shadow.get('dx'))==float(shadow.get('dy'))==0 for shadow in shadows)
+  assert float(shadows[0].get('flood-opacity'))>float(shadows[1].get('flood-opacity'))
   groups=svg.findall('{*}g')
   ids=[g.get('id') for g in groups]
   back=groups[ids.index('nextPoster1')]
   assert ids.index('nextPoster1')<ids.index('poster') and float(back.get('opacity'))==1
-  assert back.get('filter')==groups[ids.index('poster')].get('filter')=='url(#poster-shadow)'
+  assert back.get('filter')=='url(#poster-shadow-neighbor)'
+  assert groups[ids.index('poster')].get('filter')=='url(#poster-shadow-main)'
   assert back.find('{*}image').get('preserveAspectRatio')=='xMinYMin meet'
   assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
   assert b'nextPoster1' in stack_source.read('03.svg')
