@@ -286,7 +286,7 @@ function performanceScene(d,index,theme,page,ctx,images){
     return layer;
   }
 
-  const upcoming=image?d.cards.slice(index).filter(next=>images[next.assetId]):[];
+  const upcoming=image?d.cards.slice(index).concat(d.cards.slice(0,index-1)).filter(next=>images[next.assetId]).slice(0,4):[];
   const reservedWidth=Math.min(238,upcoming.length*45);
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
     x:left,y:38,width:right-left-reservedWidth,height:ruleY});
@@ -351,9 +351,9 @@ function performanceScene(d,index,theme,page,ctx,images){
     for(const [i,next] of upcoming.entries()){
       cumulativeWeight+=gapWeights[i];
       const reveal=cumulativeWeight/totalWeight;
-      const slot=i+1,depth=slot/upcoming.length;
-      const width=Math.max(8,frontWidth*(.88-.12*depth));
-      const height=Math.max(8,span*(.95-.17*depth));
+      const slot=i+1;
+      const width=Math.max(8,frontWidth*(.78-.07*i));
+      const height=Math.max(8,span*(.74-.065*i));
       const x=edge+spread*reveal-width;
       // A full-width saved poster can still reveal the lineup along its bottom edge.
       const y=revealBelow?bottom-height+18*reveal:top+(span-height)/2;

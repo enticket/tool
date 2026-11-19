@@ -196,11 +196,12 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
   for(let index=1;index<=cards.length;index++){
     const layers=scene(index),front=layers.find(l=>l.id==='poster');
     const backs=layers.filter(l=>l.id.startsWith('nextPoster')).reverse();
-    assert.deepEqual(backs.map(l=>l.assetId),cards.slice(index).map(c=>c.assetId));
+    assert.deepEqual(backs.map(l=>l.assetId),Array.from({length:4},(_,i)=>cards[(index+i)%cards.length].assetId));
     let previousEdge=front.x+front.width,previousGap=Infinity;
     for(const layer of backs){
       const edge=layer.x+layer.width;
       assert.equal(layer.opacity,100);
+      assert.ok(layer.width<=front.width*.781);
       const gap=edge-previousEdge;
       assert.ok(layer.x<previousEdge&&gap>0&&gap<previousGap&&edge<=1014.001);
       previousGap=gap;
@@ -251,7 +252,7 @@ test('featured templates have distinct covers and keep the weekly lineup on the 
     for(const index of [1,4,8]){
       const detail=scene(index);
       assert.equal(detail.find(l=>l.id==='poster').assetId,cards[index-1].assetId);
-      assert.deepEqual(detail.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.assetId),cards.slice(index).map(c=>c.assetId));
+      assert.deepEqual(detail.filter(l=>l.id.startsWith('nextPoster')).reverse().map(l=>l.assetId),Array.from({length:4},(_,i)=>cards[(index+i)%cards.length].assetId));
     }
   }
   assert.equal(coverLayouts.size,4);

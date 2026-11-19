@@ -245,7 +245,7 @@ with sync_playwright() as p:
   assert back.get('filter')==groups[ids.index('poster')].get('filter')=='url(#poster-shadow)'
   assert back.find('{*}image').get('preserveAspectRatio')=='xMidYMid slice'
   assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
-  assert b'nextPoster' not in stack_source.read('03.svg')
+  assert b'nextPoster1' in stack_source.read('03.svg')
  page.locator('#wkFilmstrip button').last.click();pane('performances');page.locator('#wkCandidates input').nth(1).uncheck();expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
  page.locator('#wkFilmstrip button').last.click();layer('closingTitle');page.locator('#wkLayerText').fill('이번 주, 놓치지 마세요');page.locator('#wkLayerSize').fill('40')
  page.locator('#wkSave').click();expect(page.locator('#wkStatus')).to_contain_text('저장했습니다',timeout=30000)
