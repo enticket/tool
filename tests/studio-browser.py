@@ -243,7 +243,7 @@ with sync_playwright() as p:
   back=groups[ids.index('nextPoster1')]
   assert ids.index('nextPoster1')<ids.index('poster') and float(back.get('opacity'))==1
   assert back.get('filter')==groups[ids.index('poster')].get('filter')=='url(#poster-shadow)'
-  assert back.find('{*}image').get('preserveAspectRatio')=='xMidYMid slice'
+  assert back.find('{*}image').get('preserveAspectRatio')=='xMinYMin meet'
   assert base64.b64encode(green.getvalue()).decode() in back.find('{*}image').get('href')
   assert b'nextPoster1' in stack_source.read('03.svg')
  page.locator('#wkFilmstrip button').last.click();pane('performances');page.locator('#wkCandidates input').nth(1).uncheck();expect(page.locator('#wkPreviews img')).to_have_count(3,timeout=30000);expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)

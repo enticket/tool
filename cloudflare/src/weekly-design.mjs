@@ -279,6 +279,7 @@ function performanceScene(d,index,theme,page,ctx,images){
   function text(id,name,value,x,fontSize,color=ink,family='sans',extra={}){
     return add({id,name,type:'text',text:value||'',x,y:0,width:Math.max(8,right-(overrides[id]?.x??x)),fontSize,color,family,leading:1.2,...extra});
   }
+  const budgets={title:150,schedule:156,venue:105,price:105};
   function fit(layer,budget){
     if(ctx&&overrides[layer.id]?.fontSize===undefined){
       while(layer.fontSize>16&&height(layer)>budget)layer.fontSize--;
@@ -292,14 +293,14 @@ function performanceScene(d,index,theme,page,ctx,images){
     x:left,y:38,width:right-left-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
-  const title=fit(text('title','공연명',card.title,left,46,red,style?.performance.titleFamily||'serif'),150);
+  const title=fit(text('title','공연명',card.title,left,46,red,style?.performance.titleFamily||'serif'),budgets.title);
   const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:style?.performance.ruleHeight||2,color:ink});
   const rows=[
     {layers:[title],gap:0},
     {layers:[divider],gap:26}
   ];
-  for(const [id,label,budget] of [['schedule','공연 일시',156],['venue','장소',105],['price','가격',105]]){
-    const value=fit(text(id,label,card[id],234,25,ink,'sans',{weight:550}),budget);
+  for(const [id,label] of [['schedule','공연 일시'],['venue','장소'],['price','가격']]){
+    const value=fit(text(id,label,card[id],234,25,ink,'sans',{weight:550}),budgets[id]);
     const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,23,red,'sans',{width:154,weight:650});
     rows.push({layers:[heading,value],gap:14});
   }
@@ -307,6 +308,15 @@ function performanceScene(d,index,theme,page,ctx,images){
   let bodyTop=(overrides.bottomRule?.y??ruleY)-24;
   for(const row of [...rows].reverse()){
     row.height=Math.max(...row.layers.map(height));
+    // Reserve the tallest corresponding text row in this carousel on every slide.
+    const value=row.layers.at(-1);
+    if(budgets[value.id]){
+      const defaultSize=value.id==='title'?46:25;
+      for(const other of d.cards){
+        const peer={...value,text:other[value.id],fontSize:overrides[value.id]?.fontSize??defaultSize};
+        row.height=Math.max(row.height,height(fit(peer,budgets[value.id])));
+      }
+    }
     if(!row.height)continue;
     bodyTop-=row.height;
     for(const layer of row.layers){
@@ -316,11 +326,10 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
   const ratio=image?.width&&image.height?image.width/image.height:.8;
   const roomHeight=()=>Math.max(8,bodyTop-32-poster.y);
-  // Wide artwork can use the full column below the page number.
-  const numberLeft=ctx?layerBounds(ctx,number).x:number.x-number.width;
-  const drawnWidth=Math.min(poster.width,(overrides.poster?.height??roomHeight())*ratio);
-  if(overrides.poster?.y===undefined&&overrides.number?.y===undefined&&number.visible!==false&&poster.x+drawnWidth+16>numberLeft){
-    poster.y=number.y+height(number)+16;
+  // Keep the upper-left corner fixed even for landscape artwork beside the number.
+  if(overrides.poster?.width===undefined&&number.visible!==false){
+    const numberLeft=ctx?layerBounds(ctx,number).x:number.x-number.width;
+    poster.width=Math.min(poster.width,Math.max(8,numberLeft-16-poster.x));
   }
   if(overrides.poster?.height===undefined){
     poster.height=Math.min(poster.width/ratio,roomHeight());
@@ -352,21 +361,23 @@ function performanceScene(d,index,theme,page,ctx,images){
       cumulativeWeight+=gapWeights[i];
       const reveal=cumulativeWeight/totalWeight;
       const slot=i+1;
-      const width=Math.max(8,frontWidth*(.78-.07*i));
-      const height=Math.max(8,span*(.74-.065*i));
+      const aspect=images[next.assetId].width/images[next.assetId].height;
+      const width=Math.min(frontWidth*(.78-.07*i),span*(.74-.065*i)*aspect);
+      const height=width/aspect;
       const x=edge+spread*reveal-width;
       // A full-width saved poster can still reveal the lineup along its bottom edge.
       const y=revealBelow?bottom-height+18*reveal:top+(span-height)/2;
       stack.push({id:'nextPoster'+slot,name:'다음 공연 · '+next.title,type:'image',assetId:next.assetId,
-        crop:true,posterShadow:true,x,y,width,height});
+        topLeft:true,posterShadow:true,x,y,width,height});
     }
     // Paint from the last page back to the current one.
     base.splice(base.indexOf(poster),0,...stack.slice().reverse());
   }
-  let y=Math.max(102,poster.y+imageHeight)+32;
+  let y=bodyTop;
   for(const row of rows){
     if(row.height)y+=row.gap;
     const start=y;
+    y+=row.height;
     for(const layer of row.layers){
       if(overrides[layer.id]?.y===undefined)layer.y=start;
       const h=height(layer);

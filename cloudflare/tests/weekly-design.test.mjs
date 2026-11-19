@@ -147,7 +147,7 @@ test('legacy introductions take up no space between the poster, title and detail
     assert.equal(poster.topLeft,true);
     assert.equal(poster.x,layer('title').x);
     const paintedBottom=poster.y+Math.min(poster.height,poster.width*height/width);
-    assert.ok(Math.abs(layer('title').y-paintedBottom-32)<1e-8);
+    assert.ok(layer('title').y>=paintedBottom+31.99);
     assert.equal(layer('description'),undefined);
     const older=pageScene(legacy,1,ctx,{img:{width,height}});
     assert.ok(older.every(l=>!['description','date','handle'].includes(l.id)));
@@ -176,9 +176,15 @@ test('poster fills the space left by performance details up to the footer or sid
   assert.ok(busy.poster.height<portrait.poster.height);
   assert.equal(Math.round(busy.bottomRule.y-busy.price.y-busy.price.height),24);
   const wide=layout(card,16,9);
-  assert.equal(wide.poster.width,wide.topRule.width);
+  assert.ok(wide.poster.width<=wide.topRule.width);
   assert.equal(wide.poster.height,wide.poster.width*9/16);
-  assert.ok(wide.poster.y>=wide.number.y+wide.number.height);
+  assert.equal(wide.poster.y,portrait.poster.y);
+  const cards=[card,{...card,performanceId:'other',assetId:'wide',title:'아주 긴 공연 제목 '.repeat(8),schedule:'11월 20일 (금) 오후 07시 / 11월 21일 (토) 오후 08시',price:'일반석'}];
+  const scenes=cards.map((_,i)=>pageScene({...draft,cards},i+1,ctx,{img:{width:3,height:4},wide:{width:16,height:9}}));
+  for(const id of ['poster','title','schedule','venue','price']){
+    const [a,b]=scenes.map(scene=>scene.find(l=>l.id===id));
+    assert.deepEqual([a.x,a.y],[b.x,b.y],id);
+  }
   draft.design={...normalizeDesign(),pages:{'performance:show':{layers:{title:{y:850}}}}};
   const edited=layout(card,3,4);
   assert.equal(edited.title.y,850);

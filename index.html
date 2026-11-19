@@ -1729,11 +1729,12 @@ window.ICO = {
                 <span id="igFileName" hidden></span>
                 <input id="igFile" type="file" accept="image/jpeg,image/png,image/webp">
               </label>
-              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드 <small>4:5</small></span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
+              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드</span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
               <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
+              <label class="ig-field" id="igFormatField">피드 비율<select id="igFormat"><option value="original">원본 비율</option><option value="frame">4:5</option></select></label>
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
-                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
+                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox">흐린 배경</label></div></div>
               </div>
               <details class="ig-adjust">
                 <summary>크기·위치 조절</summary>
@@ -1759,7 +1760,7 @@ window.ICO = {
         </div>
 </div>        <div class="ig-card ig-preview-card">
           <div class="ig-card-head"><span class="ig-step">3</span><h3>게시 미리보기</h3></div>
-          <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">1080 × 1350 px</span></div>
+          <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">원본 비율</span></div>
           <div class="ig-preview-stage">
             <div id="igEmpty"><svg class="ico"><use href="#i-nav-poster"/></svg><strong>게시할 이미지가 여기에 표시됩니다</strong></div>
             <img id="igPreview" class="ig-preview" alt="인스타그램에 게시할 최종 이미지" hidden>
@@ -2218,13 +2219,19 @@ window.ICO = {
   function closeReview(){ $('igReview').close(); $('igReview').hidden=true; $('igConfirm').checked=false; }
   $('igReviewClose').onclick=editReview;
   $('igReview').addEventListener('cancel',event=>{event.preventDefault();editReview();});
+  function originalFeed(){return $('igChannel').value==='feed' && $('igFormat').value==='original';}
+  function igHeight(){
+    if($('igChannel').value==='story')return 1920;
+    return originalFeed()&&bitmap?Math.round(1080*bitmap.height/bitmap.width):1350;
+  }
+  function unsupportedFeed(){return originalFeed()&&bitmap&&(igHeight()<565||igHeight()>1440);}
   function controls(){
     const allowed=window.gdrive?.isAllowed();
     $('igGate').hidden=allowed; $('igWork').hidden=!allowed;
     $('igCheck').disabled=working;
     $('igEditor').disabled=working || !!job;
     $('igCaptionEditor').disabled=working || !!job;
-    $('igPrepare').disabled=working || !rendered || !account;
+    $('igPrepare').disabled=working || !rendered || !account || unsupportedFeed();
     $('igDownload').disabled=working || !rendered;
     $('igAutoCaption').disabled=working || !bitmap || !!job;
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
@@ -2243,15 +2250,17 @@ window.ICO = {
     $('igDrop').setAttribute('aria-disabled',String(working || !!job));
     $('igDrop').tabIndex=working || job?-1:0;
     const blur=$('igBackgroundMode').checked;
-    $('igBackground').disabled=blur; $('igFit').disabled=blur;
+    $('igFormatField').hidden=$('igChannel').value==='story';
+    $('igBackgroundMode').disabled=originalFeed();
+    $('igBackground').disabled=blur||originalFeed(); $('igFit').disabled=blur||originalFeed();
     for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.checked=choice.value===$('igChannel').value;
     const story=$('igChannel').value==='story';
     $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
     $('igPreviewChannel').textContent=story?'스토리':'피드';
-    $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
+    $('igPreviewSize').textContent=originalFeed()&&!bitmap?'원본 비율':'1080 × '+igHeight()+' px';
     $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
     for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
-    $('igNextHint').textContent=job?'':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
+    $('igNextHint').textContent=job?'':unsupportedFeed()?'이 비율은 피드에 게시할 수 없습니다. 이미지 조절에서 4:5를 선택해 주세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
     $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
   }
   async function api(path, fields){
@@ -2277,8 +2286,8 @@ window.ICO = {
     job=null; clearImage();
     for(const id of ['igFile','igText']) $(id).value='';
     resetCaption();
-    $('igChannel').value='feed'; $('igFit').value='contain';
-    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
+    $('igFormat').value='original'; $('igChannel').value='feed'; $('igFit').value='contain';
+    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=false;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
     closeReview(); $('igConfirm').checked=false;
@@ -2310,9 +2319,10 @@ window.ICO = {
     rendered=null; controls();
     const channel=$('igChannel').value;
     $('igCaptionLabel').hidden=channel==='story'; $('igStoryNote').hidden=channel!=='story';
-    const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=channel==='story'?1920:1350;
+    const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=igHeight();
+    if(canvas.height>8192||!canvas.height){$('igPreview').hidden=true;$('igEmpty').hidden=false;controls();return;}
     const ctx=canvas.getContext('2d'); ctx.fillStyle=$('igBackground').value; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const blur=$('igBackgroundMode').checked;
+    const blur=!originalFeed()&&$('igBackgroundMode').checked;
     if(blur){
       // Overscan the blurred copy so the canvas edges stay fully covered.
       const pad=96, backgroundScale=Math.max((canvas.width+2*pad)/bitmap.width,(canvas.height+2*pad)/bitmap.height);
@@ -2382,11 +2392,11 @@ window.ICO = {
     if(working || job)return;
     $('igChannel').value=choice.value;$('igChannel').dispatchEvent(new Event('input',{bubbles:true}));
   });
-  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
+  for(const id of ['igChannel','igFormat','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{
       if(job) return;
       if(id===draggedSlider && Math.abs(Number($(id).value)-sliderDefaults[id])<=3) $(id).value=sliderDefaults[id];
-      if(id==='igChannel'){ $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
+      if(id==='igChannel'){ $('igBackgroundMode').checked=$('igChannel').value==='story'; $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
       render().catch(e=>status(describe(e)));
     });
   }
@@ -2836,7 +2846,59 @@ window.ICO = {
   async function load(){if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');const data=await api('list');performances=data.performances;drafts=data.drafts;renderCalendar();renderDraftList();if(!draft)blankDraft();else renderCandidates();status('');}
   function cacheDraft(d){draft=d;drafts=[d,...drafts.filter(x=>x.id!==d.id)];dirty=false;renderDraftList();controls();}
   async function save(){commitInline();pull();if(isLayerDraft()){await Promise.all([ensurePaperAssets(),paperPosters(draft.cards)]);for(let i=0;i<draft.cards.length+2;i++)WD.validateScene(canvasContext(),WD.pageScene(draft,i,canvasContext(),paperImages));}const result=await api('draft',{id:draft.id,data:JSON.stringify(draft)});cacheDraft(result.draft);status('초안을 저장했습니다.');}
-  async function asset(id){if(!assetCache.has(id)){const promise=api('asset',{id},true);assetCache.set(id,promise);try{await promise;}catch(e){assetCache.delete(id);throw e;}}return assetCache.get(id);}
+  // Old feed JPGs contain a centered poster over a blurred, enlarged copy.
+  // Check both seams and reconstruct that background before trimming a display copy.
+  async function unframeFeedPoster(blob){
+    const img=await image(blob),w=img.width,h=img.height;
+    if(w<160||Math.min(Math.abs(w/h-.8),Math.abs(w/h-.75))>.004)return blob;
+    const sample=document.createElement('canvas');sample.width=w;sample.height=64;
+    const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,64);
+    const pixels=ctx.getImageData(0,0,w,64).data;
+    function seam(x){
+      let sum=0;
+      for(let y=2;y<62;y++){const k=4*(y*w+x);
+        for(let c=0;c<3;c++)sum+=Math.abs(pixels[k+c]-pixels[k+c-4]);
+      }
+      return sum/180;
+    }
+    let inset=0,best=5;
+    for(let x=Math.max(4,Math.round(w*.009));x<w*.27;x++){
+      const strength=Math.min(seam(x),Math.max(seam(w-x),seam(w-x-1),seam(w-x+1)));
+      if(strength>best){inset=x;best=strength;}
+    }
+    if(!inset)return blob;
+    const thumb=document.createElement('canvas');thumb.width=180;thumb.height=Math.round(180*h/w);
+    const small=thumb.getContext('2d',{willReadFrequently:true});
+    small.drawImage(img,0,0,thumb.width,thumb.height);
+    const actual=small.getImageData(0,0,thumb.width,thumb.height).data;
+    const scale=180/w,pad=96*180/1080;
+    const zoom=Math.max((180+2*pad)/(w-2*inset),(thumb.height+2*pad)/h);
+    const bw=(w-2*inset)*zoom,bh=h*zoom;
+    small.filter='blur('+32*180/1080+'px)';
+    small.drawImage(img,inset,0,w-2*inset,h,(180-bw)/2,(thumb.height-bh)/2,bw,bh);
+    const expected=small.getImageData(0,0,180,thumb.height).data;
+    let error=0,count=0,variation=0;
+    for(let y=3;y<thumb.height-3;y+=2)for(let x=0;x<Math.max(1,inset*scale-1);x++)for(const sx of [x,179-x]){
+      const k=4*(y*180+sx);
+      for(let c=0;c<3;c++){error+=Math.abs(actual[k+c]-expected[k+c]);variation+=Math.abs(actual[k+c]-actual[4*(180+sx)+c]);count++;}
+    }
+    if(error/count>13||variation/count<3)return blob;
+    const crop=document.createElement('canvas');crop.width=w-2*inset;crop.height=h;
+    crop.getContext('2d').drawImage(img,-inset,0);
+    return await new Promise(resolve=>crop.toBlob(resolve,'image/jpeg',.97))||blob;
+  }
+  async function sourcePoster(fields){
+    return normalize(await unframeFeedPoster(await api('source',fields,true)));
+  }
+  async function asset(id){
+    if(!assetCache.has(id)){
+      const imported=performances.some(p=>p.assetId===id&&p.sourcePostId);
+      const promise=api('asset',{id},true).then(blob=>imported?unframeFeedPoster(blob):blob);
+      assetCache.set(id,promise);
+      try{await promise;}catch(e){if(assetCache.get(id)===promise)assetCache.delete(id);throw e;}
+    }
+    return assetCache.get(id);
+  }
   async function image(blob){const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();return img;}finally{URL.revokeObjectURL(url);}}
   async function normalize(file){if(file.size>15*1024*1024)throw Error('원본 포스터는 15MB 이하로 선택해 주세요.');const img=await image(file);if(img.width*img.height>40000000)throw Error('이미지가 너무 큽니다.');const c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const result=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.9));if(!result||result.size>2*1024*1024)throw Error('포스터 용량을 줄여 다시 선택해 주세요.');return result;}
   function syncSessionRows(){const values=[];for(const row of $('wkSessionRows').children){const d=row.querySelector('[type="date"]'),t=row.querySelector('[type="time"]');d.required=!!t.value;if(d.value)values.push(d.value+(t.value?' '+t.value:''));}$('wkPSessions').value=values.join('\n');}
@@ -2972,9 +3034,8 @@ window.ICO = {
         line(56,1240,1024,1240,'#ffffff60');newsText('@en__ticket',56,1278,750,45,28,'#fff',700);arrow(952,1300,'#fff');
       }else{
         const img=posters[index-1];
-        // The full original remains uncropped. A soft copy fills the side margins only.
-        rect(0,0,1080,888,'#e6e3e9');
-        if(img){ctx.save();ctx.beginPath();ctx.rect(0,0,1080,888);ctx.clip();ctx.filter='blur(42px)';ctx.globalAlpha=.42;const scale=Math.max(1160/img.width,968/img.height);ctx.drawImage(img,(1080-img.width*scale)/2,(888-img.height*scale)/2,img.width*scale,img.height*scale);ctx.restore();fullPoster(img,40,28,1000,832);}
+        rect(0,0,1080,888,paper);
+        if(img)fullPoster(img,40,28,1000,832);
         rect(0,888,1080,462,'#fff');rect(56,926,8,50,violet);
         newsText(card.title,88,922,936,132,56,ink,900);
         line(56,1070,1024,1070,'#e1dfe4');
@@ -3090,12 +3151,12 @@ window.ICO = {
         if(!images.length){skipped++;continue;}
         if(performances.some(p=>p.sourcePostId===post.id)){skipped++;continue;}
         const candidate={id:crypto.randomUUID(),version:0,title:suggestion.title,venue:suggestion.venue,sessions:suggestion.sessions,priceKind:suggestion.priceKind||'unknown',price:suggestion.price||'',bookingUrl:'',description:post.caption||'',status:'needs_review',sourcePostId:post.id,sourceAsset:String(images[0].index)};
-        async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;void loadEditorPoster(async()=>normalize(await api('source',{post:post.id,index:candidate.sourceAsset,after:after||''},true)));}
+        async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;void loadEditorPoster(async()=>sourcePoster({post:post.id,index:candidate.sourceAsset,after:after||''}));}
         // A multi-image post may advertise several different performances; do not assign all to one date.
         if(images.length>1){failed++;const button=el('button',candidate.title+' · 여러 이미지: 공연 확인','wk-source');button.addEventListener('click',()=>run(()=>openCandidate('여러 이미지가 있는 게시물입니다. 첫 이미지를 불러왔습니다. 공연별 날짜와 포스터를 확인해 주세요.')));$('wkSources').append(button);continue;}
         status('공연을 가져오는 중… '+(placed+undated)+'개 저장');
         try{
-          const file=await normalize(await api('source',{post:post.id,index:candidate.sourceAsset,after:after||''},true));
+          const file=await sourcePoster({post:post.id,index:candidate.sourceAsset,after:after||''});
           if(epoch!==generation)return;
           const saved=(await api('performance',{id:candidate.id,data:JSON.stringify(candidate),file})).performance;performances.push(saved);
           if(candidate.sessions.length){placed++;placedDates.push(...candidate.sessions.map(s=>s.date));}else undated++;
@@ -3114,7 +3175,7 @@ window.ICO = {
     await api('performance',{id:p.id,data:JSON.stringify(p),...(pFile?{file:pFile}:{})});$('wkPerformanceDialog').close();await load();status('공연 정보를 저장했습니다. 기존 주간 초안의 카드 문구는 그대로 유지됩니다.');
   }catch(e){$('wkPMessage').textContent=e.message;throw e;}});});
   $('wkPChange').addEventListener('click',()=>$('wkPFile').click());
-  $('wkPRestore').addEventListener('click',()=>{const p=pEdit;let fetched;if(!p?.sourcePostId)return;++performanceEpoch;$('wkPMessage').textContent='인스타그램 이미지를 가져오는 중…';void loadEditorPoster(async()=>{const blob=await normalize(await api('source',{post:p.sourcePostId,index:p.sourceAsset||'0',performance_id:p.id},true));fetched=blob;return blob;}).then(()=>{if(pEdit===p&&$('wkPerformanceDialog').open&&fetched&&pFile===fetched)$('wkPMessage').textContent='이미지를 불러왔습니다. 변경 저장을 누르면 포스터가 교체됩니다.';});});
+  $('wkPRestore').addEventListener('click',()=>{const p=pEdit;let fetched;if(!p?.sourcePostId)return;++performanceEpoch;$('wkPMessage').textContent='인스타그램 이미지를 가져오는 중…';void loadEditorPoster(async()=>{const blob=await sourcePoster({post:p.sourcePostId,index:p.sourceAsset||'0',performance_id:p.id});fetched=blob;return blob;}).then(()=>{if(pEdit===p&&$('wkPerformanceDialog').open&&fetched&&pFile===fetched)$('wkPMessage').textContent='이미지를 불러왔습니다. 변경 저장을 누르면 포스터가 교체됩니다.';});});
   $('wkPFile').addEventListener('change',()=>{const file=$('wkPFile').files[0];if(!file)return;++performanceEpoch;void loadEditorPoster(()=>normalize(file));});
   $('wkPDelete').addEventListener('click',async()=>{if(await EnticketUI.confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
   $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>{if($('wkPerformanceDialog').open)return;++performanceEpoch;posterWorking=false;posterPreview(null);controls();});

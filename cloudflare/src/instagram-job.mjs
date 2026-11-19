@@ -134,7 +134,8 @@ export class InstagramJob {
     if(files.some(f=>!(f instanceof Blob)||f.type!=='image/jpeg'||!f.size||f.size>4*1024*1024)||files.reduce((n,f)=>n+f.size,0)>10*1024*1024) throw new InstagramError('instagram_invalid_image',400);
     const images=[];
     for(const file of files){const bytes=new Uint8Array(await file.arrayBuffer()),d=jpegSize(bytes);
-      if(d?.width!==1080||d?.height!==(channel==='story'?1920:1350))throw new InstagramError('instagram_invalid_image',400);
+      const validHeight=d&&(channel==='feed'?d.height>=565&&d.height<=1440:d.height===(channel==='story'?1920:1350));
+      if(d?.width!==1080||!validHeight)throw new InstagramError('instagram_invalid_image',400);
       images.push(bytes);
     }
     const bytes=images[0],accountId=instagramConfig(this.env);
