@@ -213,7 +213,7 @@ test('upcoming posters follow page order at full opacity and fit even an eight-s
     for(const layer of backs){
       const leftSide=layer.assetId===cards[index-2]?.assetId;
       assert.equal(front.angle,0);
-      assert.equal(layer.angle,leftSide?-5:5);
+      assert.equal(layer.angle,leftSide?-2:5);
       const edge=leftSide?layer.x:layer.x+layer.width;
       assert.ok(leftSide?edge<front.x:edge>front.x+front.width);
       assert.ok(layer.x+layer.width>front.x&&layer.x<front.x+front.width);

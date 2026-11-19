@@ -369,9 +369,10 @@ function performanceScene(d,index,theme,page,ctx,images){
       const spread=.9*Math.min(room,148,frontWidth*.35,width);
       const x=onLeft?edge-spread:edge+spread-width;
       // Saved full-width posters can still reveal their neighbors at the bottom.
-      const y=spread<8?bottom-height+18:top+(span-height)/2;
+      const verticalBias=onLeft ? 0.64 : 0.5;
+      const y=spread<8?bottom-height+18:top+(span-height)*verticalBias;
       stack.push({id:'nextPoster'+(stack.length+1),name:(onLeft?'이전 공연 · ':'다음 공연 · ')+other.title,
-        type:'image',assetId:other.assetId,topLeft:true,posterShadow:'neighbor',angle:onLeft?-5:5,x,y,width,height});
+        type:'image',assetId:other.assetId,topLeft:true,posterShadow:'neighbor',angle:onLeft?-2:5,x,y,width,height});
     }
     addSide(upcoming,false);
     addSide(previous,true);
