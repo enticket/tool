@@ -209,7 +209,7 @@ with sync_playwright() as p:
  layer('nextPoster1')
  expect(page.locator('#wkLayerOpacity')).to_have_value('100')
  def exposed_pixel():
-  return page.locator('#wkLayerCanvas').evaluate("(canvas)=>Array.from(canvas.getContext('2d').getImageData(675,480,1,1).data)")
+  return page.locator('#wkLayerCanvas').evaluate("(canvas)=>Array.from(canvas.getContext('2d').getImageData(710,480,1,1).data)")
  # Compare the same paper pixels while hiding the cropped poster behind the main poster.
  right=float(page.locator('#wkLayerX').input_value())+float(page.locator('#wkLayerWidth').input_value())
  top=float(page.locator('#wkLayerY').input_value());height=float(page.locator('#wkLayerHeight').input_value())
@@ -218,6 +218,9 @@ with sync_playwright() as p:
   return page.locator('#wkLayerCanvas').evaluate("(c,p)=>p.map(([x,y])=>c.getContext('2d').getImageData(x,y,1,1).data[0])",points)
  pixel=exposed_pixel();shaded=shadow_samples()
  assert max(abs(x-y) for x,y in zip(pixel,[39,178,133,255]))<4,pixel
+ # The main poster casts a visible shadow across the adjacent green poster.
+ near=page.locator('#wkLayerCanvas').evaluate("(canvas)=>canvas.getContext('2d').getImageData(675,480,1,1).data[1]")
+ assert pixel[1]-near>=5,(pixel,near)
  page.locator('#wkLayerVisible').uncheck()
  paper=shadow_samples()
  assert all(base-shadow>12 for base,shadow in zip(paper,shaded)),(paper,shaded)
@@ -230,7 +233,7 @@ with sync_playwright() as p:
   await img.decode();
   const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
   const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
-  return Array.from(ctx.getImageData(675,480,1,1).data);
+  return Array.from(ctx.getImageData(710,480,1,1).data);
  }""")
  assert max(abs(x-y) for x,y in zip(jpg_pixel,pixel))<5,jpg_pixel
  with page.expect_download() as stack_download:page.locator('#wkLayerDownload').click()

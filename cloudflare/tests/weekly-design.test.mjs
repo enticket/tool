@@ -151,7 +151,7 @@ test('legacy introductions take up no space between the poster, title and detail
     assert.equal(layer('scheduleLabel').fontSize,18.4);
     assert.ok(layerBounds(ctx,layer('number')).y+layerBounds(ctx,layer('number')).height<poster.y);
     const paintedBottom=poster.y+Math.min(poster.height,poster.width*height/width);
-    assert.ok(layer('title').y>=paintedBottom+31.99);
+    assert.ok(layer('title').y>=paintedBottom+63.99);
     assert.equal(layer('description'),undefined);
     const older=pageScene(legacy,1,ctx,{img:{width,height}});
     assert.ok(older.every(l=>!['description','date','handle'].includes(l.id)));
@@ -194,7 +194,7 @@ test('poster fills the space left by performance details up to the footer or sid
   draft.design={...normalizeDesign(),pages:{'performance:show':{layers:{title:{y:850}}}}};
   const edited=layout(card,3,4);
   assert.equal(edited.title.y,850);
-  assert.equal(edited.poster.y+edited.poster.height+32,850);
+  assert.equal(edited.poster.y+edited.poster.height+64,850);
 });
 
 test('upcoming posters follow page order at full opacity and fit even an eight-show week',()=>{

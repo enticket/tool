@@ -8,10 +8,10 @@ export const PT = 96 / 72;
 export const PROFILE_PHOTO='/assets/weekly/enticket-instagram-profile.jpg';
 export const MAX_SCHEDULE_LENGTH=3000;
 const posterShadows={
-  main:{deviation:16,opacity:.78},
-  neighbor:{deviation:8,opacity:.43}
+  main:{deviation:21,opacity:.98},
+  neighbor:{deviation:10,opacity:.55}
 };
-const shadowRgb='16,15,19';
+const shadowRgb='5,5,8';
 export const DEFAULT_CLOSING_TITLE='인천\n공연 소식';
 export const DEFAULT_CLOSING_COPY='엔티켓을 팔로우해 주세요.\nenticket.com';
 const oldClosingFooters=['팔로우하고 매주 인천 공연 소식을 받아보세요.\nenticket.com','enticket.kr · @en__ticket','공연의 자세한 안내는 엔티켓에서\nenticket.kr · @en__ticket','@en__ticket을 팔로우하고\n매주 인천 공연 소식을 받아보세요.\nenticket.com'];
@@ -331,7 +331,8 @@ function performanceScene(d,index,theme,page,ctx,images){
     bodyTop-=row.gap;
   }
   const ratio=image?.width&&image.height?image.width/image.height:.8;
-  const roomHeight=()=>Math.max(8,bodyTop-32-poster.y);
+  const posterTitleGap=64;
+  const roomHeight=()=>Math.max(8,bodyTop-posterTitleGap-poster.y);
   if(overrides.poster?.x!==undefined&&overrides.poster?.width===undefined){
     poster.width=Math.min(poster.width,Math.max(8,right-poster.x));
   }
