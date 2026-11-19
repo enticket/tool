@@ -289,8 +289,9 @@ function performanceScene(d,index,theme,page,ctx,images){
 
   const upcoming=image?d.cards.slice(index).concat(d.cards.slice(0,index-1)).filter(next=>images[next.assetId]).slice(0,4):[];
   const reservedWidth=Math.min(238,upcoming.length*45);
+  const posterLeft=Math.max(left,Math.min(left+48,right-(overrides.poster?.width??0)));
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
-    x:left,y:38,width:right-left-reservedWidth,height:ruleY});
+    x:posterLeft,y:38,width:right-posterLeft-reservedWidth,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
     right,23,red,'sans',{width:200,align:'right',y:62});
   const title=fit(text('title','공연명',card.title,left,46,red,style?.performance.titleFamily||'serif'),budgets.title);
