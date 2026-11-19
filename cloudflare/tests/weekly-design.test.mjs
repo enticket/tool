@@ -145,7 +145,11 @@ test('legacy introductions take up no space between the poster, title and detail
     const layer=id=>scene.find(l=>l.id===id);
     const poster=layer('poster');
     assert.equal(poster.topLeft,true);
-    assert.equal(poster.x,layer('title').x+48);
+    assert.equal(poster.x+poster.width/2,540);
+    assert.equal(layer('title').fontSize,36.8);
+    assert.equal(layer('schedule').fontSize,20);
+    assert.equal(layer('scheduleLabel').fontSize,18.4);
+    assert.ok(layerBounds(ctx,layer('number')).y+layerBounds(ctx,layer('number')).height<poster.y);
     const paintedBottom=poster.y+Math.min(poster.height,poster.width*height/width);
     assert.ok(layer('title').y>=paintedBottom+31.99);
     assert.equal(layer('description'),undefined);
@@ -183,7 +187,9 @@ test('poster fills the space left by performance details up to the footer or sid
   const scenes=cards.map((_,i)=>pageScene({...draft,cards},i+1,ctx,{img:{width:3,height:4},wide:{width:16,height:9}}));
   for(const id of ['poster','title','schedule','venue','price']){
     const [a,b]=scenes.map(scene=>scene.find(l=>l.id===id));
-    assert.deepEqual([a.x,a.y],[b.x,b.y],id);
+    assert.equal(a.y,b.y,id);
+    if(id==='poster')assert.equal(a.x+a.width/2,b.x+b.width/2);
+    else assert.equal(a.x,b.x,id);
   }
   draft.design={...normalizeDesign(),pages:{'performance:show':{layers:{title:{y:850}}}}};
   const edited=layout(card,3,4);

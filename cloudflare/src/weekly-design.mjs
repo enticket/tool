@@ -288,22 +288,23 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
 
   const upcoming=image?d.cards.slice(index).concat(d.cards.slice(0,index-1)).filter(next=>images[next.assetId]).slice(0,4):[];
-  const reservedWidth=Math.min(238,upcoming.length*45);
-  const posterLeft=Math.max(left,Math.min(left+48,right-(overrides.poster?.width??0)));
+  const centerX=(left+right)/2;
+  const sideReveal=upcoming.length*13;
+  const titleSize=36.8,detailSize=20,labelSize=18.4;
   const poster=add({id:'poster',name:'공연 포스터',type:'image',assetId:card.assetId,topLeft:true,posterShadow:true,
-    x:posterLeft,y:38,width:right-posterLeft-reservedWidth,height:ruleY});
+    x:left,y:54,width:right-left-2*sideReveal,height:ruleY});
   const number=text('number','공연 번호',String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),
-    right,23,red,'sans',{width:200,align:'right',y:62});
-  const title=fit(text('title','공연명',card.title,left,46,red,style?.performance.titleFamily||'serif'),budgets.title);
+    right,labelSize,red,'sans',{width:200,align:'right',y:18});
+  const title=fit(text('title','공연명',card.title,left,titleSize,red,style?.performance.titleFamily||'serif'),budgets.title);
   const divider=add({id:'topRule',name:'공연 정보 구분선',type:'line',x:left,y:0,width:right-left,height:style?.performance.ruleHeight||2,color:ink});
   const rows=[
     {layers:[title],gap:0},
-    {layers:[divider],gap:26}
+    {layers:[divider],gap:20}
   ];
   for(const [id,label] of [['schedule','공연 일시'],['venue','장소'],['price','가격']]){
-    const value=fit(text(id,label,card[id],234,25,ink,'sans',{weight:550}),budgets[id]);
-    const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,23,red,'sans',{width:154,weight:650});
-    rows.push({layers:[heading,value],gap:14});
+    const value=fit(text(id,label,card[id],234,detailSize,ink,'sans',{weight:550}),budgets[id]);
+    const heading=text(id+'Label',label+' 제목',value.text&&value.visible!==false?label:'',left,labelSize,red,'sans',{width:154,weight:650});
+    rows.push({layers:[heading,value],gap:12});
   }
   // Work up from the bottom rule, reserving room for wrapped rows and saved text positions.
   let bodyTop=(overrides.bottomRule?.y??ruleY)-24;
@@ -312,7 +313,7 @@ function performanceScene(d,index,theme,page,ctx,images){
     // Reserve the tallest corresponding text row in this carousel on every slide.
     const value=row.layers.at(-1);
     if(budgets[value.id]){
-      const defaultSize=value.id==='title'?46:25;
+      const defaultSize=value.id==='title'?titleSize:detailSize;
       for(const other of d.cards){
         const peer={...value,text:other[value.id],fontSize:overrides[value.id]?.fontSize??defaultSize};
         row.height=Math.max(row.height,height(fit(peer,budgets[value.id])));
@@ -327,17 +328,18 @@ function performanceScene(d,index,theme,page,ctx,images){
   }
   const ratio=image?.width&&image.height?image.width/image.height:.8;
   const roomHeight=()=>Math.max(8,bodyTop-32-poster.y);
-  // Keep the upper-left corner fixed even for landscape artwork beside the number.
-  if(overrides.poster?.width===undefined&&number.visible!==false){
-    const numberLeft=ctx?layerBounds(ctx,number).x:number.x-number.width;
-    poster.width=Math.min(poster.width,Math.max(8,numberLeft-16-poster.x));
+  if(overrides.poster?.x!==undefined&&overrides.poster?.width===undefined){
+    poster.width=Math.min(poster.width,Math.max(8,right-poster.x));
   }
   if(overrides.poster?.height===undefined){
     poster.height=Math.min(poster.width/ratio,roomHeight());
   }
   if(overrides.poster?.width===undefined)poster.width=Math.min(poster.width,poster.height*ratio);
-  const imageHeight=poster.visible===false?0:Math.min(poster.height,poster.width/ratio);
-  const imageWidth=imageHeight*ratio;
+  const imageWidth=Math.min(poster.width,poster.height*ratio);
+  const imageHeight=poster.visible===false?0:imageWidth/ratio;
+  if(overrides.poster?.x===undefined){
+    poster.x=Math.min(centerX-imageWidth/2,1080-poster.width);
+  }
   const stack=[];
   if(imageHeight>0&&upcoming.length){
     // A resized or rotated frame can contain empty space around the front image.
