@@ -2560,7 +2560,19 @@ window.ICO = {
   }
   $('igDetailPrev').addEventListener('click',()=>{if(detailIndex>0){detailIndex--;renderDetailMedia();}});
   $('igDetailNext').addEventListener('click',()=>{if(detailIndex<detailAssets.length-1){detailIndex++;renderDetailMedia();}});
-  $('igDetailClose').addEventListener('click',()=>$('igDetail').close());
+  const detailDialog=$('igDetail');
+  let pressedBackdrop=false;
+  function onDetailBackdrop(event){
+    if(event.target!==detailDialog)return false;
+    const rect=detailDialog.getBoundingClientRect();
+    return event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom;
+  }
+  detailDialog.addEventListener('pointerdown',event=>{pressedBackdrop=onDetailBackdrop(event);});
+  detailDialog.addEventListener('click',event=>{
+    if(pressedBackdrop&&onDetailBackdrop(event))detailDialog.close();
+    pressedBackdrop=false;
+  });
+  $('igDetailClose').addEventListener('click',()=>detailDialog.close());
   $('igDetail').addEventListener('close',()=>{ $('igDetailMedia').replaceChildren();$('igDetailCaption').textContent='';$('igDetailLink').removeAttribute('href');detailAssets=[]; });
   function mediaCard(item){
     const card=document.createElement('article');card.className='ig-media-card';
