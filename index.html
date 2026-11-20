@@ -2560,19 +2560,20 @@ window.ICO = {
   }
   $('igDetailPrev').addEventListener('click',()=>{if(detailIndex>0){detailIndex--;renderDetailMedia();}});
   $('igDetailNext').addEventListener('click',()=>{if(detailIndex<detailAssets.length-1){detailIndex++;renderDetailMedia();}});
-  const detailDialog=$('igDetail');
-  let pressedBackdrop=false;
-  function onDetailBackdrop(event){
-    if(event.target!==detailDialog)return false;
-    const rect=detailDialog.getBoundingClientRect();
-    return event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom;
+  for(const dialog of [$('igDetail'),$('wkPerformanceDialog')]){
+    let pressedBackdrop=false;
+    function onBackdrop(event){
+      if(event.target!==dialog)return false;
+      const rect=dialog.getBoundingClientRect();
+      return event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom;
+    }
+    dialog.addEventListener('pointerdown',event=>{pressedBackdrop=onBackdrop(event);});
+    dialog.addEventListener('click',event=>{
+      if(pressedBackdrop&&onBackdrop(event))dialog.close();
+      pressedBackdrop=false;
+    });
   }
-  detailDialog.addEventListener('pointerdown',event=>{pressedBackdrop=onDetailBackdrop(event);});
-  detailDialog.addEventListener('click',event=>{
-    if(pressedBackdrop&&onDetailBackdrop(event))detailDialog.close();
-    pressedBackdrop=false;
-  });
-  $('igDetailClose').addEventListener('click',()=>detailDialog.close());
+  $('igDetailClose').addEventListener('click',()=>$('igDetail').close());
   $('igDetail').addEventListener('close',()=>{ $('igDetailMedia').replaceChildren();$('igDetailCaption').textContent='';$('igDetailLink').removeAttribute('href');detailAssets=[]; });
   function mediaCard(item){
     const card=document.createElement('article');card.className='ig-media-card';
