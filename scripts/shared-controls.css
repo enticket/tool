@@ -1,7 +1,7 @@
 /* App controls share surfaces, focus, spacing and popup treatments. */
 :root{--ui-field-radius:8px;--ui-popup-radius:12px;--ui-field-border:var(--color-border-neutral-strong);--ui-focus-ring:0 0 0 3px var(--color-fill-accent);--ui-option-hover:color-mix(in oklch,var(--color-bg-accent) 7%,var(--bg-white-normal));--ui-option-selected:color-mix(in oklch,var(--color-bg-accent) 12%,var(--bg-white-normal))}
 :root :is(select,textarea,input[type=text],input[type=number],input[type=email],input[type=url],input[type=password],input[type=date],input[type=time],input[type=month],input[type=datetime-local]):not(.wk-inline-text):not(.ig-time-stepper input){font-family:var(--font-family-sans-kr);border-radius:var(--ui-field-radius)!important;border-color:var(--ui-field-border);background-color:var(--bg-white-normal);color:var(--txt-black-darkest);transition:border-color .15s,box-shadow .15s}
-:root :is(select,textarea,input):focus-visible:not(.wk-inline-text){outline:2px solid var(--color-text-accent);outline-offset:2px;box-shadow:none}
+:root :is(select,textarea,input):focus-visible:not(.wk-inline-text):not(.ig-time-stepper input){outline:2px solid var(--color-text-accent);outline-offset:2px;box-shadow:none}
 :root :is(select,textarea,input):disabled{cursor:not-allowed}
 textarea{padding:10px 12px;border:1px solid var(--ui-field-border);line-height:1.6;resize:vertical}
 select{padding-inline:12px;cursor:pointer;text-overflow:ellipsis}
@@ -85,6 +85,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:4px}
 .ig-calendar-time label{color:var(--txt-black-darker)}
 .ig-time-stepper{border-color:var(--ui-field-border);background:var(--bg-grey-lighter)}
 .ig-time-stepper:focus-within{border-color:var(--color-text-accent);box-shadow:var(--ui-focus-ring)}
+.ig-time-stepper :is(input,button):focus{outline:0;box-shadow:none}
 .ig-time-stepper input{color:var(--txt-black-darkest)}
 .ig-time-stepper button{color:var(--color-text-accent)}
 .ig-time-stepper button:hover{background:var(--ui-option-hover)}
