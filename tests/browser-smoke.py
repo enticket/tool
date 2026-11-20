@@ -91,6 +91,17 @@ with sync_playwright() as p:
     lines = (ROOT / 'sms.txt').read_text().splitlines()
     assert len(lines) == 2 and all('테스트' in line for line in lines), lines
     assert any('010-0000-0001' in line for line in lines), lines
+    with page.expect_download() as event:
+        page.locator('#smsDlXlsx').click()
+    event.value.save_as(ROOT / 'sms.xlsx')
+    sms = load_workbook(ROOT / 'sms.xlsx').active
+    assert sms.title == '문자발송명단' and sms.max_row == 3
+    assert sorted(cell.value for cell in sms['B'][1:]) == ['010-0000-0001', '010-0000-0002']
+    assert '$A$1:$B$3' in str(sms.print_area) and int(sms.page_setup.paperSize) == 9
+    assert sms.sheet_properties.pageSetUpPr.fitToPage and (sms.page_setup.fitToWidth,sms.page_setup.fitToHeight) == (1,0)
+    for row in sms:
+        for cell in row:
+            assert cell.font.sz == 10 and all(getattr(cell.border, side).style == 'thin' and getattr(cell.border, side).color.rgb == 'FFB7B7B7' for side in ('left','right','top','bottom'))
     print('PASS: SMS duplicate removal and TXT download')
 
     # Generate a synthetic canvas fixture, without editing user images.

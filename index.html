@@ -3438,6 +3438,21 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
     return { id:"", label:"알 수 없는 서식" };
   }
   function pwFromName(name){ const m=String(name).match(/(\d{6})(?=\.[^.]+$|\D*$)/); return m?m[1]:null; }
+function writeRosterFile(sheetName,aoa,widths){
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=widths.map(wch=>({wch}));
+  const edge={style:"thin",color:{rgb:"FFB7B7B7"}};
+  const border={left:edge,right:edge,top:edge,bottom:edge};
+  const body={font:{sz:10},alignment:{vertical:"center",wrapText:true},border};
+  const header={...body,font:{sz:10,bold:true}};
+  for(const address of Object.keys(ws)){
+    if(address.startsWith("!"))continue;
+    ws[address].s=XLSX.utils.decode_cell(address).r===0?header:body;
+  }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  return injectPageSetup(writeStyledWorkbook(wb),aoa.length,{sheetName,lastColumn:XLSX.utils.encode_col(widths.length-1),fitToHeight:0});
+}
 /* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","관람자명","연락처","예매번호"];
@@ -3788,19 +3803,7 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
   function buildRosterFile(){
     const rows=getViewRows();
     const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]??""))];
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[26,12,9,7,11,16,17].map(wch=>({wch}));
-    const edge={style:"thin",color:{rgb:"FFB7B7B7"}};
-    const border={left:edge,right:edge,top:edge,bottom:edge};
-    const body={font:{sz:10},alignment:{vertical:"center",wrapText:true},border};
-    const header={...body,font:{sz:10,bold:true}};
-    for(const address of Object.keys(ws)){
-      if(address.startsWith("!"))continue;
-      ws[address].s=XLSX.utils.decode_cell(address).r===0?header:body;
-    }
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
-    return injectPageSetup(writeStyledWorkbook(wb),aoa.length,{sheetName:"예매자명단",lastColumn:"G",fitToHeight:0});
+    return writeRosterFile("예매자명단",aoa,[26,12,9,7,11,16,17]);
   }
   function download(){
     if(!allRows().length)return;
@@ -5647,18 +5650,14 @@ function renderValidationCard(result) {
     const blob=new Blob([lines.join("\r\n")],{type:"text/plain;charset=utf-8"});
     triggerDownload(blob, fname("txt"));
   }
-  function buildSmsWb(){
-    const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름, x.전화])];
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:14},{wch:18}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"문자발송명단");
-    return wb;
+  function buildSmsFile(){
+    const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름??"",x.전화])];
+    return writeRosterFile("문자발송명단",aoa,[16,20]);
   }
   // 다운로드: 엑셀 (이름·전화번호 2열)
   function dlXlsx(){
     if(!lastResult.length) return;
-    XLSX.writeFile(buildSmsWb(), fname("xlsx"));
+    triggerDownload(new Blob([buildSmsFile()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),fname("xlsx"));
   }
   // 드라이브 저장 (엑셀)
   async function smsSaveToDrive(){
@@ -5667,9 +5666,9 @@ function renderValidationCard(result) {
     const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
-      const bytes=XLSX.write(buildSmsWb(),{type:"array",bookType:"xlsx"});
+      const bytes=buildSmsFile();
       const res=await window.gdrive.saveFile(["enticket","문자발송명단"], fname("xlsx"),
-        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
     }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
