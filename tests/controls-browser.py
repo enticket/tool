@@ -34,7 +34,12 @@ with sync_playwright() as p:
   row=page.locator('#wkSessionRows .wk-session-row').first
   row.locator('[type=date]').fill('2026-11-20');row.locator('.ui-picker-open').first.click();expect(page.locator('.ui-calendar')).to_be_visible()
   page.get_by_role('button',name='2026년 11월 21일',exact=True).click();page.get_by_role('button',name='선택 완료',exact=True).click();expect(row.locator('[type=date]')).to_have_value('2026-11-21')
-  row.locator('.ui-picker-open').nth(1).click();page.get_by_role('textbox',name='시',exact=True).fill('19');page.get_by_role('textbox',name='분',exact=True).fill('30');page.get_by_role('button',name='선택 완료',exact=True).click();expect(row.locator('[type=time]')).to_have_value('19:30')
+  row.locator('.ui-picker-open').nth(1).click()
+  hour=page.get_by_role('textbox',name='시',exact=True);minute=page.get_by_role('textbox',name='분',exact=True)
+  hour.fill('19');hour.press('Tab');expect(minute).to_be_focused()
+  minute.press('Shift+Tab');expect(hour).to_be_focused()
+  minute.fill('29');page.get_by_role('button',name='분 증가',exact=True).click();expect(minute).to_have_value('30')
+  page.get_by_role('button',name='선택 완료',exact=True).click();expect(row.locator('[type=time]')).to_have_value('19:30')
   row.locator('.ui-picker-open').nth(1).click();page.get_by_role('button',name='비우기',exact=True).click();expect(row.locator('[type=time]')).to_have_value('')
   page.locator('#wkClosePerformance').click();page.locator('[data-ig-view=weekly]').click();expect(page.locator('#wkSave')).to_be_enabled(timeout=30000)
   # Colour apply produces the existing layer edit; cancellation never applies a preview.

@@ -1361,6 +1361,8 @@ td.c { text-align: center; }
 .ig-time-stepper { display:flex; flex-direction:column; align-items:center; width:64px; flex-shrink:0; border:1px solid #e6deed; border-radius:10px; background:#faf8fc; overflow:hidden; }
 .ig-time-stepper:focus-within { border-color:#956ab3; box-shadow:0 0 0 3px #ede5f5; }
 .ig-time-stepper button { display:flex; align-items:center; justify-content:center; width:100%; height:18px; padding:0; border:0; background:transparent; color:#987eaa; line-height:1; }
+.ig-time-stepper button::before { content:""; width:8px; height:5px; background:currentColor; clip-path:polygon(0 80%,50% 0,100% 80%,85% 100%,50% 42%,15% 100%); }
+.ig-time-stepper button[data-step="-1"]::before { transform:rotate(180deg); }
 .ig-time-stepper button:hover { background:#eee6f5; color:#64348b; }
 .ig-time-stepper input { width:100%; min-width:0; padding:0; height:28px; border:0; outline:none; background:transparent; text-align:center; font-family:inherit; line-height:28px; font-size:20px; font-weight:600; color:#563373; font-variant-numeric:tabular-nums; }
 
