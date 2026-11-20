@@ -186,7 +186,7 @@ with sync_playwright() as p:
     price_mode.uncheck()
     assert preview_order() == expected_order
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
-    expect(page.locator('#saveSettlementDrive')).to_be_hidden()
+    expect(page.get_by_role('button',name='드라이브 저장',include_hidden=True)).to_have_count(0)
     page.evaluate('''()=>{
       const write=writeStyledWorkbook;
       window.writeStyledWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};

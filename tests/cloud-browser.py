@@ -52,10 +52,6 @@ with sync_playwright() as p:
             route.fulfill(json={'ok':True, 'allowed':True,'email':'staff@example.test'})
         elif path == 'stamp':
             route.fulfill(json={'ok':True, 'b64':state['stamp']})
-        elif path == 'upload':
-            assert b'name="file"' in route.request.post_data_buffer
-            assert b'name="folder"' in route.request.post_data_buffer
-            route.fulfill(json={'ok':True,'fileId':'synthetic','name':'test.xlsx'})
         else:
             raise AssertionError(path)
     page.route('**/api/**', api)
@@ -82,21 +78,21 @@ with sync_playwright() as p:
     file = {'name':'synthetic.xlsx', 'mimeType':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'buffer':base64.b64decode(fixture['xlsx'])}
     page.locator('#osealFileInput').set_input_files(file)
     expect(page.locator('#osealStatus')).to_contain_text('변환 완료')
+    expect(page.get_by_role('button',name='드라이브 저장',include_hidden=True)).to_have_count(0)
     for tab, input_selector, button in [
-        ('excel','#xlFileInput','#xlDriveSave'),
-        ('sms','#smsFileInput','#smsDriveSave'),
-        ('settlement','#sessions input[type=file]','#saveSettlementDrive'),
+        ('excel','#xlFileInput','#xlDownload'),
+        ('sms','#smsFileInput','#smsDlXlsx'),
+        ('settlement','#sessions input[type=file]','#genSettlement'),
     ]:
         page.locator(f'[data-tab="{tab}"]').click()
         page.locator(input_selector).first.set_input_files(file)
         expect(page.locator(button)).to_be_enabled()
-        page.locator(button).click()
-        accept_app_dialog()
-        expect(page.locator(button)).to_have_text('드라이브 저장')
-    assert calls.count('upload') == 3, calls
+        with page.expect_download() as download:
+            page.locator(button).click()
+        assert download.value.suggested_filename.endswith('.xlsx')
+    assert 'upload' not in calls
     state['expired'] = True
-    page.locator('#saveSettlementDrive').click()
-    accept_app_dialog()
+    page.evaluate("()=>gdrive.api('/stamp').catch(()=>{})")
     expect(page.locator('#gLoginBtn')).to_be_visible()
     assert not page.evaluate('gdrive.isLoggedIn()')
     state.update(expired=False, allowed=False)
@@ -125,5 +121,5 @@ with sync_playwright() as p:
     expect(page.locator('#gUser')).to_be_visible()
     expect(page.locator('#osealWork')).to_be_visible()
     assert not errors, errors
-    print('PASS: cloud UI login, stamp, three Drive uploads, expiry, denied account, server/network errors and retry (mocked providers)')
+    print('PASS: cloud UI login, stamp, three local downloads, expiry, denied account, server/network errors and retry (mocked providers)')
     browser.close()

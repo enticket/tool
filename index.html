@@ -1530,7 +1530,6 @@ window.ICO = {
       <div id="xlOutput"></div>
       <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
-        <button class="btn ghost" id="xlDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="xlFname"></span>
       </div>
       <div id="xlWarn" style="margin-top:10px"></div>
@@ -1632,7 +1631,6 @@ window.ICO = {
     <div class="st-gen">
       <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
       <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
-      <button class="btn ghost" id="saveSettlementDrive" data-cloud-only hidden disabled>드라이브 저장</button>
     </div>
     <div id="checkResult"></div>
     <div class="privacy"></div>
@@ -1658,7 +1656,6 @@ window.ICO = {
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
-        <button class="btn ghost" id="smsDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="smsDlInfo"></span>
       </div>
     </div>
@@ -3812,19 +3809,6 @@ function writeRosterFile(sheetName,aoa,widths){
     a.href=URL.createObjectURL(blob);a.download=outFilename;a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),60000);
   }
-  async function saveToDrive(){
-    if(!allRows().length){ EnticketUI.alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      const bytes=buildRosterFile();
-      const res=await window.gdrive.saveFile(["enticket","예매자명단", firstShowName()||"미지정"], outFilename,
-        bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
-  }
   // 상시 드롭존: 드래그/선택 시마다 파일 추가
   inputEl.addEventListener("change",e=>{ if(e.target.files.length) addFiles(e.target.files); inputEl.value=""; });
   ["dragenter","dragover"].forEach(ev=>dropEl.addEventListener(ev,e=>{ e.preventDefault(); dropEl.classList.add("hover"); }));
@@ -3832,7 +3816,6 @@ function writeRosterFile(sheetName,aoa,widths){
   dropEl.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
   maskPhoneChk.addEventListener("change",renderOutput);
   document.getElementById("xlDownload").addEventListener("click",download);
-  document.getElementById("xlDriveSave").addEventListener("click",saveToDrive);
 })();
 /* ===== 도구 2: 포스터 이미지 변환 ===== */
 (function(){
@@ -5101,7 +5084,6 @@ function renderValidationCard(result) {
   function updateSettlementLive(){
     const hasAgg=sessions.some(sessionHasData);
     const genBtn=document.getElementById("genSettlement");
-    const saveBtn=document.getElementById("saveSettlementDrive");
     // 초대좌석권 입력란 자동 채움 (직원이 수동 편집하지 않은 경우에만)
     const invField=document.getElementById("sf_invite");
     if(invField && !inviteEdited){
@@ -5111,13 +5093,13 @@ function renderValidationCard(result) {
     if(!hasAgg){
       document.getElementById("livePayout").textContent="₩0";
       document.getElementById("checkResult").innerHTML="";
-      genBtn.disabled=true; saveBtn.disabled=true; return;
+      genBtn.disabled=true; return;
     }
     const data=buildSettlementData();
     const r=validateSettlement(data, null);
     document.getElementById("livePayout").textContent=wonS(r.expected.지급금액);
     document.getElementById("checkResult").innerHTML=renderCheck(r);
-    genBtn.disabled=false; saveBtn.disabled=false;
+    genBtn.disabled=false;
   }
   function wonS(n){ return '₩'+(Math.round(n||0)).toLocaleString('ko-KR'); }
   function renderCheck(r){
@@ -5132,7 +5114,7 @@ function renderValidationCard(result) {
     if(r.issues.length) h+='<ul>'+r.issues.map(i=>`<li>${esc(i)}</li>`).join('')+'</ul>';
     h+='</div>'; return h;
   }
-  // 정산서 바이트 생성 (다운로드·드라이브 저장 공통)
+  // 정산서 다운로드 파일 생성
   function buildSettlementFile(){
     const data=buildSettlementData();
     const check=validateSettlement(data, null);
@@ -5166,24 +5148,6 @@ function renderValidationCard(result) {
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
   }
-  // 정산서 드라이브 저장
-  async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    let built;
-    try{ built=buildSettlementFile(); }catch(err){ EnticketUI.alert('정산서 생성 중 오류: '+err.message); return; }
-    if(!built.check.ok){ if(!await EnticketUI.confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
-    const btn=document.getElementById("saveSettlementDrive"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      let year=new Date().getFullYear();
-      const withDt=built.data.rounds.find(r=>r.dt instanceof Date);
-      if(withDt) year=withDt.dt.getFullYear();
-      const res=await window.gdrive.saveFile(["enticket","정산서", String(year), built.data.공연명||"미지정"],
-        built.filename, built.bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
-  }
   // 접이식 패널 토글
   document.getElementById("suppToggle").addEventListener("click",()=>{
     const body=document.getElementById("suppBody");
@@ -5194,7 +5158,6 @@ function renderValidationCard(result) {
   priceMode.addEventListener("change", recompute);
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
-  document.getElementById("saveSettlementDrive").addEventListener("click",saveSettlementToDrive);
   // 초대좌석권 입력란: 직원이 직접 입력하면 자동 채움 중단, 그 값 우선
   (function(){
     const inv=document.getElementById("sf_invite");
@@ -5659,20 +5622,6 @@ function renderValidationCard(result) {
     if(!lastResult.length) return;
     triggerDownload(new Blob([buildSmsFile()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),fname("xlsx"));
   }
-  // 드라이브 저장 (엑셀)
-  async function smsSaveToDrive(){
-    if(!lastResult.length){ EnticketUI.alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      const bytes=buildSmsFile();
-      const res=await window.gdrive.saveFile(["enticket","문자발송명단"], fname("xlsx"),
-        bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
-  }
   function fname(ext){
     const d=new Date(); const p=n=>String(n).padStart(2,"0");
     return `문자발송명단_${won(lastResult.length)}명_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.${ext}`;
@@ -5692,7 +5641,6 @@ function renderValidationCard(result) {
   smsDrop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
   document.getElementById("smsDlTxt").addEventListener("click",dlTxt);
   document.getElementById("smsDlXlsx").addEventListener("click",dlXlsx);
-  document.getElementById("smsDriveSave").addEventListener("click",smsSaveToDrive);
 })();
 </script>
 <script>
