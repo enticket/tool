@@ -3787,10 +3787,12 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
   }
   function buildRosterFile(){
     const rows=getViewRows();
-    const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]))];
+    const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]??""))];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"]=[26,12,9,7,11,16,17].map(wch=>({wch}));
-    const body={font:{sz:10},alignment:{vertical:"center",wrapText:true}};
+    const edge={style:"thin",color:{rgb:"FFB7B7B7"}};
+    const border={left:edge,right:edge,top:edge,bottom:edge};
+    const body={font:{sz:10},alignment:{vertical:"center",wrapText:true},border};
     const header={...body,font:{sz:10,bold:true}};
     for(const address of Object.keys(ws)){
       if(address.startsWith("!"))continue;

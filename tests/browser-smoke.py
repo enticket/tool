@@ -48,7 +48,7 @@ with sync_playwright() as p:
       const rows = [
         ['공연명','공연일','공연시간','좌석수','관람자명','연락처','예매번호'],
         ['환경검증','2026-10-13','19:00',1,'테스트가','01000000001','TEST001'],
-        ['환경검증','2026-10-13','19:00',1,'테스트나','01000000002','TEST002'],
+        ['환경검증','2026-10-13',null,1,'테스트나','01000000002','TEST002'],
         ['환경검증','2026-10-13','19:00',1,'테스트가','01000000001','TEST003']
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'fixture');
@@ -70,7 +70,13 @@ with sync_playwright() as p:
     assert all(row[0] == '환경검증' for row in rows[1:]), rows
     from openpyxl import load_workbook
     roster = load_workbook(ROOT / 'cleaned.xlsx').active
-    assert all(cell.font.sz == 10 for row in roster for cell in row)
+    assert any(cell.value in (None, '') for cell in roster['C'][1:])
+    for row in roster:
+        for cell in row:
+            assert cell.font.sz == 10
+            for side in ('left', 'right', 'top', 'bottom'):
+                edge = getattr(cell.border, side)
+                assert edge.style == 'thin' and edge.color.rgb == 'FFB7B7B7', cell.coordinate
     assert roster.sheet_properties.pageSetUpPr.fitToPage and int(roster.page_setup.paperSize) == 9
     assert roster.page_setup.fitToWidth == 1 and roster.page_setup.fitToHeight == 0
     assert '$A$1:$G$4' in str(roster.print_area) and roster['A2'].alignment.wrap_text
