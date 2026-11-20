@@ -1731,10 +1731,10 @@ window.ICO = {
               </label>
               <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드</span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
               <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
-              <label class="ig-field" id="igFormatField">피드 비율<select id="igFormat"><option value="original">원본 비율</option><option value="frame">4:5</option></select></label>
+              <label class="ig-field" id="igFormatField">피드 비율<select id="igFormat"><option value="frame">4:5</option><option value="original">원본 비율</option></select></label>
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
-                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox">흐린 배경</label></div></div>
+                <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
               <details class="ig-adjust">
                 <summary>크기·위치 조절</summary>
@@ -1760,7 +1760,7 @@ window.ICO = {
         </div>
 </div>        <div class="ig-card ig-preview-card">
           <div class="ig-card-head"><span class="ig-step">3</span><h3>게시 미리보기</h3></div>
-          <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">원본 비율</span></div>
+          <div class="ig-preview-meta"><span class="ig-badge" id="igPreviewChannel">피드</span><span id="igPreviewSize">1080 × 1350 px</span></div>
           <div class="ig-preview-stage">
             <div id="igEmpty"><svg class="ico"><use href="#i-nav-poster"/></svg><strong>게시할 이미지가 여기에 표시됩니다</strong></div>
             <img id="igPreview" class="ig-preview" alt="인스타그램에 게시할 최종 이미지" hidden>
@@ -2286,8 +2286,8 @@ window.ICO = {
     job=null; clearImage();
     for(const id of ['igFile','igText']) $(id).value='';
     resetCaption();
-    $('igFormat').value='original'; $('igChannel').value='feed'; $('igFit').value='contain';
-    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=false;
+    $('igFormat').value='frame'; $('igChannel').value='feed'; $('igFit').value='contain';
+    $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
     closeReview(); $('igConfirm').checked=false;
@@ -2330,7 +2330,10 @@ window.ICO = {
       ctx.drawImage(bitmap,(canvas.width-bitmap.width*backgroundScale)/2,(canvas.height-bitmap.height*backgroundScale)/2,bitmap.width*backgroundScale,bitmap.height*backgroundScale);
       ctx.restore();
     }
-    const base=blur?(channel==='story'?canvas.width/bitmap.width:canvas.height/bitmap.height):($('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height));
+    const fitWidth=canvas.width/bitmap.width,fitHeight=canvas.height/bitmap.height;
+    let base=Math.min(fitWidth,fitHeight);
+    if(blur&&channel==='story')base=fitWidth;
+    else if(!blur&&$('igFit').value==='cover')base=Math.max(fitWidth,fitHeight);
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
     const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
     const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
@@ -2396,7 +2399,7 @@ window.ICO = {
     $(id).addEventListener('input',()=>{
       if(job) return;
       if(id===draggedSlider && Math.abs(Number($(id).value)-sliderDefaults[id])<=3) $(id).value=sliderDefaults[id];
-      if(id==='igChannel'){ $('igBackgroundMode').checked=$('igChannel').value==='story'; $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
+      if(id==='igChannel'){ $('igBackgroundMode').checked=true; $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
       render().catch(e=>status(describe(e)));
     });
   }
@@ -2888,16 +2891,17 @@ window.ICO = {
     return await new Promise(resolve=>crop.toBlob(resolve,'image/jpeg',.97))||blob;
   }
   async function sourcePoster(fields){
-    return normalize(await unframeFeedPoster(await api('source',fields,true)));
+    return normalize(await api('source',fields,true));
   }
-  async function asset(id){
-    if(!assetCache.has(id)){
-      const imported=performances.some(p=>p.assetId===id&&p.sourcePostId);
-      const promise=api('asset',{id},true).then(blob=>imported?unframeFeedPoster(blob):blob);
-      assetCache.set(id,promise);
-      try{await promise;}catch(e){if(assetCache.get(id)===promise)assetCache.delete(id);throw e;}
+  async function asset(id,forCarousel=false){
+    const crop=forCarousel&&performances.some(p=>p.assetId===id&&p.sourcePostId);
+    const key=crop?'carousel:'+id:id;
+    if(!assetCache.has(key)){
+      const promise=crop?asset(id).then(unframeFeedPoster):api('asset',{id},true);
+      assetCache.set(key,promise);
+      try{await promise;}catch(e){if(assetCache.get(key)===promise)assetCache.delete(key);throw e;}
     }
-    return assetCache.get(id);
+    return assetCache.get(key);
   }
   async function image(blob){const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();return img;}finally{URL.revokeObjectURL(url);}}
   async function normalize(file){if(file.size>15*1024*1024)throw Error('원본 포스터는 15MB 이하로 선택해 주세요.');const img=await image(file);if(img.width*img.height>40000000)throw Error('이미지가 너무 큽니다.');const c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const result=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.9));if(!result||result.size>2*1024*1024)throw Error('포스터 용량을 줄여 다시 선택해 주세요.');return result;}
@@ -3096,14 +3100,14 @@ window.ICO = {
     else{
       if(isLayerDraft())await ensurePaperAssets();
       await document.fonts.ready;checkCurrent();
-      const template=draft.template||'classic';const posters=template==='classic'?[]:isLayerDraft()?await paperPosters(draft.cards):await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId))));
+      const template=draft.template||'classic';const posters=template==='classic'?[]:isLayerDraft()?await paperPosters(draft.cards):await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId,true))));
       checkCurrent();
       for(let i=0;i<draft.cards.length+2;i++){
         const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');if(template!=='classic'){paintTemplate(ctx,template,draft,i,posters);}else{ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
         textBlock(ctx,'ENTICKET  /  WEEKLY',64,83,950,1,26,26,'#6c35a5');
         if(i===0){textBlock(ctx,draft.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2'),64,390,950,3,92,48);textBlock(ctx,draft.subtitle,64,860,950,3,36,28);textBlock(ctx,draft.week+' — '+draft.weekEnd,64,1160,950,1,36,28);}
         else if(i===draft.cards.length+1){textBlock(ctx,WD.DEFAULT_CLOSING_TITLE,64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
-        else{const card=draft.cards[i-1],img=await image(await asset(card.assetId));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
+        else{const card=draft.cards[i-1],img=await image(await asset(card.assetId,true));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
           textBlock(ctx,card.title,64,1040,952,2,38,28);textBlock(ctx,card.schedule,64,1150,952,2,25,22);textBlock(ctx,card.venue+(card.price?' · '+card.price:''),64,1230,952,2,25,22);}
         if(i===0||i===draft.cards.length+1)textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');}
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));checkCurrent();if(!blob)throw Error('이미지 생성에 실패했습니다.');rendered.push(blob);

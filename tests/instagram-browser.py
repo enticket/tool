@@ -86,14 +86,24 @@ with sync_playwright() as p:
         expect(page.locator('#igZoom')).to_have_value('100')
         expect(page.locator('#igX')).to_have_value('0')
         expect(page.locator('#igY')).to_have_value('0')
-        expect(page.locator('#igBackgroundMode')).not_to_be_checked()
+        expect(page.locator('#igBackgroundMode')).to_be_checked()
+        expect(page.locator('#igFormat')).to_have_value('frame')
         assert page.locator('#igFile').input_value() == ''
         assert not page.locator('#igPreview').get_attribute('src')
         expect(page.locator('#igConnectionBadge')).to_have_text('연결 확인 완료')
 
-    fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=675;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,675,900);return c.toDataURL('image/png').split(',')[1];}''')
+    fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=675;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,675,900);ctx.fillStyle='#edd039';ctx.fillRect(0,450,675,450);return c.toDataURL('image/png').split(',')[1];}''')
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
+    expect(page.locator('#igFormat')).to_have_value('frame')
+    expect(page.locator('#igBackgroundMode')).to_be_checked()
+    # At the poster's horizontal color boundary, the side margin blends both colors.
+    edge,above,below=page.locator('#igPreview').evaluate("""async img=>{
+        await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+        const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+        return [[8,675],[540,670],[540,680]].map(([x,y])=>ctx.getImageData(x,y,1,1).data[1]);
+    }""")
+    assert above+20<edge<below-20,(edge,above,below)
     expect(page.locator('#igField_inquiry')).to_be_hidden()
     page.locator('#igCaptionDetails summary').click()
     expect(page.locator('#igField_inquiry')).to_be_visible()
@@ -126,7 +136,7 @@ with sync_playwright() as p:
     page.locator('#igText').fill('엔티켓 테스트')
     expect(page.locator('#igPrepare')).to_be_enabled()
     expect(page.locator('#igCaptionPreview')).to_contain_text('확인한 문구')
-    assert page.locator('#igPreview').evaluate('(img)=>[img.naturalWidth,img.naturalHeight]') == [1080, 1440]
+    assert page.locator('#igPreview').evaluate('(img)=>[img.naturalWidth,img.naturalHeight]') == [1080, 1350]
     expect(page.locator('#igPreview')).to_be_visible()
     assert page.locator('#igPreview').bounding_box()['height']<=300
     if page.locator('#igChannel').input_value()=='feed':
