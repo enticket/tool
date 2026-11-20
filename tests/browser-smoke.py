@@ -68,6 +68,12 @@ with sync_playwright() as p:
     }''', output)
     assert len(rows) == 4 and rows[0] == ['공연명','공연일','공연시간','좌석수','관람자명','연락처','예매번호'], rows
     assert all(row[0] == '환경검증' for row in rows[1:]), rows
+    from openpyxl import load_workbook
+    roster = load_workbook(ROOT / 'cleaned.xlsx').active
+    assert all(cell.font.sz == 10 for row in roster for cell in row)
+    assert roster.sheet_properties.pageSetUpPr.fitToPage and int(roster.page_setup.paperSize) == 9
+    assert roster.page_setup.fitToWidth == 1 and roster.page_setup.fitToHeight == 0
+    assert '$A$1:$G$4' in str(roster.print_area) and roster['A2'].alignment.wrap_text
     print('PASS: booking XLSX upload, three-row conversion, XLSX download/readback')
 
     page.locator('[data-tab="sms"]').click()
@@ -165,8 +171,8 @@ with sync_playwright() as p:
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
     expect(page.locator('#saveSettlementDrive')).to_be_hidden()
     page.evaluate('''()=>{
-      const write=writeSettlementWorkbook;
-      window.writeSettlementWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};
+      const write=writeStyledWorkbook;
+      window.writeStyledWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};
     }''')
     with page.expect_download() as event:
         page.locator('#genSettlement').click()

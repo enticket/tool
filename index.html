@@ -3785,25 +3785,37 @@ for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById
     const miss=new Set(); nodes.forEach(n=>n.missing&&n.missing.forEach(m=>miss.add(m)));
     warnBox.innerHTML=miss.size?`<div class="warn">일부 파일에서 못 찾은 컬럼: <b>${[...miss].map(esc).join(", ")}</b> · 해당 칸은 비워둡니다.</div>`:"";
   }
-  function buildWb(){
+  function buildRosterFile(){
     const rows=getViewRows();
     const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]))];
     const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:7},{wch:10},{wch:15},{wch:12}];
+    ws["!cols"]=[26,12,9,7,11,16,17].map(wch=>({wch}));
+    const body={font:{sz:10},alignment:{vertical:"center",wrapText:true}};
+    const header={...body,font:{sz:10,bold:true}};
+    for(const address of Object.keys(ws)){
+      if(address.startsWith("!"))continue;
+      ws[address].s=XLSX.utils.decode_cell(address).r===0?header:body;
+    }
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
-    return wb;
+    return injectPageSetup(writeStyledWorkbook(wb),aoa.length,{sheetName:"예매자명단",lastColumn:"G",fitToHeight:0});
   }
-  function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
+  function download(){
+    if(!allRows().length)return;
+    const blob=new Blob([buildRosterFile()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=outFilename;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  }
   async function saveToDrive(){
     if(!allRows().length){ EnticketUI.alert("저장할 명단이 없습니다."); return; }
     if(!window.gdrive || !window.gdrive.isLoggedIn()){ EnticketUI.alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
     const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
     btn.disabled=true; btn.textContent="저장 중...";
     try{
-      const bytes=XLSX.write(buildWb(),{type:"array",bookType:"xlsx"});
+      const bytes=buildRosterFile();
       const res=await window.gdrive.saveFile(["enticket","예매자명단", firstShowName()||"미지정"], outFilename,
-        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       EnticketUI.alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
     }catch(e){ EnticketUI.alert("드라이브 저장 실패: "+e.message); }
     finally{ btn.disabled=false; btn.textContent=orig; }
@@ -4322,9 +4334,9 @@ return wb;
 }
 // Current SheetJS CE handles all parsing and workbook serialization. Keep the
 // generated settlement's formatting without loading the obsolete style fork.
-// This adapter only serializes styles created by buildSettlementWorkbook above;
+// This adapter only serializes styles created by our workbook builders;
 // it is never used to parse or rewrite an uploaded workbook.
-function writeSettlementWorkbook(wb){
+function writeStyledWorkbook(wb){
   const files=fflate.unzipSync(new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'})));
   const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const parser=new DOMParser(), serializer=new XMLSerializer();
@@ -4412,7 +4424,7 @@ function writeSettlementWorkbook(wb){
  * @param {number} lastRow  인쇄영역 마지막 행 (A1:AL{lastRow})
  * @returns {Uint8Array} 페이지설정이 주입된 .xlsx
  */
-function injectPageSetup(xlsxBytes, lastRow) {
+function injectPageSetup(xlsxBytes, lastRow, {sheetName="정산서",lastColumn="AL",fitToHeight=1}={}) {
   // fflate는 전역 fflate.unzipSync / zipSync 사용
   const files = fflate.unzipSync(xlsxBytes);
   const dec = new TextDecoder();
@@ -4433,7 +4445,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
   xml = xml.replace(/<pageSetup[^/]*\/>/g, '');
   xml = xml.replace(/<pageMargins[^/]*\/>/g, '');
   const margins = '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>';
-  const pageSetup = '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="1" orientation="portrait"/>';
+  const pageSetup = `<pageSetup paperSize="9" fitToWidth="1" fitToHeight="${fitToHeight}" orientation="portrait"/>`;
   const printOpts = '<printOptions horizontalCentered="1"/>';
   // 3) printOptions/pageMargins/pageSetup 삽입
   // ⚠ OOXML 스키마는 sheet 자식 요소 순서가 엄격함:
@@ -4460,7 +4472,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
   // 4) workbook.xml에 Print_Area 정의
   const wbPath = 'xl/workbook.xml';
   let wbXml = dec.decode(files[wbPath]);
-  const printArea = `<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">정산서!$A$1:$AL$${lastRow}</definedName></definedNames>`;
+  const printArea = `<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">${sheetName}!$A$1:$${lastColumn}$${lastRow}</definedName></definedNames>`;
   if (!wbXml.includes('definedNames')) {
     // <sheets>...</sheets> 다음에 삽입
     wbXml = wbXml.replace('</sheets>', '</sheets>' + printArea);
@@ -5121,7 +5133,7 @@ function renderValidationCard(result) {
     const check=validateSettlement(data, null);
     if(typeof XLSX==='undefined' || !XLSX.write){ throw new Error('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); }
     const wb=buildSettlementWorkbook(data);
-    const baseBytes=writeSettlementWorkbook(wb);
+    const baseBytes=writeStyledWorkbook(wb);
     if(!baseBytes || baseBytes.byteLength<2000){ throw new Error('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); }
     let bytes=baseBytes;
     try{
