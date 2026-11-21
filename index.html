@@ -1977,8 +1977,7 @@ window.ICO = {
       fetchStamp: async () => {
         if(!localStamp) throw new Error("직인 이미지를 먼저 선택해 주세요.");
         return localStamp;
-      },
-      saveFile: async () => { throw new Error("임시 버전에서는 다운로드를 이용해 주세요."); }
+      }
     };
     return;
   }
@@ -2006,6 +2005,7 @@ window.ICO = {
     }catch(e){ throw new Error("로그인 서버에 연결하지 못했습니다. 잠시 후 다시 로그인해 주세요."); }
     const d = await r.json().catch(()=>({}));
     if(r.status === 403 && d.error === "not_allowed") throw new Error("이 계정은 허용목록에 없습니다.");
+    if(r.status === 429 && d.error === "login_rate_limited") throw new Error("로그인 요청이 많습니다. 1분 후 다시 시도해 주세요.");
     if(r.status === 401) throw new Error("Google 인증을 확인하지 못했습니다. 다시 로그인해 주세요.");
     if(r.status === 403 && d.error === "email_not_verified") throw new Error("Google 계정의 이메일 인증 상태를 확인해 주세요.");
     if(!r.ok || d.ok !== true || d.allowed !== true) throw new Error("로그인 서버에서 계정 확인에 실패했습니다. 잠시 후 다시 로그인해 주세요.");
@@ -2112,25 +2112,6 @@ window.ICO = {
         const error = new Error("요청 실패: "+err); error.code = err; throw error;
       }
       return d;
-    },
-    saveFile: async function(segments, filename, bytes, mimeType){
-      if(!tokenValid()){ throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }
-      const mt = mimeType || "application/octet-stream";
-      const folder = (segments||[]).map(s=>String(s==null?"":s).replace(/[\\/:*?"<>|]/g,'').trim()||'미지정').join("/");
-      const fd = new FormData();
-      fd.append("folder", folder);
-      fd.append("filename", filename);
-      fd.append("mime", mt);
-      fd.append("file", new Blob([bytes], { type: mt }), filename);
-      const r = await fetch(WORKER_URL + "/upload", { method:"POST", body: fd });
-      const d = await r.json().catch(()=>({}));
-      if(!r.ok || !d.ok){
-        const err = (d && d.error) ? d.error : ("HTTP "+r.status);
-        if(err === "invalid_token"){ showLoggedOut(); throw new Error("로그인이 만료됐습니다. 다시 로그인해 주세요."); }
-        if(err === "not_allowed"){ throw new Error("이 계정은 허용목록에 없습니다: "+(d.email||"")); }
-        throw new Error("저장 실패: "+err);
-      }
-      return { id: d.fileId, name: d.name, webViewLink: d.webViewLink };
     },
     fetchStamp: async function(){
       if(!tokenValid()){ showLoggedOut(); throw new Error("로그인이 필요합니다. 로그인 버튼으로 로그인해 주세요."); }

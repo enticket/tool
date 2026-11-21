@@ -11,18 +11,19 @@ function request(path, fields = {}, from = origin) {
   for (const [key, value] of Object.entries(fields)) form.set(key, value);
   return new Request(origin + '/api/instagram/' + path, { method: 'POST', headers: { Origin: from }, body: form });
 }
+const nodeEnv = {...bindings, LOGIN_RATE_LIMITER:{limit:async()=>({success:true})}};
 const google = email => Response.json({ aud: 'test-client', email, email_verified: true, expires_in: 300 });
 test('Instagram authorization fails before any Meta call', async t => {
   const calls = []; let identity = { email: 'other@example.test' };
   t.mock.method(globalThis, 'fetch', async url => { calls.push(String(url)); return Response.json({ aud: 'test-client', expires_in: 300, email_verified: true, ...identity }); });
   for (const path of ['connection', 'media', 'prepare', 'publish', 'status', 'schedule', 'cancel', 'schedules']) {
-    assert.equal((await worker.fetch(request(path), bindings)).status, 403);
-    assert.equal((await worker.fetch(request(path, {}, 'https://other.test'), bindings)).status, 403);
+    assert.equal((await worker.fetch(request(path), nodeEnv)).status, 403);
+    assert.equal((await worker.fetch(request(path, {}, 'https://other.test'), nodeEnv)).status, 403);
   }
   identity = { aud: 'other-client', email: 'staff@example.test' };
-  assert.equal((await worker.fetch(request('connection'), bindings)).status, 401);
+  assert.equal((await worker.fetch(request('connection'), nodeEnv)).status, 401);
   identity = { email: 'staff@example.test', expires_in: 0 };
-  assert.equal((await worker.fetch(request('connection'), bindings)).status, 401);
+  assert.equal((await worker.fetch(request('connection'), nodeEnv)).status, 401);
   assert.ok(calls.every(url => url.startsWith('https://oauth2.googleapis.com/')));
 });
 for (const [scenario, response, status, error] of [
@@ -42,7 +43,7 @@ for (const [scenario, response, status, error] of [
     assert.equal(opts.headers.Authorization, 'Bearer private-instagram-token');
     assert.equal(opts.redirect, 'manual'); assert.equal(opts.method, 'GET'); return response();
   });
-  const result = await worker.fetch(request('connection'), bindings);
+  const result = await worker.fetch(request('connection'), nodeEnv);
   assert.equal(result.status, status); assert.equal(metaCalls, 1);
   assert.equal(result.headers.get('Cache-Control'), 'no-store');
   const text = await result.text(); assert.ok(!/MUST_NOT_LEAK|private-instagram-token/.test(text));
@@ -56,7 +57,7 @@ test('Workers + SQLite: immutable review, protected media, one publish and uncer
   const jpeg = new Uint8Array([255,216,255,192,0,17,8,5,70,4,56,3,1,17,0,2,17,0,3,17,0,255,217]);
   jpeg[7]=5; jpeg[8]=160; // 1080 × 1440 native portrait feed.
   const storyJpeg = jpeg.slice(); storyJpeg[7] = 7; storyJpeg[8] = 128;
-  const mf = new Miniflare(convertV4MiniflareOptions({
+  const mf = new Miniflare(convertV4MiniflareOptions({ratelimits:{LOGIN_RATE_LIMITER:{namespace_id:"17001",simple:{limit:1000,period:60}}},
     modules: ['worker.mjs','weekly.mjs','weekly-design.mjs','weekly-styles.mjs', 'instagram.mjs', 'instagram-job.mjs', 'instagram-caption.mjs'].map(name => ({
       type: 'ESModule', path: fileURLToPath(new URL('../src/' + name, import.meta.url)),
     })),
@@ -147,10 +148,10 @@ test('media list exposes safe fields and cursor without provider next URLs or se
   return Response.json({data:[{id:'12',caption:'<script>unsafe</script>',media_type:'IMAGE',media_url:'https://evil.example/a',permalink:'javascript:alert(1)',timestamp:'bad'},
    {id:'13',media_type:'VIDEO',media_product_type:'REELS',thumbnail_url:'https://scontent.cdninstagram.com/image.jpg',permalink:'https://www.instagram.com/reel/abc/',timestamp:'2026-11-06T00:00:00Z'}],paging:{next:'https://graph.facebook.com/next?access_token=MUST_NOT_LEAK',cursors:{after:'cursor_2'}}});
  });
- const res=await worker.fetch(request('media',{after:'cursor_1'}),bindings);assert.equal(res.status,200);
+ const res=await worker.fetch(request('media',{after:'cursor_1'}),nodeEnv);assert.equal(res.status,200);
  const text=await res.text();assert.ok(!text.includes('MUST_NOT_LEAK'));const data=JSON.parse(text);
  assert.equal(data.nextCursor,'cursor_2');assert.equal(data.items[0].type,'릴스');assert.equal(data.items[1].thumbnail,null);assert.equal(data.items[1].permalink,null);
- const count=calls.length;assert.equal((await worker.fetch(request('media',{after:'https://evil.example'}),bindings)).status,400);assert.equal(calls.length,count+1);
+ const count=calls.length;assert.equal((await worker.fetch(request('media',{after:'https://evil.example'}),nodeEnv)).status,400);assert.equal(calls.length,count+1);
 });
 test('media permission failure is sanitized and never modifies Meta posts',async t=>{
  t.mock.method(globalThis,'fetch',async(input,opts)=>{
@@ -158,5 +159,5 @@ test('media permission failure is sanitized and never modifies Meta posts',async
   assert.equal(opts.method,'GET');
   return Response.json({error:{code:200,message:'MUST_NOT_LEAK'}},{status:403});
  });
- assert.deepEqual(await (await worker.fetch(request('media'),bindings)).json(),{error:'instagram_permission_denied'});
+ assert.deepEqual(await (await worker.fetch(request('media'),nodeEnv)).json(),{error:'instagram_permission_denied'});
 });

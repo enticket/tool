@@ -14,10 +14,10 @@
 ## 현재 구현
 
 - 루트 `index.html`은 `local` 모드입니다. GitHub Pages 접속 시에만 새 Cloudflare 주소로 이동합니다. 로컬 실행에서는 명단·이미지·정산서 다운로드를 유지하고 로그인/Drive 저장은 숨깁니다. 원본대조필은 사용자가 직접 선택한 직인을 메모리에서만 사용합니다.
-- Cloudflare 빌드는 같은 HTML을 `cloud` 모드로 복사합니다. 기존 `enticket-drive` Worker가 화면과 `/api/verify`, `/api/upload`, `/api/stamp`를 함께 제공합니다.
-- 이전 화면과의 호환을 위해 `/verify`, `/upload`, `/stamp`도 유지합니다. 기존 Worker 주소는 그대로이고 `/`는 이제 도구 화면, 상태 확인은 `/healthz`입니다.
+- Cloudflare 빌드는 같은 HTML을 `cloud` 모드로 복사합니다. 기존 `enticket-drive` Worker가 화면과 `/api/verify`, `/api/stamp`를 함께 제공합니다.
+- 이전 화면과의 호환을 위해 `/verify`, `/stamp`도 유지합니다. 기존 Worker 주소는 그대로이고 `/`는 이제 도구 화면, 상태 확인은 `/healthz`입니다.
 - 정적 파일은 Workers Assets가 제공하고 지정한 API 경로만 서버 코드를 실행합니다. DB나 유료 스토리지는 추가하지 않습니다.
-- 기존 Google 앱의 직원 토큰 검증 → 이메일 허용목록 확인 → 회사 refresh token으로 Drive 저장하는 방식을 유지합니다. 메일 관련 기능은 제공된 원본에서도 제거된 상태이므로 다시 추가하지 않습니다.
+- Google 토큰과 직원 이메일 허용목록을 확인합니다. Drive 업로드 경로는 종료했습니다. 메일 관련 기능은 제공된 원본에서도 제거된 상태이므로 다시 추가하지 않습니다.
 - 회사 직인은 원본 코드에서 추출해 `cloudflare/.private/stamp-base64.txt`에 보관했습니다. 공개 코드에는 포함하지 않고 새 Worker secret `STAMP_JPEG_B64_1`, `STAMP_JPEG_B64_2`, `STAMP_JPEG_B64_3`로 전달합니다. 원본 복구용 코드도 같은 ignored 디렉터리에 보존했습니다.
 
 ## 로컬 실행과 확인
@@ -51,8 +51,8 @@ python3 tests/cloud-browser.py
 | 이름 | 배포 시 처리 |
 | --- | --- |
 | GOOGLE_CLIENT_ID | 기존 secret 유지. HTML의 공개 OAuth client ID와 일치해야 함 |
-| GOOGLE_CLIENT_SECRET | 기존 secret 유지 |
-| GOOGLE_REFRESH_TOKEN | 기존 secret 유지 |
+| GOOGLE_CLIENT_SECRET | Drive 업로드 종료로 Worker에서 사용하지 않음 |
+| GOOGLE_REFRESH_TOKEN | Drive 업로드 종료로 Worker에서 사용하지 않음 |
 | ALLOWED_EMAILS | 기존 일반 변수 유지 |
 | STAMP_JPEG_B64_1 / STAMP_JPEG_B64_2 / STAMP_JPEG_B64_3 | 원본 직인을 3개 secret으로 나눠 추가 (각 값 5KB 제한) |
 | MAIL_PUBLISH_KEY / ROUTINE_ID / ROUTINE_TOKEN | 기존 설정을 삭제하지 않음. 현재 코드에서는 사용 안 함 |
@@ -130,3 +130,10 @@ Instagram 최종 운영 버전은 `e7452154-e02f-4c15-a2b2-061154130c51`이며, 
 ## 주간 공연 도구 운영 배포 (2026-11-16)
 
 사용자의 배포 요청으로 `codex/weekly-performance-carousel`의 `6323603`을 기존 Worker에 배포했다. 버전은 `e6cc7687-b13f-4a43-bd61-e2853d788fa6`이며 https://tools.enticket.kr/ 의 **인스타그램 → 공연 달력**에서 제공한다. 서버 46개 테스트·빌드, 운영 HTML/CSP 일치·healthz 200, 무효 인증 401·비허용 출처 403·비공개 경로 404를 확인했다. 기존 바인딩과 일반 설정 및 저장소 namespace를 보존했다. 실제 공연 자료 등록과 Instagram 게시는 실행하지 않았다. 상세 검증 범위는 [주간 캐러셀](weekly-carousel.md)을 참조한다.
+
+
+## 2026-11-21 로그인 요청 제한과 Drive 업로드 종료
+
+Google 토큰을 검증하는 요청은 Cloudflare의 접속 IP를 기준으로 같은 엣지 위치에서 60초에 5회까지 허용합니다. 로그인 화면과 기존 토큰 기반 API는 한도를 공유합니다. 초과하면 Google에 검증을 요청하기 전에 HTTP 429와 60초 재시도 안내를 반환합니다. 이미 로그인한 사용자의 세션 확인과 쿠키 기반 작업은 이 한도를 소모하지 않습니다.
+
+Drive 저장 버튼에 이어 서버의 업로드 처리도 제거했습니다. `/upload`와 `/api/upload`는 404를 반환합니다. 기존 Drive 파일은 그대로 보관되며 명단과 정산서는 브라우저에서 다운로드합니다.

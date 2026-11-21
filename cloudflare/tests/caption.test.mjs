@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import worker from '../src/worker.mjs';
 import {formatCaption} from '../src/instagram-caption.mjs';
 const data={title:'테스트 공연',description:'',venue:'공연장',age:'',duration:'',price:'',inquiry:'02-123-4567',schedules:[{date:'2026-11-20',time:'19:30',text:'원문'}],tags:['공연','공연','엔티켓','지역','극장','장르','초과']};
-const env={GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@example.test',GEMINI_API_KEY:'secret-key'};
+const env={LOGIN_RATE_LIMITER:{limit:async()=>({success:true})},GOOGLE_CLIENT_ID:'client',ALLOWED_EMAILS:'staff@example.test',GEMINI_API_KEY:'secret-key'};
 function request(file=new Blob([new Uint8Array([255,216,255,0])],{type:'image/jpeg'})){
  const form=new FormData();form.set('access_token','google-token');form.set('file',file,'poster.jpg');
  return new Request('https://tools.enticket.kr/api/instagram/caption',{method:'POST',body:form});

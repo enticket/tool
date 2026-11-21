@@ -42,6 +42,8 @@ with sync_playwright() as p:
         assert (b'synthetic-token' in route.request.post_data_buffer) == (path == 'session/login')
         if state['network_error']:
             route.abort()
+        elif state.get('rate_limited'):
+            route.fulfill(status=429, json={'error':'login_rate_limited'})
         elif state['server_error']:
             route.fulfill(status=502, json={'error':'upstream_error'})
         elif state['expired']:
@@ -105,7 +107,7 @@ with sync_playwright() as p:
     expect(page.locator('#osealGate')).to_contain_text('로그인이 필요한 기능입니다')
     assert '허용목록에 없습니다' in dialogs[-1]
     state['allowed'] = True
-    for failure, message in [('server_error', '계정 확인에 실패'), ('network_error', '연결하지 못했습니다'), ('expired', 'Google 인증을 확인하지 못했습니다')]:
+    for failure, message in [('rate_limited', '1분 후'), ('server_error', '계정 확인에 실패'), ('network_error', '연결하지 못했습니다'), ('expired', 'Google 인증을 확인하지 못했습니다')]:
         state[failure] = True
         count = len(dialogs)
         page.locator('#gLoginBtn').click()

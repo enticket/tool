@@ -7,7 +7,7 @@ import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 test('Workers runtime verifies accounts and rejects invalid tokens/redirects', async () => {
   let mode = 'allowed';
   const calls = [];
-  const mf = new Miniflare(convertV4MiniflareOptions({
+  const mf = new Miniflare(convertV4MiniflareOptions({ratelimits:{LOGIN_RATE_LIMITER:{namespace_id:"17001",simple:{limit:5,period:60}}},
     modules: ['worker.mjs','weekly.mjs','weekly-design.mjs','weekly-styles.mjs', 'instagram.mjs', 'instagram-job.mjs', 'instagram-caption.mjs'].map(name => ({
       type: 'ESModule', path: fileURLToPath(new URL('../src/' + name, import.meta.url)),
     })),
@@ -27,18 +27,21 @@ test('Workers runtime verifies accounts and rejects invalid tokens/redirects', a
     for (const [scenario, status, error] of [
       ['allowed', 200, undefined], ['denied', 403, 'not_allowed'],
       ['invalid', 401, 'invalid_token'], ['redirect', 502, 'google_unavailable'],
+      ['invalid', 401, 'invalid_token'], ['limited', 429, 'login_rate_limited'],
+      ['other-ip', 200, undefined],
     ]) {
       mode = scenario;
-      const response = await mf.dispatchFetch('https://tools.enticket.kr/api/verify', {
+      const response = await mf.dispatchFetch('https://tools.enticket.kr/api/' + (scenario === 'limited' ? 'session/login' : 'verify'), {
         method: 'POST',
-        headers: { Origin: 'https://tools.enticket.kr', 'Content-Type': 'multipart/form-data; boundary=test' },
+        headers: { 'CF-Connecting-IP': scenario === 'other-ip' ? '192.0.2.2' : '192.0.2.1', Origin: 'https://tools.enticket.kr', 'Content-Type': 'multipart/form-data; boundary=test' },
         body: '--test\r\nContent-Disposition: form-data; name="access_token"\r\n\r\nsynthetic-token\r\n--test--\r\n',
       });
       assert.equal(response.status, status, scenario);
+      if (status === 429) assert.equal(response.headers.get('Retry-After'), '60');
       const data = await response.json();
       if (error) assert.equal(data.error, error);
       else assert.equal(data.allowed, true);
     }
-    assert.deepEqual(calls, Array(4).fill('oauth2.googleapis.com'));
+    assert.deepEqual(calls, Array(6).fill('oauth2.googleapis.com'));
   } finally { await mf.dispose(); }
 });

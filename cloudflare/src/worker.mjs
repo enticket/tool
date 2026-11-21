@@ -4,7 +4,7 @@ import { instagramConnection, instagramMedia, InstagramError } from './instagram
 import { generateCaption } from './instagram-caption.mjs';
 import { validDraftId } from './instagram-job.mjs';
 export { InstagramJob } from './instagram-job.mjs';
-const ROUTES = new Set(['/weekly', '/session/login', '/session', '/session/logout', '/verify', '/stamp', '/upload', '/instagram/connection',
+const ROUTES = new Set(['/weekly', '/session/login', '/session', '/session/logout', '/verify', '/stamp', '/instagram/connection',
   '/instagram/schedule', '/instagram/cancel', '/instagram/schedules', '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
 const SESSION_TTL = 86400000;
 const SESSION_COOKIE = '__Host-enticket_session';
@@ -44,8 +44,7 @@ async function sessionCall(env, id, action, email) {
     method:'POST', body:JSON.stringify({action,email})
   });
 }
-const MAX_FILE = 10 * 1024 * 1024;
-const MAX_BODY = MAX_FILE + 1024 * 1024;
+const MAX_BODY = 11 * 1024 * 1024;
 class ApiError extends Error {
   constructor(code, status = 502) { super(code); this.status = status; }
 }
@@ -116,60 +115,6 @@ async function verifyGoogleAccessToken(token, clientId) {
   if (!email || !verified) throw new ApiError('email_not_verified', 403);
   return String(email).toLowerCase();
 }
-async function companyToken(env) {
-  if (!env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REFRESH_TOKEN)
-    throw new ApiError('server_not_configured', 503);
-  const res = await google('https://oauth2.googleapis.com/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET, refresh_token: env.GOOGLE_REFRESH_TOKEN,
-      grant_type: 'refresh_token' }),
-  });
-  if (!res.ok) throw new ApiError('company_token_failed');
-  const data = await res.json();
-  if (!data.access_token) throw new ApiError('company_token_failed');
-  return data.access_token;
-}
-function driveEscape(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
-async function ensurePath(token, segments) {
-  let parent = 'root';
-  for (const name of segments) {
-    const query = `name='${driveEscape(name)}' and mimeType='application/vnd.google-apps.folder' and '${driveEscape(parent)}' in parents and trashed=false`;
-    const url = new URL('https://www.googleapis.com/drive/v3/files');
-    url.search = new URLSearchParams({ q: query, fields: 'files(id,name)', spaces: 'drive' });
-    const found = await google(url, { headers: { Authorization: 'Bearer ' + token } });
-    // Failed lookup must not create duplicate folders or upload into Drive root.
-    if (!found.ok) throw new ApiError('folder_lookup_failed');
-    const data = await found.json();
-    if (data.files?.[0]?.id) { parent = data.files[0].id; continue; }
-    const created = await google('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parent] }),
-    });
-    if (!created.ok) throw new ApiError('folder_create_failed');
-    const folder = await created.json();
-    if (!folder.id) throw new ApiError('folder_create_failed');
-    parent = folder.id;
-  }
-  return parent;
-}
-async function uploadFile(token, parent, filename, mime, file) {
-  const boundary = 'enticket_' + crypto.randomUUID();
-  const body = new Blob([
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
-    JSON.stringify({ name: filename, parents: [parent] }),
-    `\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`, file,
-    `\r\n--${boundary}--\r\n`,
-  ]);
-  const res = await google('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
-    method: 'POST', headers: { Authorization: 'Bearer ' + token,
-      'Content-Type': `multipart/related; boundary=${boundary}` }, body,
-  });
-  if (!res.ok) throw new ApiError('upload_failed');
-  const saved = await res.json();
-  if (!saved.id) throw new ApiError('upload_failed');
-  return saved;
-}
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -184,7 +129,7 @@ export default {
     }
     const route = url.pathname.startsWith('/api/') ? url.pathname.slice(4) : url.pathname;
     if (!ROUTES.has(route)) {
-      if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404);
+      if (url.pathname === '/upload' || url.pathname === '/api' || url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404);
       return env.ASSETS.fetch(request);
     }
     let cors = {};
@@ -193,8 +138,6 @@ export default {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, cors);
       if (!env.GOOGLE_CLIENT_ID || !env.ALLOWED_EMAILS) throw new ApiError('server_not_configured', 503);
-      const form = await parseForm(request);
-      const token = form.get('access_token');
       const id = sessionId(request);
       const sessionRoute = route.startsWith('/session');
       // Cookie credentials may only be used by our own origin, including logout/login.
@@ -202,13 +145,24 @@ export default {
         if (request.headers.get('Origin') !== url.origin)
           throw new ApiError('origin_not_allowed',403);
       }
+      const verifiesToken = route === '/session/login' || (!id && !sessionRoute);
+      if (verifiesToken) {
+        if (!env.LOGIN_RATE_LIMITER) throw new ApiError('server_not_configured', 503);
+        const key = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const { success } = await env.LOGIN_RATE_LIMITER.limit({ key });
+        if (!success) {
+          return json({ error: 'login_rate_limited' }, 429, { ...cors, 'Retry-After': '60' });
+        }
+      }
+      const form = await parseForm(request);
       if (route === '/session/logout') {
         if (id) await sessionCall(env,id,'delete');
         cors['Set-Cookie'] = sessionCookie();
         return json({ok:true},200,cors);
       }
       let email;
-      if (route === '/session/login' || (!id && !sessionRoute)) {
+      if (verifiesToken) {
+        const token = form.get('access_token');
         if (typeof token !== 'string' || !token || token.length > 8192) throw new ApiError('missing_fields',400);
         email = await verifyGoogleAccessToken(token,env.GOOGLE_CLIENT_ID);
       } else {
@@ -274,22 +228,7 @@ export default {
           throw new ApiError('stamp_not_configured', 503);
         return json({ ok: true, by: email, mime: 'image/jpeg', b64: stamp.join('') }, 200, cors);
       }
-      const file = form.get('file');
-      const filename = form.get('filename') || 'upload.bin';
-      const mime = form.get('mime') || 'application/octet-stream';
-      const folder = form.get('folder') || '';
-      if (!(file instanceof Blob) || !file.size) throw new ApiError('missing_fields', 400);
-      if (file.size > MAX_FILE) throw new ApiError('file_too_large', 413);
-      if (typeof filename !== 'string' || filename.length > 255 || /[\r\n\0]/.test(filename) ||
-          typeof mime !== 'string' || !/^[\w.+-]+\/[\w.+-]+$/.test(mime) ||
-          typeof folder !== 'string' || folder.length > 1500) throw new ApiError('invalid_fields', 400);
-      const segments = folder.split('/').map(s => s.trim()).filter(Boolean);
-      if (!segments.length || segments.length > 8 || segments.some(s => s.length > 200 || /[\r\n\0]/.test(s)))
-        throw new ApiError('invalid_folder', 400);
-      const company = await companyToken(env);
-      const parent = await ensurePath(company, segments);
-      const saved = await uploadFile(company, parent, filename, mime, file);
-      return json({ ok: true, by: email, fileId: saved.id, name: saved.name, webViewLink: saved.webViewLink || null }, 200, cors);
+      throw new ApiError('not_found', 404);
     } catch (error) {
       const known = error instanceof ApiError || error instanceof InstagramError;
       return json({ error: known ? error.message : 'upstream_error' },
