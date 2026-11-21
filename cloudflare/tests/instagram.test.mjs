@@ -54,9 +54,10 @@ test('Workers + SQLite: immutable review, protected media, one publish and uncer
   const calls = [];
   // Synthetic JPEG marker fixture validates the server contract; it is never sent to Meta.
   const jpeg = new Uint8Array([255,216,255,192,0,17,8,5,70,4,56,3,1,17,0,2,17,0,3,17,0,255,217]);
+  jpeg[7]=5; jpeg[8]=160; // 1080 × 1440 native portrait feed.
   const storyJpeg = jpeg.slice(); storyJpeg[7] = 7; storyJpeg[8] = 128;
   const mf = new Miniflare(convertV4MiniflareOptions({
-    modules: ['worker.mjs', 'instagram.mjs', 'instagram-job.mjs', 'instagram-caption.mjs'].map(name => ({
+    modules: ['worker.mjs','weekly.mjs','weekly-design.mjs','weekly-styles.mjs', 'instagram.mjs', 'instagram-job.mjs', 'instagram-caption.mjs'].map(name => ({
       type: 'ESModule', path: fileURLToPath(new URL('../src/' + name, import.meta.url)),
     })),
     compatibilityDate: '2026-10-13', bindings,
@@ -93,6 +94,7 @@ test('Workers + SQLite: immutable review, protected media, one publish and uncer
   const id = '10000000-0000-4000-8000-000000000001';
   const draft = { draft_id: id, channel: 'feed', caption: '승인한 캡션', file: new File([jpeg], 'test.jpg', { type: 'image/jpeg' }) };
   try {
+    assert.equal((await invoke('prepare',{...draft,file:new File([storyJpeg],'too-tall.jpg',{type:'image/jpeg'})})).status,400);
     const response = await invoke('prepare', draft);
     assert.equal(response.status, 200, await response.clone().text());
     const prepared = await response.json(); assert.equal(prepared.status, 'prepared');

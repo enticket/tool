@@ -1,0 +1,113 @@
+/* App controls share surfaces, focus, spacing and popup treatments. */
+:root{--ui-field-radius:8px;--ui-popup-radius:12px;--ui-field-border:var(--color-border-neutral-strong);--ui-focus-ring:0 0 0 3px var(--color-fill-accent);--ui-option-hover:color-mix(in oklch,var(--color-bg-accent) 7%,var(--bg-white-normal));--ui-option-selected:color-mix(in oklch,var(--color-bg-accent) 12%,var(--bg-white-normal))}
+:root :is(select,textarea,input[type=text],input[type=number],input[type=email],input[type=url],input[type=password],input[type=date],input[type=time],input[type=month],input[type=datetime-local]):not(.wk-inline-text):not(.ig-time-stepper input){font-family:var(--font-family-sans-kr);border-radius:var(--ui-field-radius)!important;border-color:var(--ui-field-border);background-color:var(--bg-white-normal);color:var(--txt-black-darkest);transition:border-color .15s,box-shadow .15s}
+:root :is(select,textarea,input):focus-visible:not(.wk-inline-text):not(.ig-time-stepper input){outline:2px solid var(--color-text-accent);outline-offset:2px;box-shadow:none}
+:root :is(select,textarea,input):disabled{cursor:not-allowed}
+textarea{padding:10px 12px;border:1px solid var(--ui-field-border);line-height:1.6;resize:vertical}
+select{padding-inline:12px;cursor:pointer;text-overflow:ellipsis}
+select:disabled{background:var(--bg-grey-lighter)}
+input::placeholder,textarea::placeholder{color:var(--txt-black-dark);opacity:1}
+:is(button,summary,a[role=button]):focus-visible{outline:2px solid var(--color-text-accent);outline-offset:3px}
+:is(.btn,.gbtn,.ig-date-trigger){border-radius:var(--ui-field-radius)}
+:is(button,summary){-webkit-tap-highlight-color:transparent}
+input[type=file]{font:inherit;font-size:13px;color:var(--txt-black-darker);max-width:100%}
+input[type=file]::file-selector-button{font:inherit;color:var(--color-text-accent);background:var(--color-fill-accent);border:0;border-radius:var(--ui-field-radius);padding:9px 12px;margin-right:10px;cursor:pointer}
+input[type=file]::file-selector-button:hover{background:var(--color-fill-accent-hover)}
+:root input:is([type=checkbox],[type=radio]){appearance:none;width:16px;height:16px;min-width:16px;flex:none;vertical-align:middle;margin:0;padding:0!important;border:1px solid var(--ui-field-border);border-radius:5px;background:var(--bg-white-normal);cursor:pointer;accent-color:var(--color-bg-accent)}
+:root input[type=radio]{border-radius:50%}
+:root input[type=checkbox]:checked{border-color:var(--color-bg-accent);background-color:var(--color-bg-accent);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='m4 8 2.5 2.5L12 5.5'/%3E%3C/svg%3E")}
+:root input[type=checkbox]:indeterminate{background:linear-gradient(white,white) center/8px 2px no-repeat var(--color-bg-accent);border-color:var(--color-bg-accent)}
+:root input[type=radio]:checked{border-color:var(--color-bg-accent);background:radial-gradient(circle,var(--color-bg-accent) 0 4px,transparent 4.5px)}
+:root input[type=range]{appearance:none;height:20px;padding:0;border:0;background:transparent;box-shadow:none;accent-color:var(--color-bg-accent);cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:var(--color-border-neutral-strong)}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg-white-normal);background:var(--color-bg-accent);box-shadow:0 0 0 1px var(--color-bg-accent);margin-top:-5px}
+input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:var(--color-border-neutral-strong)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;border:2px solid var(--bg-white-normal);background:var(--color-bg-accent);box-shadow:0 0 0 1px var(--color-bg-accent)}
+input[type=color]{border-radius:var(--ui-field-radius);cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+input[type=color]::-webkit-color-swatch{border:0;border-radius:4px}
+input[type=color]::-moz-color-swatch{border:0;border-radius:4px}
+
+/* Modern browsers keep native form/keyboard semantics while rendering a styled popup. */
+@supports(appearance:base-select){
+  select:not([multiple]):not([size]),select:not([multiple]):not([size])::picker(select){appearance:base-select}
+  select:not([multiple]):not([size]){display:flex;align-items:center;gap:12px}
+  select::picker-icon{color:var(--txt-black-dark);font-size:12px;transition:rotate .15s;margin-left:auto;flex:none}
+  select:open::picker-icon{rotate:180deg;color:var(--color-text-accent)}
+  select::picker(select){background:var(--bg-white-normal);color:var(--txt-black-darkest);border:1px solid var(--ui-field-border);border-radius:var(--ui-popup-radius);padding:5px;margin-block:6px;box-shadow:var(--elevation-3);max-height:min(340px,55dvh);min-width:anchor-size(width);max-width:min(480px,calc(100vw - 24px));overflow:auto;overscroll-behavior:contain;font-family:var(--font-family-sans-kr)}
+  select option{display:flex;align-items:center;gap:10px;padding:9px 11px;min-height:36px;border:0;border-radius:6px;background:transparent;color:var(--txt-black-darkest);font:inherit;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+  select option:hover,select option:focus{background:var(--ui-option-hover);outline:0}
+  select option:checked{background:var(--ui-option-selected);color:var(--color-text-accent);font-weight:700}
+  select option::checkmark{order:1;margin-left:auto;color:var(--color-text-accent)}
+  select option:disabled{color:var(--txt-black-dark);cursor:not-allowed;background:transparent}
+  select optgroup{font:inherit;font-size:11px;font-weight:700;color:var(--txt-black-dark);padding:5px}
+}
+.ui-select-popup{position:fixed;inset:auto;margin:0;padding:5px;max-height:min(340px,55dvh);overflow:auto;overscroll-behavior:contain;background:var(--bg-white-normal);color:var(--txt-black-darkest);border:1px solid var(--ui-field-border);border-radius:var(--ui-popup-radius);box-shadow:var(--elevation-3);z-index:1600;font:13px/1.5 var(--font-family-sans-kr)}
+.ui-select-option{display:flex;gap:10px;align-items:center;padding:9px 11px;min-height:36px;border-radius:6px;cursor:pointer;overflow-wrap:anywhere}
+.ui-select-option[data-active=true]{background:var(--ui-option-hover)}
+.ui-select-option[aria-selected=true]{background:var(--ui-option-selected);color:var(--color-text-accent);font-weight:700}
+.ui-select-option[aria-selected=true]::after{content:'✓';margin-left:auto}
+.ui-select-option[aria-disabled=true]{color:var(--txt-black-dark);cursor:not-allowed}
+.ui-select-group{padding:8px 11px 4px;color:var(--txt-black-dark);font-size:11px}
+
+/* Date, time, colour and message dialogs all use the same app surface. */
+.ui-dialog,.ig-calendar{background:var(--bg-white-normal);color:var(--txt-black-darkest);border:1px solid var(--ui-field-border);border-radius:16px;box-shadow:var(--elevation-4)}
+.ui-dialog{position:fixed;inset:0;margin:auto;width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:24px;font:14px/1.6 var(--font-family-sans-kr)}
+:is(.ui-dialog,.ig-calendar,.ig-detail)::backdrop{background:color-mix(in srgb,#21172f 38%,transparent);backdrop-filter:blur(3px)}
+.ui-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.ui-dialog-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.3px}
+.ui-dialog-close{display:grid;place-items:center;width:30px;height:30px;flex:none;border:0;border-radius:50%;background:var(--bg-grey-lighter);color:var(--txt-black-darker);font:22px/1 var(--font-family-sans-kr);cursor:pointer}
+.ui-dialog-message{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--txt-black-darker);margin-bottom:20px}
+.ui-dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.ui-dialog input{min-width:0}
+.ui-dialog-error{font-size:12px;color:var(--color-text-critical);margin-top:10px}
+.ui-field-picker{position:relative;display:block;min-width:0;width:100%}
+.ui-field-picker>input{padding-right:38px!important}
+.ui-field-picker>input::-webkit-calendar-picker-indicator{display:none}
+.ui-picker-open{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--txt-black-dark);cursor:pointer}
+.ui-picker-open:hover{background:var(--color-fill-accent);color:var(--color-text-accent)}
+.ui-picker-open:disabled{opacity:var(--opacity-disabled);cursor:not-allowed}
+.ui-picker-open svg{width:17px;height:17px;pointer-events:none}
+.ig-date-trigger{background:var(--bg-white-normal);color:var(--txt-black-darkest);border-color:var(--ui-field-border)}
+.ui-date-icon{display:flex;flex:none}.ui-date-icon svg{width:17px;height:17px}
+.ig-calendar-head{gap:6px}
+.ig-calendar-head strong{flex:1;text-align:center;white-space:nowrap}
+.ig-calendar-icon{color:var(--txt-black-darker)}
+.ig-calendar-icon:hover:not(:disabled){background:var(--ui-option-hover)}
+.ig-calendar-grid span{color:var(--txt-black-dark)}
+.ig-calendar-day{color:var(--txt-black-darkest);border-radius:8px}
+.ig-calendar-day:hover:not(:disabled){background:var(--ui-option-hover)}
+.ig-calendar-day[aria-pressed=true]{background:var(--color-bg-accent);color:var(--txt-white-normal)}
+.ig-calendar-day:disabled{color:var(--txt-black-dark);opacity:.35}
+.ig-calendar-grid.is-months{grid-template-columns:repeat(3,1fr)}
+.ig-calendar-grid.is-months .ig-calendar-day{aspect-ratio:auto;padding:12px 6px}
+.ig-calendar-time{border-color:var(--color-border-neutral)}
+.ig-calendar-time label{color:var(--txt-black-darker)}
+.ig-time-stepper{border-color:var(--ui-field-border);background:var(--bg-grey-lighter)}
+.ig-time-stepper:focus-within{border-color:var(--color-text-accent);box-shadow:var(--ui-focus-ring)}
+.ig-time-stepper :is(input,button):focus{outline:0;box-shadow:none}
+.ig-time-stepper input{color:var(--txt-black-darkest)}
+.ig-time-stepper button{color:var(--color-text-accent)}
+.ig-time-stepper button:hover{background:var(--ui-option-hover)}
+.ui-colour-preview{height:64px;border:1px solid var(--ui-field-border);border-radius:var(--ui-field-radius);margin-bottom:16px}
+.ui-colour-swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:16px 0}
+.ui-colour-swatches button{width:100%;aspect-ratio:1;border:1px solid var(--ui-field-border);border-radius:6px;cursor:pointer}
+.ui-colour-swatches button[aria-pressed=true]{outline:2px solid var(--color-text-accent);outline-offset:2px}
+.ui-colour-channel{display:grid;grid-template-columns:16px minmax(0,1fr) 36px;align-items:center;gap:12px;margin:10px 0;font-size:12px;color:var(--txt-black-darker)}
+.ui-colour-channel output{text-align:right;font-variant-numeric:tabular-nums}
+.ui-colour-hex{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--txt-black-darker)}
+.ui-colour-hex input{flex:1;font-family:var(--font-family-mono)}
+/* The studio uses the same light/dark surfaces as the other tools. */
+#wkDesignView{--studio-border:var(--color-border-neutral);--studio-ink:var(--txt-black-darkest);--studio-muted:var(--txt-black-dark);--studio-accent:var(--color-text-accent)}
+#wkDesignView :is(.wk-design-toolbar,#wkRange,.wk-assets,.wk-studio-tools,.wk-stage-bottom){background:var(--bg-white-normal)}
+#wkDesignView :is(.wk-stage,.wk-studio){background:var(--bg-grey-lightest)}
+#wkDesignView .wk-filmstrip{background:var(--bg-grey-lighter)}
+#wkDesignView :is(.wk-add-text,.wk-shapes button){background:var(--bg-grey-lighter);border-color:var(--ui-field-border);color:var(--color-text-accent)}
+#wkDesignView :is(.wk-studio-tools button,.wk-stage-bottom button){color:var(--txt-black-darker)}
+#wkDesignView :is(.wk-studio-tools button,.wk-stage-bottom button):hover:not(:disabled){background:var(--ui-option-hover)}
+#wkDesignView .wk-studio-tools button[aria-pressed=true]{background:var(--ui-option-selected);color:var(--color-text-accent)}
+#wkDesignView .wk-stage-bottom select{background:var(--bg-grey-lighter);color:var(--txt-black-darkest)}
+#wkDesignView .wk-assets-tabs button[aria-selected=true]{color:var(--color-text-accent);border-bottom-color:var(--color-text-accent)}
+#wkDesignView.wk-focus{background:var(--bg-grey-lightest)}
+@media(prefers-reduced-motion:reduce){:root :is(input,select,textarea),select::picker-icon{transition:none}}
+@media(forced-colors:active){:root input:is([type=checkbox],[type=radio]){appearance:auto}input[type=range]{appearance:auto}}

@@ -3,6 +3,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 from security_headers import security_headers
+from public_assets import ROOT, PUBLIC_ASSETS, public_html
 
 class LegacyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -12,14 +13,16 @@ class LegacyHandler(BaseHTTPRequestHandler):
         self.respond(False)
 
     def respond(self, body):
-        if urlsplit(self.path).path not in ('/', '/index.html'):
+        path = urlsplit(self.path).path
+        asset = path.lstrip('/')
+        if path not in ('/', '/index.html') and asset not in PUBLIC_ASSETS:
             self.send_error(404)
             return
-        content = (Path(__file__).resolve().parents[1] / 'index.html').read_bytes()
+        content = (ROOT / asset).read_bytes() if asset in PUBLIC_ASSETS else public_html().encode()
         self.send_response(200)
-        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Type', PUBLIC_ASSETS.get(asset, 'text/html; charset=utf-8'))
         self.send_header('Content-Length', str(len(content)))
-        for name, value in security_headers(content.decode()).items():
+        for name, value in security_headers(public_html()).items():
             self.send_header(name, value)
         self.end_headers()
         if body:

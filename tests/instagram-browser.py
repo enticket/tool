@@ -1,3 +1,4 @@
+from browser_support import accept_app_messages
 """Browser image/review flow with synthetic providers; never calls Meta or publishes."""
 import base64
 import os
@@ -16,6 +17,7 @@ with sync_playwright() as p:
     state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'caption_error':False, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
+    accept_app_messages(page)
     install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{initTokenClient(opts){return {requestAccessToken(){opts.callback({access_token:'synthetic-google-token',expires_in:3600});}}},revoke(){}}}};
@@ -85,13 +87,23 @@ with sync_playwright() as p:
         expect(page.locator('#igX')).to_have_value('0')
         expect(page.locator('#igY')).to_have_value('0')
         expect(page.locator('#igBackgroundMode')).to_be_checked()
+        expect(page.locator('#igFormat')).to_have_value('frame')
         assert page.locator('#igFile').input_value() == ''
         assert not page.locator('#igPreview').get_attribute('src')
         expect(page.locator('#igConnectionBadge')).to_have_text('연결 확인 완료')
 
-    fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=600;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,600,900);return c.toDataURL('image/png').split(',')[1];}''')
+    fixture = page.evaluate('''() => {const c=document.createElement('canvas'); c.width=675;c.height=900;const ctx=c.getContext('2d');ctx.fillStyle='#602b89';ctx.fillRect(0,0,675,900);ctx.fillStyle='#edd039';ctx.fillRect(0,450,675,450);return c.toDataURL('image/png').split(',')[1];}''')
     page.locator('#igFile').set_input_files({'name': 'poster.png', 'mimeType': 'image/png', 'buffer': base64.b64decode(fixture)})
     expect(page.locator('#igPrepare')).to_be_enabled()
+    expect(page.locator('#igFormat')).to_have_value('frame')
+    expect(page.locator('#igBackgroundMode')).to_be_checked()
+    # At the poster's horizontal color boundary, the side margin blends both colors.
+    edge,above,below=page.locator('#igPreview').evaluate("""async img=>{
+        await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+        const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+        return [[8,675],[540,670],[540,680]].map(([x,y])=>ctx.getImageData(x,y,1,1).data[1]);
+    }""")
+    assert above+20<edge<below-20,(edge,above,below)
     expect(page.locator('#igField_inquiry')).to_be_hidden()
     page.locator('#igCaptionDetails summary').click()
     expect(page.locator('#igField_inquiry')).to_be_visible()

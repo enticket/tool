@@ -1,3 +1,4 @@
+import { weeklyLibrary } from './weekly.mjs';
 import { instagramConfig, instagramConnection, instagramRequest, InstagramError } from './instagram.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -15,7 +16,7 @@ const publicJob = job => ({ ok: true, draftId: job.id, fingerprint: job.fingerpr
   account: { id: job.accountId, username: job.username }, channel: job.channel,
   caption: job.caption, scheduledAt:job.scheduledAt?new Date(job.scheduledAt).toISOString():null, previewUrl:job.scheduledAt && job.expiresAt>Date.now()?`/instagram-media/${job.id}/${job.capability}`:null, status: job.status, mediaId: job.mediaId || null,
   publishedAt: job.status === 'published' ? new Date(job.publishedAt || job.attemptedAt || job.scheduledAt || job.expiresAt - DAY).toISOString() : null,
-  error: job.error || null, expiresAt: new Date(job.expiresAt).toISOString() });
+  permalink: job.permalink || null, error: job.error || null, expiresAt: new Date(job.expiresAt).toISOString() });
 const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', value)), b => b.toString(16).padStart(2, '0')).join('');
 
 // Validate the browser-rendered JPEG, including dimensions, without native image libraries.
@@ -45,6 +46,7 @@ export class InstagramJob {
   async fetch(request) {
     try {
       const path = new URL(request.url).pathname;
+      if (path === '/weekly') return await weeklyLibrary(this,request,{jpegSize,validDraftId});
       if (path === '/register' || path === '/schedules') return await this.registry(request,path);
       if (path === '/media') return await this.media(request);
       if (path === '/prepare') return await this.prepare(request);
@@ -52,6 +54,12 @@ export class InstagramJob {
       if (!job) throw new InstagramError('instagram_draft_not_found', 404);
       if (job.accountId !== instagramConfig(this.env)) throw new InstagramError('instagram_account_mismatch', 409);
       if(path==='/snapshot')return reply(publicJob(job));
+      if(path==='/review')return this.media(new Request('https://job/media?key='+job.capability+'&index='+new URL(request.url).searchParams.get('index')));
+      if(path==='/abandon'){
+        const abandoned=await this.ctx.storage.transaction(async tx=>{const j=await tx.get('job');
+          if(!['prepared','failed','cancelled'].includes(j.status))throw new InstagramError('weekly_locked',409);
+          j.status='cancelled';await tx.put('job',j);return j;});return reply(publicJob(abandoned));
+      }
       const input = await request.json();
       if (path === '/schedule' || path === '/cancel') return await this.schedule(job,input,path);
       if (path === '/publish') return await this.publish(job, input);
@@ -98,6 +106,7 @@ export class InstagramJob {
     return reply({ok:true,nextCursor:offset<active.length?String(offset):null,items:items.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt))});
   }
   async schedule(original,input,path){
+    if(original.channel==='carousel') throw new InstagramError('instagram_invalid_schedule',400);
     const cancel=path==='/cancel';
     if(input.fingerprint!==original.fingerprint || input.confirm!==(cancel?'cancel':'schedule')) throw new InstagramError('instagram_confirmation_required',409);
     const time=typeof input.scheduled_at==='string' && /Z$/.test(input.scheduled_at)?Date.parse(input.scheduled_at):NaN;
@@ -119,17 +128,19 @@ export class InstagramJob {
   async prepare(request) {
     const form = await request.formData();
     const id = form.get('draft_id'), channel = form.get('channel'), caption = form.get('caption');
-    const file = form.get('file');
-    if (!validDraftId(id) || !['feed', 'story'].includes(channel) || typeof caption !== 'string' ||
-        [...caption].length > 2200 || (channel === 'story' && caption !== '') ||
-        !(file instanceof Blob) || file.type !== 'image/jpeg' || !file.size || file.size > 4 * 1024 * 1024)
-      throw new InstagramError('instagram_invalid_draft', 400);
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const dimensions = jpegSize(bytes);
-    if (dimensions?.width !== 1080 || dimensions?.height !== (channel === 'feed' ? 1350 : 1920))
-      throw new InstagramError('instagram_invalid_image', 400);
-    const accountId = instagramConfig(this.env);
-    const fingerprint = await hash(new TextEncoder().encode(JSON.stringify({ accountId, channel, caption, image: await hash(bytes) })));
+    const files=form.getAll('file');
+    if (!validDraftId(id) || !['feed','story','carousel'].includes(channel) || typeof caption!=='string' || [...caption].length>2200 || (channel==='story'&&caption!=='')) throw new InstagramError('instagram_invalid_draft',400);
+    if(channel==='carousel' ? (files.length<3||files.length>10) : files.length!==1) throw new InstagramError('instagram_invalid_draft',400);
+    if(files.some(f=>!(f instanceof Blob)||f.type!=='image/jpeg'||!f.size||f.size>4*1024*1024)||files.reduce((n,f)=>n+f.size,0)>10*1024*1024) throw new InstagramError('instagram_invalid_image',400);
+    const images=[];
+    for(const file of files){const bytes=new Uint8Array(await file.arrayBuffer()),d=jpegSize(bytes);
+      const validHeight=d&&(channel==='feed'?d.height>=565&&d.height<=1440:d.height===(channel==='story'?1920:1350));
+      if(d?.width!==1080||!validHeight)throw new InstagramError('instagram_invalid_image',400);
+      images.push(bytes);
+    }
+    const bytes=images[0],accountId=instagramConfig(this.env);
+    const hashes=await Promise.all(images.map(hash));
+    const fingerprint=await hash(new TextEncoder().encode(JSON.stringify({accountId,channel,caption,image:channel==='carousel'?hashes:hashes[0]})));
     const existing = await this.ctx.storage.get('job');
     if (existing) {
       if (existing.fingerprint !== fingerprint) throw new InstagramError('instagram_draft_conflict', 409);
@@ -138,7 +149,7 @@ export class InstagramJob {
     const account = await instagramConnection(this.env);
     const job = { id, fingerprint, accountId, username: account.username, channel, caption,
       status: 'prepared', capability: crypto.randomUUID() + crypto.randomUUID(),
-      chunks: Math.ceil(bytes.length / CHUNK), size: bytes.length, expiresAt: Date.now() + DAY };
+      imageChunks:images.map(b=>Math.ceil(b.length/CHUNK)), chunks: Math.ceil(bytes.length / CHUNK), size: bytes.length, expiresAt: Date.now() + DAY };
     // Serialize competing preparations and store all image chunks atomically.
     await this.ctx.storage.transaction(async txn => {
       const current = await txn.get('job');
@@ -147,8 +158,8 @@ export class InstagramJob {
         Object.assign(job, current); return;
       }
       const entries = { job };
-      for (let i = 0; i < job.chunks; i++) entries['image:' + i] = bytes.slice(i * CHUNK, (i + 1) * CHUNK);
-      await txn.put(entries);
+      for(let n=0;n<images.length;n++)for(let i=0;i<job.imageChunks[n];i++)entries[n===0?'image:'+i:`image${n}:${i}`]=images[n].slice(i*CHUNK,(i+1)*CHUNK);
+      const pairs=Object.entries(entries);for(let i=0;i<pairs.length;i+=64)await txn.put(Object.fromEntries(pairs.slice(i,i+64)));
       await txn.setAlarm(job.expiresAt);
     });
     return reply(publicJob(job));
@@ -157,9 +168,11 @@ export class InstagramJob {
     const job = await this.ctx.storage.get('job');
     const capability = new URL(request.url).searchParams.get('key');
     if (!job || job.expiresAt <= Date.now() || capability !== job.capability) return new Response(null, { status: 404 });
+    const index=Number(new URL(request.url).searchParams.get('index')||0);
+    if(!Number.isInteger(index)||index<0||index>=(job.imageChunks?.length||1))return new Response(null,{status:404});
     const chunks = [];
-    for (let i = 0; i < job.chunks; i++) {
-      const chunk = await this.ctx.storage.get('image:' + i);
+    for (let i = 0; i < (job.imageChunks?.[index]||job.chunks); i++) {
+      const chunk = await this.ctx.storage.get(index===0?'image:'+i:`image${index}:${i}`);
       if (!chunk) return new Response(null, { status: 404 });
       chunks.push(chunk);
     }
@@ -186,12 +199,28 @@ export class InstagramJob {
         const account = await instagramConnection(this.env);
         if (account.username !== job.username) throw new InstagramError('instagram_account_mismatch', 409);
         const imageUrl = `https://tools.enticket.kr/instagram-media/${job.id}/${job.capability}`;
-        const container = await instagramRequest(this.env, job.accountId + '/media', { body: {
-          image_url: imageUrl, ...(job.channel === 'story' ? { media_type: 'STORIES' } : { caption: job.caption }),
-        } });
-        if (!/^\d+$/.test(container.id || '')) throw new InstagramError('instagram_unavailable');
-        job.containerId = container.id;
-        await this.ctx.storage.put('job', job);
+        if(job.channel==='carousel'){
+          job.childIds=[];
+          for(let i=0;i<job.imageChunks.length;i++){
+            const child=await instagramRequest(this.env,job.accountId+'/media',{body:{image_url:imageUrl+'/'+i,is_carousel_item:true}});
+            if(!/^\d+$/.test(child.id||''))throw new InstagramError('instagram_unavailable');
+            job.childIds.push(child.id);await this.ctx.storage.put('job',job);
+          }
+        }else{
+          const container=await instagramRequest(this.env,job.accountId+'/media',{body:{image_url:imageUrl,...(job.channel==='story'?{media_type:'STORIES'}:{caption:job.caption})}});
+          if(!/^\d+$/.test(container.id||''))throw new InstagramError('instagram_unavailable');
+          job.containerId=container.id;await this.ctx.storage.put('job',job);
+        }
+      }
+      if(job.channel==='carousel'&&!job.containerId){
+        for(const id of job.childIds){
+          const state=await instagramRequest(this.env,id,{fields:'status_code'});
+          if(['ERROR','EXPIRED'].includes(state.status_code))throw new InstagramError('instagram_media_failed');
+          if(state.status_code!=='FINISHED'){job.status='processing';await this.ctx.storage.put('job',job);return reply(publicJob(job));}
+        }
+        const parent=await instagramRequest(this.env,job.accountId+'/media',{body:{media_type:'CAROUSEL',children:job.childIds.join(','),caption:job.caption}});
+        if(!/^\d+$/.test(parent.id||''))throw new InstagramError('instagram_unavailable');
+        job.containerId=parent.id;await this.ctx.storage.put('job',job);
       }
       const state = await instagramRequest(this.env, job.containerId, { fields: 'status_code' });
       if (state.status_code === 'PUBLISHED') { job.status = 'published'; job.publishedAt ||= Date.now(); }
@@ -204,6 +233,10 @@ export class InstagramJob {
         const result = await instagramRequest(this.env, job.accountId + '/media_publish', { body: { creation_id: job.containerId } });
         if (!/^\d+$/.test(result.id || '')) throw new InstagramError('instagram_unavailable');
         job.mediaId = result.id; job.status = 'published'; job.publishedAt ||= Date.now();
+        // A permalink lookup failure must never change a successful publication to unknown.
+        if(job.channel==='carousel')try{await this.ctx.storage.put('job',job);const media=await instagramRequest(this.env,result.id,{fields:'permalink'});const link=new URL(media.permalink);
+          if(link.protocol==='https:'&&['www.instagram.com','instagram.com'].includes(link.hostname)&&!link.username&&!link.password)job.permalink=link.href;
+        }catch{}
       } else { job.status = 'processing'; }
       await this.ctx.storage.put('job', job);
     } catch (e) {
@@ -237,7 +270,8 @@ export class InstagramJob {
     if(job.status==='scheduled' && job.scheduledAt>Date.now()){await this.ctx.storage.setAlarm(job.scheduledAt);return;}
     if(job.expiresAt<=Date.now()){
       if(job.scheduledAt && ['scheduled','processing'].includes(job.status)){job.status='failed';job.error='instagram_draft_expired';await this.ctx.storage.put('job',job);}
-      await this.ctx.storage.delete(Array.from({length:job.chunks},(_,i)=>'image:'+i));
+      for(let n=0;n<(job.imageChunks?.length||1);n++)await this.ctx.storage.delete(Array.from({length:job.imageChunks?.[n]||job.chunks},(_,i)=>n===0?'image:'+i:`image${n}:${i}`));
+      if(job.channel==='carousel')return; // Permanent small receipt; images still expire after 24 hours.
       if(Date.now()>=job.expiresAt+29*DAY)await this.ctx.storage.deleteAll();
       else await this.ctx.storage.setAlarm(job.expiresAt+29*DAY);
     }else await this.ctx.storage.setAlarm(job.expiresAt);

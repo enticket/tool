@@ -4,7 +4,7 @@ import { instagramConnection, instagramMedia, InstagramError } from './instagram
 import { generateCaption } from './instagram-caption.mjs';
 import { validDraftId } from './instagram-job.mjs';
 export { InstagramJob } from './instagram-job.mjs';
-const ROUTES = new Set(['/session/login', '/session', '/session/logout', '/verify', '/stamp', '/upload', '/instagram/connection',
+const ROUTES = new Set(['/weekly', '/session/login', '/session', '/session/logout', '/verify', '/stamp', '/upload', '/instagram/connection',
   '/instagram/schedule', '/instagram/cancel', '/instagram/schedules', '/instagram/media', '/instagram/caption', '/instagram/prepare', '/instagram/publish', '/instagram/status']);
 const SESSION_TTL = 86400000;
 const SESSION_COOKIE = '__Host-enticket_session';
@@ -175,11 +175,11 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/healthz') return json({ ok: true, service: 'enticket-drive' });
     if (url.pathname.startsWith('/instagram-media/')) {
-      const match = /^\/instagram-media\/([^/]+)\/([0-9a-f-]{72})$/.exec(url.pathname);
+      const match = /^\/instagram-media\/([^/]+)\/([0-9a-f-]{72})(?:\/(\d))?$/.exec(url.pathname);
       if (!match || !validDraftId(match[1]) || !env.INSTAGRAM_JOBS || !['GET', 'HEAD'].includes(request.method))
         return new Response(null, { status: 404 });
       const stub = env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName(match[1]));
-      const response = await stub.fetch('https://job/media?key=' + match[2]);
+      const response = await stub.fetch('https://job/media?key=' + match[2] + '&index=' + (match[3] || '0'));
       return request.method === 'HEAD' ? new Response(null, { status: response.status, headers: response.headers }) : response;
     }
     const route = url.pathname.startsWith('/api/') ? url.pathname.slice(4) : url.pathname;
@@ -232,6 +232,14 @@ export default {
       }
       if (sessionRoute) return json({ok:true,allowed:true,email},200,cors);
       if (route === '/verify') return json({ ok: true, allowed: true, email }, 200, cors);
+      if (route === '/weekly') {
+        if (!env.INSTAGRAM_JOBS) throw new InstagramError('instagram_storage_not_configured',503);
+        form.delete('access_token');
+        const stub=env.INSTAGRAM_JOBS.get(env.INSTAGRAM_JOBS.idFromName('weekly-library'));
+        const r=await stub.fetch('https://job/weekly',{method:'POST',body:form});
+        const headers=new Headers(r.headers);for(const [k,v] of Object.entries(cors))headers.set(k,v);
+        return new Response(r.body,{status:r.status,headers});
+      }
       if (route === '/instagram/connection')
         return json({ ok: true, connected: true, account: await instagramConnection(env) }, 200, cors);
       if (route === '/instagram/media')

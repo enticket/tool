@@ -6,6 +6,7 @@
 <title>엔티켓 업무 도구</title>
 <script>
 try { if(localStorage.getItem('enticket-nav-collapsed')==='true') document.documentElement.classList.add('nav-collapsed'); } catch {}
+if(history.state?.enticketMenu?.tab && history.state.enticketMenu.tab!=='excel') document.documentElement.classList.add('restoring-menu');
 // Keep old bookmarks working after the Cloudflare move.
 if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)?$/.test(location.pathname)) {
   location.replace("https://tools.enticket.kr/");
@@ -13,6 +14,7 @@ if (location.hostname === "enticket.github.io" && /^\/tool(?:\/(?:index\.html)?)
 </script>
 <script id="tool-config" type="application/json">{"mode":"local","apiBase":"/api"}</script>
 <style>
+.restoring-menu #mainNav, .restoring-menu .panel-view { visibility: hidden; }
 [hidden] { display: none !important; }
 .auth-loading { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#978a9f; height:30px; padding:0; }
 .auth-loading:not(.is-error)::before { content:""; display:block; width:14px; height:14px; flex-shrink:0; box-sizing:border-box; border:2px solid #e5ddeb; border-top-color:#75469b; border-radius:50%; animation:auth-spin .8s linear infinite; }
@@ -335,7 +337,12 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
   .nav-collapsed .gnb-head { justify-content:center; }
   .nav-collapsed .gnb-brand, .nav-collapsed .nav-label, .nav-collapsed .section-label { display:none; }
   .nav-collapsed .tab { justify-content:center; padding:10px; }
-  .nav-collapsed .ig-subnav, .nav-collapsed .settlement-subnav { display:none; }
+  .nav-collapsed .ig-subnav, .nav-collapsed .settlement-subnav { margin-left:0; }
+  .nav-collapsed .submenu-items { gap:0; padding:0; border:0; }
+  .nav-collapsed .ig-subtab { min-height:30px; padding:0; font-size:0; background:transparent; }
+  .nav-collapsed .ig-subtab::after { content:""; position:absolute; inset:0 auto 0 50%; width:1px; background:var(--color-border-neutral-strong); }
+  .nav-collapsed .ig-subtab.active::before { content:""; position:absolute; left:50%; top:7px; bottom:7px; width:2px; background:var(--color-bg-accent); z-index:1; }
+  .nav-collapsed .ig-subtab:focus-visible { outline-offset:-2px; }
   .nav-collapsed .gauth { justify-content:center; }
   .nav-collapsed #gUser { display:none !important; }
   .nav-collapsed .gauth .gbtn { width:34px; padding:0; justify-content:center; }
@@ -390,7 +397,7 @@ b, strong, th, h2, h3, h4 { font-weight: var(--font-weight-700); }
    폭이 내용물 크기(shrink-to-fit)로 쪼그라든다 — 콘텐츠 열이 1352px여도 wrap은 467px가 됐다. */
 .wrap {
   width: 100%;
-  max-width: 900px;
+  max-width: 1160px;
   margin-inline: auto;
   padding: var(--spacing-24) var(--spacing-32) var(--spacing-32);
 }
@@ -667,6 +674,20 @@ th {
 tbody tr:last-child td { border-bottom: none; }
 tr:nth-child(even) td { background: transparent; }
 tbody tr:hover td { background: var(--bg-grey-lighter); }
+#output tbody tr:hover td[rowspan]:not(:hover),
+#output tbody tr:has(> td[rowspan]:hover) > td:not(:hover) { background: transparent; }
+#output tr:has(+ tr.grade-start) > td:not([rowspan]) { border-bottom: 0; }
+#output tr.grade-start td { border-top: 1px solid #555; }
+#output { container-type: inline-size; }
+@container (max-width: 920px) {
+  #output th, #output td { padding: 6px 4px; }
+  #output th { white-space: normal; word-break: keep-all; }
+  #output td.seat-grade {
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  #output td.l { width: 20%; max-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #output .session-time { display: block; }
+}
 tr.total td {
   background: var(--color-fill-accent) !important;
   font-weight: var(--font-weight-700);
@@ -770,7 +791,11 @@ td.c { text-align: center; }
   color: var(--txt-black-darkest);
   cursor: pointer; user-select: none;
 }
-.supp-head .chev, .merge-toggle .chev {
+details > summary { display:flex; align-items:center; list-style:none; }
+details > summary::-webkit-details-marker { display:none; }
+details > summary > .chev { flex:none; margin-inline-end:var(--spacing-8); }
+details[open] > summary > .chev { transform:rotate(90deg); }
+.supp-head .chev, .merge-toggle .chev, summary > .chev {
   display: flex; color: var(--color-icon-neutral);
   transition: transform var(--motion-transition-fast);
 }
@@ -1340,13 +1365,104 @@ td.c { text-align: center; }
 .ig-time-stepper { display:flex; flex-direction:column; align-items:center; width:64px; flex-shrink:0; border:1px solid #e6deed; border-radius:10px; background:#faf8fc; overflow:hidden; }
 .ig-time-stepper:focus-within { border-color:#956ab3; box-shadow:0 0 0 3px #ede5f5; }
 .ig-time-stepper button { display:flex; align-items:center; justify-content:center; width:100%; height:18px; padding:0; border:0; background:transparent; color:#987eaa; line-height:1; }
+.ig-time-stepper button::before { content:""; width:8px; height:5px; background:currentColor; clip-path:polygon(0 80%,50% 0,100% 80%,85% 100%,50% 42%,15% 100%); }
+.ig-time-stepper button[data-step="-1"]::before { transform:rotate(180deg); }
 .ig-time-stepper button:hover { background:#eee6f5; color:#64348b; }
 .ig-time-stepper input { width:100%; min-width:0; padding:0; height:28px; border:0; outline:none; background:transparent; text-align:center; font-family:inherit; line-height:28px; font-size:20px; font-weight:600; color:#563373; font-variant-numeric:tabular-nums; }
 
 .ig-calendar-apply { width:100%; border:0; border-radius:8px; background:#64348b; color:white; padding:11px; }
+
+.wk-layout{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1.3fr);gap:20px}.wk-panel{padding:20px;border:1px solid var(--color-border-neutral);border-radius:12px;margin:16px 0;min-width:0;background:var(--bg-white-normal)}.wk-toolbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}.wk-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin:20px 0}.wk-day{min-height:85px;border:1px solid var(--color-border-neutral);padding:4px;min-width:0}.wk-day-name{text-align:center;padding:8px;font-size:12px}.wk-event{display:block;font:inherit;font-size:11px;line-height:1.4;background:var(--bg-grey-lighter);color:var(--color-text-accent);border:0;border-radius:4px;margin:4px 0;padding:4px;width:100%;text-align:left;overflow-wrap:anywhere;cursor:pointer}.wk-candidate{display:flex;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--color-border-neutral)}.wk-card-editor{padding:16px;margin:16px 0;border:1px solid var(--color-border-neutral);border-radius:8px}.wk-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.wk-previews figure{margin:0;min-width:0}.wk-previews img{width:100%;border-radius:8px}.wk-previews a{font-size:12px}.wk-source{display:block;text-align:left;width:100%;background:var(--bg-grey-lighter);color:inherit;padding:10px;border:0;border-radius:6px;margin:6px 0;cursor:pointer}.wk-event img{width:100%;height:44px;object-fit:contain;display:block;background:var(--bg-white-normal)}.wk-event-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.wk-event small{display:block;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#igWeeklyView input[type="text"],#igWeeklyView input[type="date"],#igWeeklyView input[type="month"],#igWeeklyView input[type="url"]{border:1px solid var(--color-border-neutral);border-radius:8px;padding:10px 12px;background:var(--bg-white-normal);color:var(--txt-black-darkest);font:inherit;width:100%;box-sizing:border-box}#igWeeklyView .ig-field{margin:10px 0}#wkEditor{border:0;padding:0;min-width:0}#wkFinalCaption{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;padding:12px;background:var(--bg-grey-lighter)}#wkPPreview{max-width:100%;max-height:280px;object-fit:contain;margin:12px 0}#wkStatus[data-error="true"],#wkPMessage{color:var(--color-text-danger,#b23a4a)}#igWeeklyView input:not([type="checkbox"]),#igWeeklyView textarea,#igWeeklyView select{max-width:100%;min-width:0}#igWeeklyView .btn-row{flex-wrap:wrap;margin:12px 0}@media(max-width:1000px){.wk-layout{grid-template-columns:1fr}}@media(max-width:480px){.wk-panel{padding:12px}.wk-day{min-height:65px}.wk-previews{grid-template-columns:1fr}}
+
+
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.wk-outside{color:var(--txt-black-dark);opacity:.45}.wk-heading h2{margin:0 0 6px}.wk-month-nav,.wk-design-toolbar{display:flex;align-items:center;gap:8px}.wk-month-nav label{max-width:190px}.wk-design-toolbar{flex-wrap:wrap}.wk-design-toolbar .ig-field{margin:0!important}.wk-drafts{flex:1;min-width:160px}.wk-studio{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:20px;margin:18px 0;align-items:start}.wk-stage{background:var(--bg-grey-lighter);border:1px solid var(--color-border-neutral);border-radius:12px;padding:20px;min-width:0}.wk-inspector{background:var(--bg-white-normal);border:1px solid var(--color-border-neutral);border-radius:12px;min-width:0;overflow:hidden}.wk-inspector-section{padding:18px;border-bottom:1px solid var(--color-border-neutral)}.wk-inspector-section h3{margin:0;font-size:14px}.wk-inspector-section summary{cursor:pointer;font-weight:600;font-size:14px}.wk-inspector .wk-card-editor{border:0;margin:0;padding:18px}.wk-previews{display:block;min-height:280px}.wk-previews figure{max-width:360px;margin:0 auto}.wk-previews img{box-shadow:0 8px 28px #0002}.wk-previews figure>a:last-child{display:block;text-align:center;margin-top:8px;color:var(--color-text-accent);font-size:12px}.wk-filmstrip{display:flex;gap:8px;overflow-x:auto;padding:8px 0 16px}.wk-filmstrip button{flex:0 0 72px;border:2px solid transparent;background:var(--bg-white-normal);border-radius:6px;padding:5px;color:inherit;cursor:pointer;font:inherit;font-size:11px}.wk-filmstrip button[aria-pressed="true"]{border-color:var(--color-text-accent)}.wk-filmstrip img{width:100%;aspect-ratio:4/5;object-fit:contain}.wk-publish-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--color-border-neutral);padding-top:12px}.wk-publish-bar .btn-row{flex-shrink:0}.wk-candidate{font-size:13px}.wk-candidate input{margin-top:3px}.wk-candidate img{width:36px;height:48px;object-fit:contain;flex-shrink:0}.wk-calendar{border-bottom:1px solid var(--color-border-neutral)}.wk-day{min-height:115px;padding:8px}.wk-day-date{background:transparent;border:0;color:inherit;padding:2px 4px;font:inherit;cursor:pointer;border-radius:4px}.wk-day-date:hover{background:var(--bg-grey-lighter)}.wk-event{font-size:12px}.wk-event img{height:56px}.wk-event small{font-size:10px}.wk-today{background:var(--color-text-accent);color:white}.wk-inspector .ig-field input,.wk-inspector textarea{width:100%}.wk-stage [hidden]{display:none!important}
+@media(max-width:760px){.wk-studio{grid-template-columns:1fr}.wk-inspector{order:2}.wk-stage{padding:14px}.wk-previews figure{max-width:320px}.wk-publish-bar{flex-direction:column;align-items:stretch}.wk-day{min-height:75px;padding:3px}.wk-event img{height:36px}.wk-event-title{font-size:10px}.wk-month-nav{flex-wrap:wrap}.wk-design-toolbar{align-items:end}.wk-stage .wk-toolbar{gap:8px}}
+
+
+/* Performance calendar: quiet month header, roomy dates and compact poster cards. */
+#wkCalendarView>.wk-panel{padding:24px;border-radius:18px;box-shadow:0 4px 24px #24133d05}.wk-calendar-toolbar{gap:16px}.wk-month-nav{gap:10px}.wk-month-nav strong{font-size:22px;font-weight:700;letter-spacing:-.7px;white-space:nowrap}.wk-month-nav label{width:34px;position:relative}.wk-month-nav input[type="month"]{width:34px!important;padding:5px!important;color:transparent!important;background:transparent!important;border:0!important;cursor:pointer}.wk-month-nav input::-webkit-datetime-edit{display:none}.wk-calendar-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:22px 0 12px;color:var(--txt-black-dark);font-size:12px}.wk-legend-dot{display:inline-block;width:7px;height:7px;background:#7847af;border-radius:50%;margin:0 5px 1px 12px}.wk-legend-dot.pending{background:#d3a052}.wk-calendar{margin:0 0 14px;border:1px solid var(--color-border-neutral);border-radius:12px;overflow:hidden;gap:1px;background:var(--color-border-neutral)}.wk-day-name{background:var(--bg-white-normal);padding:14px 6px;color:var(--txt-black-dark);font-size:12px;font-weight:500}.wk-day-name:nth-child(7){color:#c77982}.wk-day{border:0;background:var(--bg-white-normal);min-height:0;box-sizing:border-box;padding:0;display:grid}.wk-outside{opacity:1;color:var(--color-border-neutral-strong);background:var(--bg-grey-lighter)}.wk-day-date{flex-shrink:0;align-self:flex-start;font-size:12px;width:24px;height:24px;border-radius:50%;padding:0;margin:0 0 2px}.wk-today{background:#7040a2;color:white;font-weight:700}.wk-event{position:relative;display:flex;align-items:center;gap:5px;height:26px;min-height:26px;flex-shrink:0;padding:3px 5px;margin:0;border:1px solid #8253b219;border-left:2px solid #9461c4;background:#8756b209;border-radius:4px;color:var(--txt-black-darkest);transition:box-shadow .15s,background .15s}.wk-event:hover{background:#8756b215;box-shadow:0 3px 8px #29133912}.wk-event.pending{border-left-color:#ceaa70}.wk-event img{display:none}.wk-event-title{display:block;flex:1;min-width:0;font-size:11px;font-weight:500;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wk-event small{flex:0 0 auto;max-width:38px;color:var(--txt-black-dark);font-size:10px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#wkPending{margin-top:20px;padding:14px 16px;border-radius:10px;background:var(--bg-grey-lighter);font-size:13px}#wkPending summary{cursor:pointer}#wkUnscheduled{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}#wkUnscheduled .wk-event{width:auto;max-width:230px}#wkSources:empty{display:none}
+@media(max-width:640px){#wkCalendarView>.wk-panel{padding:12px}.wk-calendar-toolbar{align-items:flex-start}.wk-month-nav strong{font-size:19px}.wk-calendar-meta{font-size:11px;margin-top:12px}.wk-day-content{padding:3px}.wk-day-date{width:22px;height:22px;font-size:11px}.wk-event{display:flex;padding:3px;border-left-width:2px}.wk-event img{display:none}.wk-event-title{font-size:10px;white-space:nowrap}.wk-event small{display:none}.wk-day-name{padding:10px 2px}}
+
+
+#wkPerformanceDialog{width:min(800px,calc(100vw - 32px));max-height:90dvh;border:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 80px #0003}#wkPerformanceDialog::backdrop{background:#1e172b66;backdrop-filter:blur(3px)}#wkPerformanceForm{display:flex;flex-direction:column;max-height:90dvh;margin:0}.wk-modal-header{display:flex;justify-content:space-between;align-items:center;flex-shrink:0;padding:22px 26px 18px;border-bottom:1px solid var(--color-border-neutral)}.wk-modal-header p{margin:0 0 4px;font-size:11px;color:var(--color-text-accent);font-weight:600}.wk-modal-header h3{margin:0;font-size:19px;letter-spacing:-.5px}.wk-modal-close{width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--bg-grey-lighter);color:var(--txt-black-dark);font-size:23px;cursor:pointer}.wk-modal-body{display:grid;grid-template-columns:210px minmax(0,1fr);gap:28px;padding:22px 26px;overflow-y:auto;overscroll-behavior:contain;min-height:0}.wk-field-label{display:block;font-size:12px;color:var(--txt-black-dark);margin-bottom:8px}.wk-poster-column{min-width:0}.wk-poster-upload{position:relative;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;min-height:0;border:1px dashed var(--color-border-neutral-strong);border-radius:10px;background:var(--bg-grey-lighter);overflow:hidden}.wk-poster-upload:focus-within{outline:2px solid var(--color-text-accent);outline-offset:3px}#wkPPreview{grid-area:1/1;display:block;width:100%;height:auto;aspect-ratio:3/4;max-height:none;margin:0;object-fit:contain}#wkPPreview[hidden]{display:none}#wkPPosterEmpty{width:100%;aspect-ratio:3/4;grid-area:1/1;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--txt-black-dark);font-size:13px}#wkPPosterEmpty[hidden]{display:none}.wk-poster-plus{display:block;font-size:30px;margin-bottom:10px;color:var(--color-text-accent)}.wk-poster-action{grid-area:2/1;width:100%;text-align:center;padding:10px;background:var(--bg-white-normal);font-size:11px;color:var(--color-text-accent);margin-top:0}.wk-poster-column>.ig-hint{font-size:11px;text-align:center;margin:8px 0 20px}#wkPerformanceForm .ig-field{margin:0 0 16px;font-size:12px}#wkPerformanceForm input,#wkPerformanceForm select,#wkPerformanceForm textarea{font:inherit;font-size:13px;border:1px solid var(--color-border-neutral);border-radius:8px;background:var(--bg-white-normal);color:var(--txt-black-darkest);box-sizing:border-box}#wkPerformanceForm input:not([type=file]),#wkPerformanceForm select{height:39px;padding:8px 10px;width:100%}#wkPerformanceForm textarea{padding:10px;width:100%;resize:vertical}.wk-session-section{margin:2px 0 18px}.wk-session-section .ig-hint{font-size:11px}.wk-session-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) 28px;gap:8px;margin:0 0 8px;align-items:center}.wk-session-row label{min-width:0}.wk-session-remove{border:0;background:transparent;color:var(--txt-black-dark);font-size:20px;width:28px;height:32px;border-radius:6px;cursor:pointer}.wk-session-remove:hover{background:var(--bg-grey-lighter)}#wkAddSession{margin-top:2px}.wk-price-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px}.wk-extra{border-top:1px solid var(--color-border-neutral);padding-top:14px}.wk-extra summary{font-size:12px;color:var(--txt-black-dark);cursor:pointer;margin-bottom:12px}.wk-modal-footer{padding:14px 26px;background:var(--bg-white-normal);border-top:1px solid var(--color-border-neutral);flex-shrink:0}.wk-modal-footer .wk-toolbar{flex-wrap:nowrap;justify-content:space-between}.wk-delete{padding:8px 0;color:var(--txt-black-dark);background:transparent;border:0;font:inherit;font-size:12px;cursor:pointer}.wk-delete:hover{color:#ba3f54}#wkPSave{margin-left:auto;min-width:115px}#wkPMessage:empty{display:none}#wkPMessage{margin:0 0 10px;font-size:12px}#wkPPrice:disabled{background:var(--bg-grey-lighter)}
+@media(max-width:600px){#wkPerformanceDialog{width:calc(100vw - 20px);max-height:94dvh;border-radius:14px}#wkPerformanceForm{max-height:94dvh}.wk-modal-header{padding:16px 18px}.wk-modal-body{display:flex;flex-direction:column;gap:16px;padding:18px}.wk-poster-column{display:grid;grid-template-columns:85px minmax(0,1fr);gap:8px 16px;align-items:center}.wk-poster-column>.wk-field-label,.wk-poster-column>.ig-hint{display:none}.wk-poster-upload{grid-row:1/3;grid-template-rows:auto auto;min-height:0}#wkPPreview{height:auto;aspect-ratio:3/4;object-fit:contain}.wk-poster-action{padding:5px;font-size:9px}#wkPPosterEmpty{font-size:10px}.wk-poster-plus{font-size:22px;margin-bottom:0}.wk-poster-column .ig-field{margin:0!important}.wk-modal-footer{padding:12px 18px}.wk-session-row{gap:5px;grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) 24px}#wkPerformanceForm .wk-session-row input{padding:7px 4px;font-size:12px}.wk-price-row{grid-template-columns:95px minmax(0,1fr)}}
+
+
+.wk-poster-control{overflow:hidden;border:1px solid var(--color-border-neutral);border-radius:10px;margin-bottom:20px}.wk-poster-control .wk-poster-upload{display:block;width:100%;aspect-ratio:3/4;border:0;border-radius:0;margin:0;padding:0;box-sizing:border-box}.wk-poster-control #wkPPreview,.wk-poster-control #wkPPosterEmpty{position:absolute;inset:0;width:100%;height:100%;min-height:0;aspect-ratio:auto;margin:0;box-sizing:border-box}.wk-poster-tools{display:flex;border-top:1px solid var(--color-border-neutral);background:var(--bg-white-normal)}.wk-poster-tools button{flex:1;min-width:0;padding:11px 4px;border:0;background:transparent;color:#655d70;font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap}.wk-poster-tools button+button{border-left:1px solid var(--color-border-neutral)}.wk-poster-tools button:hover:not(:disabled){background:var(--bg-grey-lighter);color:var(--color-text-accent)}.wk-poster-tools button:focus-visible{outline:2px solid var(--color-text-accent);outline-offset:-3px}.wk-poster-tools button:disabled{opacity:.45;cursor:default}.wk-poster-tools button[hidden]{display:none}
+@media(max-width:600px){.wk-poster-control{grid-row:1/3;margin-bottom:0}.wk-poster-tools{flex-direction:column}.wk-poster-tools button{padding:6px 2px;font-size:10px}.wk-poster-tools button+button{border-left:0;border-top:1px solid var(--color-border-neutral)}}
+
+.wk-day::before{content:"";grid-area:1/1;padding-top:100%;pointer-events:none}.wk-day-content{grid-area:1/1;min-width:0;padding:6px;display:flex;flex-direction:column;gap:3px}@media(max-width:640px){.wk-day-content{padding:3px}}
+.wk-calendar-savebar{margin-top:16px;font-size:12px;color:var(--txt-black-dark)}.wk-draggable{cursor:grab;touch-action:none;user-select:none}.wk-draggable:active{cursor:grabbing}.wk-dragging{opacity:.35}.wk-moved{box-shadow:inset 0 0 0 1px #9461c4}.wk-drop-target{background:#eee6f8;box-shadow:inset 0 0 0 2px #9461c4}.wk-drag-ghost{position:fixed;z-index:10000;pointer-events:none;opacity:.9;box-shadow:0 5px 18px #0003}
+#wkPerformanceTip { position:fixed; z-index:var(--layer-z-index-tooltip); pointer-events:none; width:max-content; max-width:min(300px,calc(100vw - 20px)); padding:12px 15px; background:var(--bg-white-normal); color:var(--txt-black-darkest); border:1px solid var(--color-border-neutral); border-radius:10px; box-shadow:0 5px 20px #24133d24; overflow-wrap:anywhere; font-size:13px; line-height:1.5; }
+#wkPerformanceTip strong { display:block; font-size:14px; margin-bottom:3px; }
+#wkPerformanceTip small { display:block; color:var(--color-text-accent); }
+.wk-event.wk-linked-highlight{background:#eee3fb;border-color:#9461c4;box-shadow:0 0 0 1px #9461c470,0 0 12px #9461c43d;color:var(--txt-black-darkest)}
+.wk-template-picker{margin:20px 0 24px;padding:20px;border:1px solid var(--color-border-neutral);border-radius:14px;background:var(--bg-white-normal)}.wk-template-picker h3{margin:0;font-size:15px}.wk-template-picker .ig-hint{margin:5px 0 0}.wk-template-picker #wkTemplateName{color:var(--color-text-accent);font-size:12px}.wk-templates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}.wk-template{display:flex;flex-direction:column;align-items:stretch;text-align:left;min-width:0;padding:8px;border:1px solid var(--color-border-neutral);border-radius:10px;background:var(--bg-white-normal);color:var(--txt-black-darkest);cursor:pointer;font:inherit;transition:border-color .15s,box-shadow .15s}.wk-template img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:5px}.wk-template strong{font-size:12px;margin:10px 2px 4px}.wk-template span{font-size:10px;color:var(--txt-black-dark);margin:0 2px 3px;line-height:1.5}.wk-template[aria-pressed="true"]{border-color:#7c4aaa;box-shadow:0 0 0 2px #7c4aaa25}.wk-template:hover:not(:disabled){border-color:#7c4aaa}.wk-template:disabled{cursor:default;opacity:.65}.wk-template:focus-visible{outline:2px solid #7c4aaa;outline-offset:3px}@media(max-width:640px){.wk-template-picker{padding:14px}.wk-templates{display:flex;overflow-x:auto;gap:10px;padding:3px 3px 8px;margin-inline:-3px;scroll-snap-type:x proximity}.wk-template{flex:0 0 132px;scroll-snap-align:start}.wk-template span{font-size:10px}}
+.wk-template-info{display:flex;flex-direction:column}.wk-template .wk-template-info strong{font-weight:700}.wk-template .wk-template-info>span{font-size:11px;line-height:1.6}#wkFeaturedTemplate .wk-template{display:flex;flex-direction:row;align-items:center;gap:22px;width:100%;margin-top:16px;padding:14px 20px}#wkFeaturedTemplate .wk-template img{width:130px;flex-shrink:0;border-radius:2px}#wkFeaturedTemplate .wk-template strong{font-size:19px;margin:0 0 10px}#wkFeaturedTemplate .wk-template-info>span{font-size:13px}#wkFeaturedTemplate .wk-template .wk-template-tag{margin-top:16px;color:var(--color-text-accent);font-size:11px}#wkPreviousTemplates{margin-top:16px}#wkPreviousTemplates summary{font-size:12px;color:var(--txt-black-dark);cursor:pointer}@media(max-width:640px){#wkFeaturedTemplate .wk-template{gap:14px;padding:10px}#wkFeaturedTemplate .wk-template img{width:100px}#wkFeaturedTemplate .wk-template strong{font-size:16px}#wkFeaturedTemplate .wk-template-info>span{font-size:11px}}
+
+@font-face{font-family:"Enticket Myeongjo";src:url('/assets/weekly/NanumMyeongjo-ExtraBold.woff2') format('woff2');font-weight:800;font-display:block}
+.wk-layer-stage{position:relative;max-width:440px;margin:20px auto;line-height:0;touch-action:pan-y;box-shadow:0 8px 28px #0002}.wk-layer-stage canvas{display:block;width:100%;height:auto;outline:0}.wk-layer-stage canvas:focus-visible{outline:2px solid #713eb0;outline-offset:5px}.wk-layer-selection{position:absolute;border:1px solid #713eb0;box-shadow:0 0 0 1px #fff9;pointer-events:none}.wk-layer-selection:after{content:'';position:absolute;width:6px;height:6px;background:white;border:1px solid #713eb0;right:-4px;bottom:-4px}.wk-layer-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:14px 0}.wk-layer-grid button{padding:9px 10px;border:1px solid #e5e0e9;border-radius:6px;background:white;color:#726b79;font:inherit;font-size:12px;text-align:left;cursor:pointer}.wk-layer-grid button[aria-pressed=true]{background:#f4edf9;color:#592c87;border-color:#956eb8}.wk-layer-grid button[data-hidden=true]{opacity:.55}.wk-layer-properties .ig-row{gap:10px}.wk-layer-properties input[type=number]{width:100%;padding:8px;border:1px solid #ded8e4;border-radius:6px;font:inherit}.wk-layer-properties input[type=color]{width:100%;height:36px;padding:3px;border:1px solid #ded8e4;border-radius:6px;background:white}.wk-layer-properties textarea{font:inherit;font-size:13px;padding:9px;border:1px solid #ded8e4;border-radius:6px}.wk-layer-properties input[type=range]{width:100%;accent-color:#663399}.wk-layer-properties label{font-size:12px}.wk-layer-properties .wk-layer-visible{display:flex;gap:8px;align-items:center;margin:12px 0;font-size:12px}.wk-layer-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.wk-layer-note{font-size:11px;line-height:1.6;color:#84798f}.wk-layer-properties [hidden]{display:none!important}
+
+#wkCalendarView .wk-calendar-meta{justify-content:flex-end}
+#wkStatus:empty{display:none}
+#wkCalendarView.has-unsaved-moves .wk-day:not(.wk-drop-target),
+#wkCalendarView.has-unsaved-moves .wk-day-name {
+  background: color-mix(in srgb, #f59e0b 7%, var(--bg-white-normal));
+}
+#wkCalendarView.has-unsaved-moves .wk-calendar {
+  --pending-grid-line: color-mix(in srgb, var(--color-text-warning) 45%, var(--bg-white-normal));
+  border-color: var(--pending-grid-line);
+  background-color: var(--pending-grid-line);
+}
+#wkCalendarView.has-unsaved-moves .wk-moved { box-shadow: inset 0 0 0 2px var(--color-text-warning); }
+#wkUnsavedMoves { margin-right: auto; color: var(--color-text-warning); }
+#wkCalendar {
+  --saturday-ink: #225ca8;
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--txt-black-darkest) 34%, var(--bg-white-normal));
+  background-color: color-mix(in srgb, var(--txt-black-darkest) 19%, var(--bg-white-normal));
+}
+@media (prefers-color-scheme: dark) {
+  #wkCalendar { --saturday-ink: #91bfff; }
+}
+#wkCalendar > .wk-day-name:nth-child(6),
+#wkCalendar > .wk-day:nth-child(7n+6) .wk-day-date { color: var(--saturday-ink); }
+#wkCalendar > .wk-outside:nth-child(7n+6) { color: color-mix(in srgb, var(--saturday-ink) 65%, var(--bg-white-normal)); }
+#wkCalendar > .wk-day:nth-child(7n+6) .wk-today { background: #225ca8; color: white; }
+#wkCalendar { --sunday-ink: #ae3544; }
+@media (prefers-color-scheme: dark) {
+  #wkCalendar { --sunday-ink: #ff9ca8; }
+}
+#wkCalendar > .wk-day-name:nth-child(7),
+#wkCalendar > .wk-day:nth-child(7n) .wk-day-date { color: var(--sunday-ink); }
+#wkCalendar > .wk-outside:nth-child(7n) { color: color-mix(in srgb, var(--sunday-ink) 65%, var(--bg-white-normal)); }
+#wkCalendar > .wk-day:nth-child(7n) .wk-today { background: #ae3544; color: white; }
+#wkPrevMonth, #wkNextMonth {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+}
+#wkPrevMonth::before, #wkNextMonth::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  clip-path: polygon(60% 20%, 70% 30%, 50% 50%, 70% 70%, 60% 80%, 30% 50%);
+}
+#wkNextMonth::before { transform: rotate(180deg); }
+/* WEEKLY_STUDIO_CSS */
+/* SHARED_CONTROLS_CSS */
+.settlement-results-heading { align-items: center; justify-content: space-between; }
+.price-mode { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+#settleByPrice { width: 30px; height: 18px; border-radius: 12px; background: var(--bg-grey-light); }
+#settleByPrice::before { content: ""; display: block; width: 10px; height: 10px; margin: 3px; border-radius: 50%; background: var(--txt-black-darker); }
+#settleByPrice:checked { background: var(--color-bg-accent); }
+#settleByPrice:checked::before { transform: translateX(12px); background: white; }
 </style>
 </head>
 <body>
+<script>/* SHARED_CONTROLS_JS */</script>
 <svg style="display:none" aria-hidden="true">
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 8V6a2 2 0 0 1 2-2h3.9l2 2H19a2 2 0 0 1 2 2v1"/><path d="M3.4 9h17.3a1 1 0 0 1 .97 1.26l-2.06 7.5A2 2 0 0 1 17.68 19H5.4a2 2 0 0 1-2-2Z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
@@ -1382,7 +1498,7 @@ window.ICO = {
     <button class="tab" data-tab="settlement" aria-expanded="false"><svg class="ico"><use href="#i-nav-settlement"/></svg><span class="nav-label">공연 정산서</span></button>
     <div class="settlement-subnav" aria-label="공연 정산서 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab settlement-tab active" data-subtab="settlement" aria-pressed="true">정산서</button><button type="button" class="ig-subtab settlement-tab" data-tab="oseal" aria-pressed="false">원본대조필</button></div></div>
     <button class="tab" data-tab="instagram" aria-expanded="false" data-cloud-only hidden><svg class="ico"><use href="#i-nav-instagram"/></svg><span class="nav-label">인스타그램</span></button>
-    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button></div></div>
+    <div class="ig-subnav" data-cloud-only hidden aria-label="인스타그램 하위 메뉴"><div class="submenu-items"><button type="button" class="ig-subtab active" data-ig-view="post" aria-pressed="true">게시</button><button type="button" class="ig-subtab" data-ig-view="manage" aria-pressed="false">관리</button><button type="button" class="ig-subtab" data-ig-view="calendar" aria-pressed="false">공연 달력</button><button type="button" class="ig-subtab" data-ig-view="weekly" aria-pressed="false">주간 디자인</button></div></div>
   </nav>
   <div class="gauth" data-cloud-only hidden>
     <span id="gAuthLoading" role="status" class="auth-loading">로그인 확인 중…</span><button class="gbtn" id="gAuthRetry" hidden>다시 확인</button>
@@ -1414,19 +1530,18 @@ window.ICO = {
       <div id="xlOutput"></div>
       <div class="btn-row" id="xlDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="xlDownload">정리본 엑셀 다운로드</button>
-        <button class="btn ghost" id="xlDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="xlFname"></span>
       </div>
       <div id="xlWarn" style="margin-top:10px"></div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="xlReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 2: 포스터 이미지 변환 ============ -->
   <section class="panel-view" id="panel-poster">
     <div class="feature-heading">
       <h2>이미지 변환</h2>
       <div class="bar">
-        <button class="btn ghost" id="imClear" disabled>초기화</button>
         <span class="count" id="imCount"></span>
       </div>
     </div>
@@ -1461,6 +1576,7 @@ window.ICO = {
       <div class="imgbox-results" data-box="strip"></div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="imClear" disabled>초기화</button></div></div>
   </section>
   <!-- ============ 탭 3: 정산서 도구 ============ -->
   <section class="panel-view" id="panel-settlement">
@@ -1504,7 +1620,9 @@ window.ICO = {
     </div>
     <div class="connector"></div>
     <!-- 집계 결과 -->
-    <div class="out-head">집계 결과</div>
+    <div class="out-head settlement-results-heading">집계 결과
+      <label class="price-mode"><input type="checkbox" role="switch" id="settleByPrice"><span>금액별 정산</span></label>
+    </div>
     <div class="out-body">
       <div id="output"></div>
       <div id="merge"></div>
@@ -1513,10 +1631,10 @@ window.ICO = {
     <div class="st-gen">
       <div class="st-gen-live">예상 지급금액 <b id="livePayout">₩0</b></div>
       <button class="btn" id="genSettlement" disabled>정산서 엑셀 생성</button>
-      <button class="btn ghost" id="saveSettlementDrive" data-cloud-only hidden disabled>드라이브 저장</button>
     </div>
     <div id="checkResult"></div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="settlementReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 4: 문자발송명단 ============ -->
   <section class="panel-view" id="panel-sms">
@@ -1538,11 +1656,11 @@ window.ICO = {
       <div class="btn-row" id="smsDownloadRow" style="margin-top:14px;display:none">
         <button class="btn" id="smsDlTxt">txt 다운로드</button>
         <button class="btn ghost" id="smsDlXlsx">엑셀 다운로드</button>
-        <button class="btn ghost" id="smsDriveSave" data-cloud-only hidden>드라이브 저장</button>
         <span class="fname" id="smsDlInfo"></span>
       </div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="smsReset">초기화</button></div></div>
   </section>
   <!-- ============ 탭 5: 원본대조필 ============ -->
   <section class="panel-view" id="panel-oseal">
@@ -1584,6 +1702,7 @@ window.ICO = {
       </div>
     </div>
     <div class="privacy"></div>
+    <div class="ig-footer"><div class="btn-row"><button type="button" class="btn ghost sm" id="osealReset">초기화</button></div></div>
   </section>
   <section class="panel-view" id="panel-instagram" data-cloud-only hidden>
     <h2>인스타그램</h2>
@@ -1613,14 +1732,15 @@ window.ICO = {
                 <span id="igFileName" hidden></span>
                 <input id="igFile" type="file" accept="image/jpeg,image/png,image/webp">
               </label>
-              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드 <small>4:5</small></span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드 · 세로형 4:5</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
-              <details class="ig-adjust"><summary>이미지 조절</summary><div class="ig-fields">
+              <div class="ig-field"><span>게시 위치</span><div class="ig-channel-choice" role="group" aria-label="게시 위치"><label><input type="radio" name="ig-channel-choice" value="feed" checked><span class="ig-channel-symbol" aria-hidden="true"></span><span>피드</span></label><label><input type="radio" name="ig-channel-choice" value="story"><span class="ig-channel-symbol story" aria-hidden="true"></span><span>스토리 <small>9:16</small></span></label></div><select id="igChannel" hidden aria-hidden="true"><option value="feed">피드</option><option value="story">스토리 · 전체 화면 9:16</option></select></div>
+              <details class="ig-adjust"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>이미지 조절</summary><div class="ig-fields">
+              <label class="ig-field" id="igFormatField">피드 비율<select id="igFormat"><option value="frame">4:5</option><option value="original">원본 비율</option></select></label>
               <div class="ig-row">
                 <label class="ig-field">이미지 배치 <select id="igFit"><option value="contain">전체 보이기</option><option value="cover">화면 채우기</option></select></label>
                 <div class="ig-field"><span>배경색</span><div class="ig-background-controls"><input id="igBackground" type="color" value="#ffffff" aria-label="배경색"><label class="ig-blur-toggle"><input id="igBackgroundMode" type="checkbox" checked>흐린 배경</label></div></div>
               </div>
               <details class="ig-adjust">
-                <summary>크기·위치 조절</summary>
+                <summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>크기·위치 조절</summary>
                 <div class="ig-sliders">
                 <label class="ig-field"><span class="ig-field-title">축소·확대 <output id="igZoomValue" for="igZoom">100%</output></span><input id="igZoom" type="range" min="0" max="200" value="100"></label>
                 <label class="ig-field"><span class="ig-field-title">좌우 위치 <output id="igXValue" for="igX">0</output></span><input id="igX" type="range" min="-100" max="100" value="0"></label>
@@ -1636,7 +1756,7 @@ window.ICO = {
           <div class="ig-card-head"><span class="ig-step">2</span><h3>캡션</h3></div>
           <div class="ig-card-body">
             <fieldset class="ig-fields" id="igCaptionEditor" aria-label="게시 캡션 편집">
-<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="[공연명]"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="1" maxlength="220" id="igField_description" placeholder="[공연의 매력을 소개하는 한두 문장]"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="1" maxlength="600" id="igField_schedules" placeholder="0000.00.00.(요일) 오후 0시 · 여러 회차는 줄바꿈"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="[공연장명]"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><details class="ig-adjust" id="igCaptionDetails"><summary>상세 정보 <span id="igDetailCount"></span></summary><div class="ig-fields"><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="[관람 가능 연령]"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="[러닝타임]"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="1" maxlength="220" id="igField_price" placeholder="[좌석 등급·가격]"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="[문의 연락처]"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label></div></details><textarea id="igCaption" hidden></textarea></div>
+<div class="ig-fields" id="igCaptionLabel"><div class="ig-field-title"><strong>피드 캡션</strong><span id="igCaptionCount">0 / 2,200</span></div><button class="btn ghost sm" id="igAutoCaption" type="button" disabled>AI로 캡션 채우기</button><label class="ig-field">공연명<input type="text" maxlength="220" id="igField_title" placeholder="[공연명]"><span class="ig-hint" id="igMissing_title" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 소개<textarea rows="1" maxlength="220" id="igField_description" placeholder="[공연의 매력을 소개하는 한두 문장]"></textarea><span class="ig-hint" id="igMissing_description" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">일시<textarea rows="1" maxlength="600" id="igField_schedules" placeholder="0000.00.00.(요일) 오후 0시 · 여러 회차는 줄바꿈"></textarea><span class="ig-hint" id="igMissing_schedules" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">장소<input type="text" maxlength="220" id="igField_venue" placeholder="[공연장명]"><span class="ig-hint" id="igMissing_venue" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><details class="ig-adjust" id="igCaptionDetails"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>상세 정보 <span id="igDetailCount"></span></summary><div class="ig-fields"><label class="ig-field">관람 연령<input type="text" maxlength="220" id="igField_age" placeholder="[관람 가능 연령]"><span class="ig-hint" id="igMissing_age" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">공연 시간<input type="text" maxlength="220" id="igField_duration" placeholder="[러닝타임]"><span class="ig-hint" id="igMissing_duration" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">티켓 가격<textarea rows="1" maxlength="220" id="igField_price" placeholder="[좌석 등급·가격]"></textarea><span class="ig-hint" id="igMissing_price" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">문의<input type="text" maxlength="220" id="igField_inquiry" placeholder="[문의 연락처]"><span class="ig-hint" id="igMissing_inquiry" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label><label class="ig-field">해시태그<input type="text" maxlength="220" id="igField_tags" placeholder="#엔티켓 #[공연명] #[지역명]공연 #[공연장명] #[공연장르]"><span class="ig-hint" id="igMissing_tags" hidden>확인 필요 · 포스터에서 읽지 못했습니다.</span></label></div></details><textarea id="igCaption" hidden></textarea></div>
               <p id="igStoryNote" class="ig-hint" hidden>스토리에는 이미지 속 문구만 게시됩니다. 링크·음악·스티커는 지원하지 않습니다.</p>
             </fieldset>
           </div>
@@ -1665,12 +1785,121 @@ window.ICO = {
           <div class="ig-review-timing"><div class="ig-field"><div class="ig-publish-choice" role="group" aria-label="게시 방식"><label><input type="radio" name="ig-publish-mode" data-publish-mode="now" value="now" checked>지금 게시</label><label><input type="radio" name="ig-publish-mode" data-publish-mode="schedule" value="schedule">예약 게시</label></div><select id="igPublishMode" hidden aria-hidden="true"><option value="now">지금 게시</option><option value="schedule">예약 게시</option></select></div><div class="ig-time-slot"><div class="ig-field" id="igScheduleField"><div class="ig-schedule-heading"><span>예약 시각 · 한국 시간</span><span class="ig-hint">현재부터 2분 이후 ~ 30일 이내</span></div><input id="igScheduleTime" type="datetime-local" aria-label="예약 시각 · 한국 시간" disabled></div></div></div>
           <label class="ig-confirm"><input id="igConfirm" type="checkbox">이미지와 캡션, 게시 시각을 확인했습니다.</label>
           <p id="igReviewStatus" role="status" class="ig-hint"></p>
-          <div class="ig-review-footer"><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
+          <div class="ig-review-footer"><button class="btn" id="igPublish" disabled>게시하기</button></div><details class="ig-retention"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>보관 안내</summary><p>게시용 이미지는 즉시 게시 준비 후 24시간, 예약 게시 시 예약 시각 후 24시간까지 보관됩니다.</p></details>
         </div>
       </dialog>
       <p id="igStatus" role="status" aria-live="polite"></p>
       <div class="ig-footer"><div class="btn-row"><button class="btn ghost sm" id="igReset">초기화</button></div></div>
       </div>
+<section id="igWeeklyView" hidden>
+  <p id="wkStatus" role="status" aria-live="polite"></p>
+  <div id="wkCalendarView">
+    <div class="wk-panel">
+      <div class="wk-toolbar wk-calendar-toolbar"><div class="wk-month-nav"><strong id="wkMonthTitle"></strong><button class="btn ghost sm" id="wkPrevMonth" aria-label="이전 달"></button><label><span class="sr-only">표시할 달</span><input type="month" id="wkMonth"></label><button class="btn ghost sm" id="wkNextMonth" aria-label="다음 달"></button></div><div class="btn-row"><button class="btn ghost sm" id="wkImport" title="최근 게시물의 공연과 날짜를 읽어 달력에 저장합니다. 기존 공연은 유지합니다.">인스타 동기화</button><button class="btn ghost sm" id="wkCalendarRefresh">새로고침</button><button class="btn ghost sm" id="wkCalendarCancel" disabled>변경 취소</button><button class="btn primary sm" id="wkCalendarSave" disabled>변경 저장</button></div></div><div class="wk-calendar-meta"><strong id="wkUnsavedMoves" role="status" hidden>저장 전 · 날짜 이동</strong><span><i class="wk-legend-dot"></i> 확인 완료 <i class="wk-legend-dot pending"></i> 정보 확인 필요</span></div><div class="wk-calendar" id="wkCalendar"></div>
+      <details id="wkPending"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>날짜 확인 필요 · 숨긴 공연 <span id="wkPendingCount"></span></summary><div id="wkUnscheduled"></div></details>
+      <div id="wkSources"></div><button class="btn ghost sm" id="wkMoreSources" hidden>이전 게시물도 가져오기</button>
+    </div>
+  </div>
+  <div id="wkDesignView" hidden>
+    <header class="wk-design-top" id="wkDesignHeading" hidden>
+      <div class="wk-document-title"><h2>주간 디자인</h2><span id="wkRange"></span></div>
+      <div class="btn-row"><button class="btn ghost sm" id="wkRefresh">새로고침</button><button class="btn ghost sm" id="wkNewDraft">새 디자인</button><button class="btn primary sm" id="wkSave">저장</button></div>
+    </header>
+    <div class="wk-design-toolbar">
+      <label class="ig-field">공연 주간<input type="date" id="wkWeek"></label>
+      <label class="ig-field wk-drafts">저장한 디자인<select id="wkDraftList"><option value="">새 초안</option></select></label>
+    </div>
+    <div class="wk-studio" id="wkStudio">
+      <div class="wk-stage">
+        <div class="wk-stage-heading"><div><div class="wk-page-nav" role="group" aria-label="페이지 이동"><button type="button" id="wkShowPrevious" aria-label="이전 페이지" title="이전 페이지" disabled></button><span id="wkPageNumber" class="wk-page-number"></span><button type="button" id="wkShowNext" aria-label="다음 페이지" title="다음 페이지" disabled></button></div><strong id="wkStageTitle">표지</strong></div><button class="btn ghost sm wk-to-tools" type="button" id="wkToTools">편집 도구</button><span id="wkStageState"></span></div>
+        <div id="wkStudioTools" class="wk-studio-tools" role="toolbar" aria-label="요소 편집"><div><button type="button" id="wkUndo" title="실행 취소 (Ctrl/⌘ Z)" aria-label="실행 취소">↶</button><button type="button" id="wkRedo" title="다시 실행 (Ctrl/⌘ Shift Z)" aria-label="다시 실행">↷</button></div><span class="wk-tool-divider"></span><button type="button" id="wkDuplicate">복제</button><button type="button" id="wkDelete">삭제</button><span class="wk-tool-divider"></span><button type="button" id="wkBackward">뒤로</button><button type="button" id="wkForward">앞으로</button><button type="button" id="wkAlignCenter">가운데</button><button type="button" id="wkLock" aria-pressed="false">잠금</button></div>
+        <div id="wkCanvasViewport" class="wk-canvas-viewport"><div class="wk-canvas-slot"><div id="wkLayerStage" class="wk-layer-stage" hidden><canvas id="wkLayerCanvas" width="1080" height="1350" tabindex="0" aria-label="디자인 캔버스. 요소를 클릭해 선택, 더블클릭해 글자 수정, 모서리를 끌어 크기 조절."></canvas><div id="wkLayerSelection" class="wk-layer-selection" hidden><button type="button" data-handle="nw" aria-label="왼쪽 위 크기 조절"></button><button type="button" data-handle="ne" aria-label="오른쪽 위 크기 조절"></button><button type="button" data-handle="sw" aria-label="왼쪽 아래 크기 조절"></button><button type="button" data-handle="se" aria-label="오른쪽 아래 크기 조절"></button><button type="button" data-handle="rotate" aria-label="요소 회전" title="회전 · Shift로 15도씩">↻</button></div><textarea id="wkInlineText" class="wk-inline-text" spellcheck="false" aria-label="캔버스 글자 직접 수정" hidden></textarea><div id="wkGuideX" class="wk-guide x" hidden></div><div id="wkGuideY" class="wk-guide y" hidden></div></div><div class="wk-previews" id="wkPreviews"></div></div></div>
+        <div class="wk-stage-bottom"><button class="btn ghost sm" id="wkRender">미리보기 갱신</button><div><span id="wkZoomLabel"></span><label><span class="sr-only">캔버스 확대</span><select id="wkZoom"><option value="fit">화면에 맞춤</option><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option><option value="150">150%</option></select></label><button type="button" id="wkFocus">넓게 보기</button></div></div>
+        <div class="wk-page-heading"><strong>페이지</strong><span id="wkCount"></span></div>
+        <div id="wkFilmstrip" class="wk-filmstrip" aria-label="편집할 카드 선택"></div>
+      </div>
+      <aside class="wk-assets" aria-label="디자인 도구">
+        <div class="wk-tool-heading"><h3>편집 도구</h3><button type="button" class="btn ghost sm" id="wkToCanvas">캔버스로</button></div>
+        <div class="wk-assets-tabs" role="tablist" aria-label="도구 선택">
+          <button type="button" role="tab" id="wkToolPerformances" data-studio-pane="performances" aria-controls="wkPerformancesPane">공연</button>
+          <button type="button" role="tab" id="wkToolTemplates" data-studio-pane="templates" aria-controls="wkTemplatesPane">템플릿</button>
+          <button type="button" role="tab" id="wkToolElements" data-studio-pane="elements" aria-controls="wkElementsPane">요소</button>
+          <button type="button" role="tab" id="wkToolLayers" data-studio-pane="layers" aria-controls="wkLayersPane">레이어</button>
+          <button type="button" role="tab" id="wkToolProperties" data-studio-pane="properties" aria-controls="wkPropertiesPane">속성</button>
+        </div>
+        <div class="wk-assets-content">
+          <section id="wkElementsPane" data-studio-content="elements" role="tabpanel" aria-labelledby="wkToolElements"><button class="wk-add-text" type="button" data-add-object="text"><span>T</span> 텍스트 추가</button><h4>기본 도형</h4><div class="wk-shapes"><button type="button" data-add-object="rect" aria-label="사각형 추가"><span class="wk-shape-rect"></span>사각형</button><button type="button" data-add-object="ellipse" aria-label="원 추가"><span class="wk-shape-circle"></span>원</button><button type="button" data-add-object="line" aria-label="선 추가"><span class="wk-shape-line"></span>선</button></div></section>
+          <section id="wkLayersPane" data-studio-content="layers" role="tabpanel" aria-labelledby="wkToolLayers" hidden><h3>페이지 레이어</h3><div id="wkLayerList" class="wk-layer-grid" role="group" aria-label="레이어 선택"></div></section>
+          <section id="wkTemplatesPane" data-studio-content="templates" role="tabpanel" aria-labelledby="wkToolTemplates" hidden>    <section class="wk-template-picker" aria-label="캐러셀 템플릿"><div class="wk-toolbar"><div><h3>카드 템플릿</h3></div><span id="wkTemplateName"></span></div><div id="wkTemplates"><div id="wkFeaturedTemplate"></div><details id="wkPreviousTemplates"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>이전 템플릿</summary><div id="wkLegacyTemplates" class="wk-templates"></div></details></div></section>
+</section>
+          <section id="wkPerformancesPane" data-studio-content="performances" role="tabpanel" aria-labelledby="wkToolPerformances" hidden>        <details class="wk-inspector-section" id="wkSelectPerformances" open><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>공연 선택<span id="wkSelectedCount"></span></summary><div id="wkCandidates"></div></details></section>
+          <section id="wkPropertiesPane" class="wk-inspector" data-studio-content="properties" role="tabpanel" aria-labelledby="wkToolProperties" hidden>
+
+        <fieldset id="wkEditor"><legend class="sr-only">선택한 카드 편집</legend>
+          <div id="wkCoverFields" class="wk-inspector-section"><h3>표지 문구</h3><label class="ig-field">제목<textarea id="wkTitle" maxlength="220" rows="3"></textarea></label><label class="ig-field">부제<input type="text" id="wkSubtitle" maxlength="220"></label></div>
+          <section id="wkLayerPanel" class="wk-inspector-section" aria-label="선택한 요소 속성" hidden>
+            <p id="wkLayerEmpty" class="wk-layer-note">캔버스에서 편집할 요소를 선택하세요.</p>
+            <div class="wk-layer-properties" id="wkLayerProperties">
+              <div class="wk-layer-heading">
+                <h3 id="wkLayerName" tabindex="-1"></h3>
+                <label class="wk-layer-visible"><input type="checkbox" id="wkLayerVisible">표시</label>
+              </div>
+              <label class="ig-field" id="wkLayerTextField">문구<textarea id="wkLayerText" maxlength="220" rows="3"></textarea></label>
+              <p id="wkLayerAutoNote" class="wk-layer-note" hidden>선택한 공연 수가 자동으로 표시됩니다.</p>
+              <div class="wk-layer-fields">
+                <label class="ig-field" id="wkLayerFontField">글꼴<select id="wkLayerFont"><option value="serif">나눔명조</option><option value="sans">고딕</option></select></label>
+                <label class="ig-field" id="wkLayerSizeField">글자 크기 (pt)<input id="wkLayerSize" type="number" min="12" max="220" step="0.25"></label>
+                <label class="ig-field" id="wkLayerAlignField">글자 정렬<select id="wkLayerAlign"><option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option></select></label>
+                <label class="ig-field" id="wkLayerColorField">색상<input type="color" id="wkLayerColor"></label>
+              </div>
+              <label class="ig-field wk-layer-slider" id="wkLayerOpacityField" for="wkLayerOpacity"><span id="wkLayerOpacityLabel">질감 강도</span><output for="wkLayerOpacity" id="wkLayerOpacityValue"></output><input id="wkLayerOpacity" aria-labelledby="wkLayerOpacityLabel" type="range" min="0" max="100" step="1"></label>
+              <div id="wkLayerGeometry" class="wk-layer-geometry">
+                <div class="wk-layer-fields" id="wkLayerPosition">
+                  <label class="ig-field">가로 위치<input id="wkLayerX" type="number" min="-1080" max="1080" step="0.01"></label>
+                  <label class="ig-field">세로 위치<input id="wkLayerY" type="number" min="-1350" max="1350" step="0.01"></label>
+                </div>
+                <div class="wk-layer-fields" id="wkLayerDimensions">
+                  <label class="ig-field">너비<input id="wkLayerWidth" type="number" min="8" max="2160" step="0.01"></label>
+                  <label class="ig-field" id="wkLayerHeightField">높이<input id="wkLayerHeight" type="number" min="8" max="2160" step="0.01"></label>
+                </div>
+                <label class="ig-field" id="wkLayerRotationField">회전 (°)<input id="wkLayerRotation" type="number" min="-180" max="180" step="0.01"></label>
+              </div>
+              <div class="wk-layer-tools"><button type="button" class="btn ghost sm" id="wkLayerReset">이 레이어 초기화</button></div>
+            </div>
+          </section><div id="wkCards"></div>
+          <div id="wkClosingFields" class="wk-inspector-section" hidden><h3>뒷표지 문구</h3><label class="ig-field">안내 문구<textarea id="wkClosing" maxlength="300" rows="3"></textarea></label></div>
+          <details class="wk-inspector-section" id="wkCaptionSection"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>게시글 캡션</summary><label class="ig-field"><span class="sr-only">캡션</span><textarea id="wkCaption" maxlength="2200" rows="7"></textarea></label><button class="btn ghost sm" id="wkCaptionGenerate">공연 정보로 채우기</button></details>
+        </fieldset>
+          </section>
+        </div>
+      </aside>
+    </div>
+    <div class="wk-publish-bar"><div class="btn-row"><button class="btn ghost sm" id="wkLayerDownload" hidden>편집 원본</button><button class="btn ghost sm" id="wkDownload" disabled>ZIP 다운로드</button><button class="btn primary" id="wkPrepare">게시 전 확인</button></div></div>
+    <div id="wkReview" class="wk-panel" hidden><p id="wkAccount"></p><pre id="wkFinalCaption"></pre><label><input type="checkbox" id="wkConfirm"> 모든 카드의 이미지·순서·캡션과 게시 계정을 확인했습니다.</label></div>
+    <div class="btn-row"><button class="btn primary" id="wkPublish" hidden>확인한 내용 지금 게시</button><button class="btn ghost sm" id="wkJobStatus" hidden>게시 상태 확인</button><button class="btn ghost sm" id="wkUnlock" hidden>초안 다시 편집</button></div>
+  </div>
+  <dialog id="wkPerformanceDialog" aria-labelledby="wkPDialogTitle" class="ig-detail">
+    <form id="wkPerformanceForm">
+      <header class="wk-modal-header"><div><p>공연 관리</p><h3 id="wkPDialogTitle">공연 정보 수정</h3></div><button type="button" class="wk-modal-close" id="wkClosePerformance" aria-label="닫기">×</button></header>
+      <div class="wk-modal-body">
+        <aside class="wk-poster-column">
+          <span class="wk-field-label">포스터</span>
+          <div class="wk-poster-control"><input hidden type="file" id="wkPFile" accept="image/jpeg,image/png,image/webp"><div class="wk-poster-upload"><img id="wkPPreview" alt="공연 포스터" draggable="false" hidden><span id="wkPPosterEmpty">포스터 없음</span></div><div class="wk-poster-tools"><button type="button" id="wkPChange">이미지 변경</button><button type="button" id="wkPRestore" title="인스타그램 게시물의 원본 이미지 불러오기" aria-label="인스타 원본 불러오기" disabled>인스타 원본</button></div></div>
+          <label class="ig-field">확인 상태<select id="wkPStatus"><option value="needs_review">정보 확인 필요</option><option value="verified">정보 확인 완료</option><option value="hidden">달력에서 숨김</option></select></label>
+        </aside>
+        <div class="wk-performance-fields">
+          <label class="ig-field">공연명<input type="text" id="wkPTitle" required maxlength="220" placeholder="공연명을 입력하세요" autofocus></label>
+          <label class="ig-field">장소<input type="text" id="wkPVenue" maxlength="220" placeholder="공연장 · 세부 장소"></label>
+          <section class="wk-session-section" aria-label="공연 회차"><div class="wk-toolbar"><span class="wk-field-label">공연 일시</span></div><div id="wkSessionRows"></div><button class="btn ghost sm" id="wkAddSession" type="button">＋ 회차 추가</button><textarea id="wkPSessions" hidden></textarea></section>
+          <div class="wk-price-row"><label class="ig-field">가격<select id="wkPPriceKind"><option value="unknown">미확인</option><option value="free">무료</option><option value="paid">유료</option></select></label><label class="ig-field" id="wkPPriceField">가격 안내<input type="text" id="wkPPrice" maxlength="220" placeholder="예: 전석 20,000원"></label></div>
+          <details id="wkPExtra" class="wk-extra"><summary><span class="chev" aria-hidden="true"><svg class="ico ico--sm"><use href="#i-chevron"/></svg></span>원문 · 홍보 문구</summary><label class="ig-field">원문 · 홍보 문구<textarea id="wkPDescription" rows="4" maxlength="10000"></textarea></label></details>
+        </div>
+      </div>
+      <footer class="wk-modal-footer"><p id="wkPMessage" role="status"></p><div class="wk-toolbar"><button class="wk-delete" type="button" id="wkPDelete">공연 삭제</button><button class="btn primary" id="wkPSave" type="submit">변경 저장</button></div></footer>
+    </form>
+  </dialog>
+</section>
+
       <dialog class="ig-detail" id="igDetail" aria-labelledby="igDetailTitle">
         <div class="ig-detail-head"><strong id="igDetailTitle">게시물 상세</strong><button class="ig-detail-close" type="button" id="igDetailClose" aria-label="게시물 상세 닫기" title="닫기" autofocus><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
         <div class="ig-detail-body"><div><div id="igDetailMedia"></div><div class="ig-detail-nav" id="igDetailNav" hidden><button class="ig-detail-arrow" id="igDetailPrev" type="button" aria-label="이전 이미지" title="이전 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><span id="igDetailPage"></span><button class="ig-detail-arrow" id="igDetailNext" type="button" aria-label="다음 이미지" title="다음 이미지"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div><div><p class="fname" id="igDetailDate"></p><p id="igDetailCaption"></p><a class="ig-detail-link" id="igDetailLink" target="_blank" rel="noopener noreferrer"><span>인스타그램에서 보기</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M10 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4"/></svg></a></div></div>
@@ -1739,6 +1968,7 @@ window.ICO = {
       }
     });
     clear.addEventListener("click", reset);
+    document.getElementById("osealReset").addEventListener("click", reset);
     window.gdrive = {
       isLocal: true,
       isLoggedIn: () => false,
@@ -1789,7 +2019,7 @@ window.ICO = {
       client_id: CLIENT_ID,
       scope: "openid email profile",
       callback: async (resp)=>{
-        if(resp && resp.error){ alert("로그인 실패: "+resp.error); return; }
+        if(resp && resp.error){ EnticketUI.alert("로그인 실패: "+resp.error); return; }
         authRevision++;
         accessToken = resp.access_token;
         tokenExp = Date.now() + ((resp.expires_in ? Number(resp.expires_in) : 3600) * 1000) - 60000;
@@ -1802,12 +2032,12 @@ window.ICO = {
           isAllowedUser = await verifyAllowed();
         }catch(e){
           showLoggedOut();
-          alert(e.message);
+          EnticketUI.alert(e.message);
           return;
         }
         showLoggedIn(userEmail || "로그인됨");
         if(!isAllowedUser){
-          alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
+          EnticketUI.alert("이 계정은 허용목록에 없습니다: "+(userEmail||"")+"\n관리자에게 등록을 요청해 주세요.");
         }
       }
     });
@@ -1821,7 +2051,7 @@ window.ICO = {
   document.head.appendChild(gis);
   if(window.google && google.accounts && google.accounts.oauth2){ initGis(); }
   loginBtn.addEventListener("click", ()=>{
-    if(!tokenClient){ alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
+    if(!tokenClient){ EnticketUI.alert("로그인 모듈 로딩 중입니다. 잠시 후 다시 시도해 주세요."); return; }
     tokenClient.requestAccessToken();
   });
   logoutBtn.addEventListener("click", async ()=>{
@@ -1832,7 +2062,7 @@ window.ICO = {
       if(!r.ok) throw new Error();
       showLoggedOut();
       authChannel?.postMessage('logout');
-    } catch { alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
+    } catch { EnticketUI.alert('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'); }
     finally { logoutBtn.disabled = false; }
   });
   const authChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('enticket-auth') : null;
@@ -1992,13 +2222,19 @@ window.ICO = {
   function closeReview(){ $('igReview').close(); $('igReview').hidden=true; $('igConfirm').checked=false; }
   $('igReviewClose').onclick=editReview;
   $('igReview').addEventListener('cancel',event=>{event.preventDefault();editReview();});
+  function originalFeed(){return $('igChannel').value==='feed' && $('igFormat').value==='original';}
+  function igHeight(){
+    if($('igChannel').value==='story')return 1920;
+    return originalFeed()&&bitmap?Math.round(1080*bitmap.height/bitmap.width):1350;
+  }
+  function unsupportedFeed(){return originalFeed()&&bitmap&&(igHeight()<565||igHeight()>1440);}
   function controls(){
     const allowed=window.gdrive?.isAllowed();
     $('igGate').hidden=allowed; $('igWork').hidden=!allowed;
     $('igCheck').disabled=working;
     $('igEditor').disabled=working || !!job;
     $('igCaptionEditor').disabled=working || !!job;
-    $('igPrepare').disabled=working || !rendered || !account;
+    $('igPrepare').disabled=working || !rendered || !account || unsupportedFeed();
     $('igDownload').disabled=working || !rendered;
     $('igAutoCaption').disabled=working || !bitmap || !!job;
     $('igAutoCaption').textContent=captionAnalyzing?'캡션 작성 중…':'AI로 캡션 채우기';
@@ -2017,15 +2253,17 @@ window.ICO = {
     $('igDrop').setAttribute('aria-disabled',String(working || !!job));
     $('igDrop').tabIndex=working || job?-1:0;
     const blur=$('igBackgroundMode').checked;
-    $('igBackground').disabled=blur; $('igFit').disabled=blur;
+    $('igFormatField').hidden=$('igChannel').value==='story';
+    $('igBackgroundMode').disabled=originalFeed();
+    $('igBackground').disabled=blur||originalFeed(); $('igFit').disabled=blur||originalFeed();
     for(const choice of document.querySelectorAll('[name=ig-channel-choice]'))choice.checked=choice.value===$('igChannel').value;
     const story=$('igChannel').value==='story';
     $('igCaptionLabel').hidden=story; $('igStoryNote').hidden=!story;
     $('igPreviewChannel').textContent=story?'스토리':'피드';
-    $('igPreviewSize').textContent=story?'1080 × 1920 px':'1080 × 1350 px';
+    $('igPreviewSize').textContent=originalFeed()&&!bitmap?'원본 비율':'1080 × '+igHeight()+' px';
     $('igCaptionCount').textContent=$('igCaption').value.length.toLocaleString('ko-KR')+' / 2,200';
     for(const id of ['igZoom','igX','igY']) $(id+'Value').textContent=$(id).value+(id==='igZoom'?'%':'');
-    $('igNextHint').textContent=job?'':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
+    $('igNextHint').textContent=job?'':unsupportedFeed()?'이 비율은 피드에 게시할 수 없습니다. 이미지 조절에서 4:5를 선택해 주세요.':!account?'게시 계정을 연결해 주세요.':!rendered?'포스터를 선택해 주세요.':'';
     $('igCaptionToggle').hidden=story || !$('igCaptionPreview').textContent;
   }
   async function api(path, fields){
@@ -2051,7 +2289,7 @@ window.ICO = {
     job=null; clearImage();
     for(const id of ['igFile','igText']) $(id).value='';
     resetCaption();
-    $('igChannel').value='feed'; $('igFit').value='contain';
+    $('igFormat').value='frame'; $('igChannel').value='feed'; $('igFit').value='contain';
     $('igBackground').value='#ffffff'; $('igBackgroundMode').checked=true;
     $('igZoom').value=100; $('igX').value=0; $('igY').value=0;
     $('igCaptionPreview').textContent=''; $('igReviewAccount').textContent='';
@@ -2060,8 +2298,8 @@ window.ICO = {
     $('igPublish').textContent='게시하기';
     controls();
   }
-  function canStartNew(){
-    return !job || !['unknown','creating','checking','posting'].includes(job.status) || confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
+  async function canStartNew(){
+    return !job || !['unknown','creating','checking','posting'].includes(job.status) || await EnticketUI.confirm('게시 결과가 불명확합니다. 인스타그램에서 게시 여부를 직접 확인했으며 새 이미지를 준비하시겠습니까?');
   }
   function showJob(data){
     job=data; openReview();
@@ -2084,9 +2322,10 @@ window.ICO = {
     rendered=null; controls();
     const channel=$('igChannel').value;
     $('igCaptionLabel').hidden=channel==='story'; $('igStoryNote').hidden=channel!=='story';
-    const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=channel==='story'?1920:1350;
+    const canvas=document.createElement('canvas'); canvas.width=1080; canvas.height=igHeight();
+    if(canvas.height>8192||!canvas.height){$('igPreview').hidden=true;$('igEmpty').hidden=false;controls();return;}
     const ctx=canvas.getContext('2d'); ctx.fillStyle=$('igBackground').value; ctx.fillRect(0,0,canvas.width,canvas.height);
-    const blur=$('igBackgroundMode').checked;
+    const blur=!originalFeed()&&$('igBackgroundMode').checked;
     if(blur){
       // Overscan the blurred copy so the canvas edges stay fully covered.
       const pad=96, backgroundScale=Math.max((canvas.width+2*pad)/bitmap.width,(canvas.height+2*pad)/bitmap.height);
@@ -2094,7 +2333,10 @@ window.ICO = {
       ctx.drawImage(bitmap,(canvas.width-bitmap.width*backgroundScale)/2,(canvas.height-bitmap.height*backgroundScale)/2,bitmap.width*backgroundScale,bitmap.height*backgroundScale);
       ctx.restore();
     }
-    const base=blur?(channel==='story'?canvas.width/bitmap.width:canvas.height/bitmap.height):($('igFit').value==='cover'?Math.max(canvas.width/bitmap.width,canvas.height/bitmap.height):Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height));
+    const fitWidth=canvas.width/bitmap.width,fitHeight=canvas.height/bitmap.height;
+    let base=Math.min(fitWidth,fitHeight);
+    if(blur&&channel==='story')base=fitWidth;
+    else if(!blur&&$('igFit').value==='cover')base=Math.max(fitWidth,fitHeight);
     const scale=base*Number($('igZoom').value)/100, w=bitmap.width*scale, h=bitmap.height*scale;
     const x=(canvas.width-w)/2+Number($('igX').value)/100*canvas.width/2;
     const y=(canvas.height-h)/2+Number($('igY').value)/100*canvas.height/2;
@@ -2156,18 +2398,18 @@ window.ICO = {
     if(working || job)return;
     $('igChannel').value=choice.value;$('igChannel').dispatchEvent(new Event('input',{bubbles:true}));
   });
-  for(const id of ['igChannel','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
+  for(const id of ['igChannel','igFormat','igFit','igBackground','igBackgroundMode','igZoom','igX','igY','igText','igCaption']){
     $(id).addEventListener('input',()=>{
       if(job) return;
       if(id===draggedSlider && Math.abs(Number($(id).value)-sliderDefaults[id])<=3) $(id).value=sliderDefaults[id];
-      if(id==='igChannel'){ $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
+      if(id==='igChannel'){ $('igBackgroundMode').checked=true; $('igZoom').value=100; $('igX').value=0; $('igY').value=0; }
       render().catch(e=>status(describe(e)));
     });
   }
-  $('igAutoCaption').addEventListener('click',()=>{
+  $('igAutoCaption').addEventListener('click',async()=>{
     if(working || job || !bitmap) return;
     const existing=captionKeys.some(key=>key!=='tags' && $('igField_'+key).value.trim())?$('igCaption').value:'';
-    if(existing.trim() && existing!==captionTemplate && !confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
+    if(existing.trim() && existing!==captionTemplate && !await EnticketUI.confirm('현재 캡션을 포스터에서 읽은 내용으로 바꾸시겠습니까?')) return;
     run(async current=>{
       captionAnalyzing=true; controls(); status('포스터에서 공연 정보를 읽고 있습니다.');
       try {
@@ -2195,7 +2437,7 @@ window.ICO = {
     const fields=composeCaption();
     if($('igChannel').value==='feed'){
       if($('igCaption').value.length>2200){status('캡션을 2,200자 이내로 줄여 주세요.','error');return;}
-      if(['title','schedules','venue'].some(key=>!fields[key]) && !confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
+      if(['title','schedules','venue'].some(key=>!fields[key]) && !await EnticketUI.confirm('공연명·일시·장소 중 빈 항목이 있습니다. 이대로 최종 확인하시겠습니까?')) return;
     }
     const id=crypto.randomUUID(); remember(id); status('확인할 이미지 보관 중…');
     const data=await api('prepare',{draft_id:id,channel:$('igChannel').value,caption:$('igChannel').value==='feed'?$('igCaption').value:'',file:new File([rendered],'instagram.jpg',{type:'image/jpeg'})});
@@ -2237,12 +2479,12 @@ window.ICO = {
       }
     }
   }));
-  function editReview(){
-    if(working || !canStartNew()) return;
+  async function editReview(){
+    if(working || !await canStartNew()) return;
     job=null; closeReview(); $('igConfirm').checked=false; status('새 게시 내용은 다시 최종 확인해야 합니다.'); controls();
   }
-  $('igReset').addEventListener('click',()=>{
-    if(working || !canStartNew()) return;
+  $('igReset').addEventListener('click',async()=>{
+    if(working || !await canStartNew()) return;
     resetEditor(); status('');
   });
   let scheduleBusy=false,scheduleCursor=null;
@@ -2278,7 +2520,7 @@ window.ICO = {
           async function mutate(action){
             if(scheduleBusy)return;
             let scheduled_at;try{if(action==='schedule')scheduled_at=scheduleISO(time.value);}catch(e){$('igScheduleStatus').textContent=e.message;return;}
-            if(!confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
+            if(!await EnticketUI.confirm(action==='cancel'?'이 예약을 취소하시겠습니까?':'예약 시각을 '+time.value.replace('T',' ')+' (한국 시간)으로 변경하시겠습니까?'))return;
             scheduleBusy=true;change.disabled=true;cancel.disabled=true;
             try{await api(action,{draft_id:item.draftId,fingerprint:item.fingerprint,confirm:action,...(scheduled_at?{scheduled_at}:{})});if(current!==session)return;scheduleBusy=false;await loadSchedules();}
             catch(e){if(current===session)$('igScheduleStatus').textContent=describe(e);}
@@ -2318,6 +2560,19 @@ window.ICO = {
   }
   $('igDetailPrev').addEventListener('click',()=>{if(detailIndex>0){detailIndex--;renderDetailMedia();}});
   $('igDetailNext').addEventListener('click',()=>{if(detailIndex<detailAssets.length-1){detailIndex++;renderDetailMedia();}});
+  for(const dialog of [$('igDetail'),$('wkPerformanceDialog')]){
+    let pressedBackdrop=false;
+    function onBackdrop(event){
+      if(event.target!==dialog)return false;
+      const rect=dialog.getBoundingClientRect();
+      return event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom;
+    }
+    dialog.addEventListener('pointerdown',event=>{pressedBackdrop=onBackdrop(event);});
+    dialog.addEventListener('click',event=>{
+      if(pressedBackdrop&&onBackdrop(event))dialog.close();
+      pressedBackdrop=false;
+    });
+  }
   $('igDetailClose').addEventListener('click',()=>$('igDetail').close());
   $('igDetail').addEventListener('close',()=>{ $('igDetailMedia').replaceChildren();$('igDetailCaption').textContent='';$('igDetailLink').removeAttribute('href');detailAssets=[]; });
   function mediaCard(item){
@@ -2362,7 +2617,7 @@ window.ICO = {
   }
   for(const button of document.querySelectorAll('[data-ig-view]')) button.addEventListener('click',()=>{
     manageView=button.dataset.igView==='manage';
-    $('igPostView').hidden=manageView;$('igManageView').hidden=!manageView;
+    $('igPostView').hidden=button.dataset.igView!=='post';$('igManageView').hidden=!manageView;$('igWeeklyView').hidden=!['weekly','calendar'].includes(button.dataset.igView);
     for(const tab of document.querySelectorAll('[data-ig-view]')){const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));}
     if(manageView){if(!$('igScheduledPane').hidden)loadSchedules();else if(!mediaLoaded)loadMedia();}
   });
@@ -2385,6 +2640,632 @@ window.ICO = {
   controls();
 })();
 
+/* WEEKLY_DESIGN_MODULE */
+
+/* Weekly performance library. All persistent data is behind existing staff auth. */
+(()=>{
+  const $=id=>document.getElementById(id), el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+  const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const week=value=>{const d=new Date(value+'T00:00:00Z');if(!Number.isFinite(+d))throw Error('날짜를 선택해 주세요.');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return {start:d.toISOString().slice(0,10),end:new Date(+d+6*86400000).toISOString().slice(0,10),title:`${d.getUTCFullYear()}년 ${d.getUTCMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째'][Math.floor((d.getUTCDate()-1)/7)]} 주 공연`};};
+  const labels={draft:'편집 중',preparing:'준비 결과 확인 필요',prepared:'게시 준비 완료',processing:'미디어 처리 중',creating:'미디어 생성 중',checking:'미디어 확인 중',posting:'발행 처리 중',published:'게시 완료',unknown:'결과 확인 필요',failed:'실패'};
+  const messages={weekly_conflict:'다른 창에서 수정되었습니다. 내용을 복사한 뒤 새로고침해 주세요.',weekly_source_duplicate:'이 게시물의 이미지는 이미 등록했습니다. 달력에서 기존 공연을 수정해 주세요.',weekly_locked:'게시 작업이 연결된 초안입니다. 먼저 게시 상태를 확인해 주세요.',weekly_verification_required:'공연명·공연일·장소·포스터와 정보 확인 상태를 점검해 주세요.',weekly_in_use:'주간 초안이나 발행 이력에서 사용하는 공연입니다. 삭제 대신 숨김으로 변경해 주세요.',weekly_source_unavailable:'원본 이미지를 가져오지 못했습니다. 포스터 파일을 직접 선택해 주세요.',weekly_invalid_sessions:'회차를 YYYY-MM-DD 또는 YYYY-MM-DD HH:MM 형식으로 입력하고 중복을 제거해 주세요.',weekly_invalid_image:'포스터는 JPEG, 최대 2MB로 저장합니다. 다른 이미지를 선택해 주세요.',weekly_poster_required:'포스터 파일을 선택해 주세요.',weekly_invalid_design:'레이어 설정을 확인해 주세요.',weekly_invalid_fields:'필수 항목과 가격 정보를 확인해 주세요.',weekly_library_full:'저장 한도에 도달했습니다. 담당자에게 문의해 주세요.'};
+  const calendarChanges=new Map();let calendarDrag=null,suppressCalendarClick=false;
+  let thumbUrls=new Map(),selectedCard=0;
+  function selectCard(index){
+    const last=(draft?.cards.length||0)+1;
+    const next=Math.max(0,Math.min(index,last));
+    if(next!==selectedCard)selectedLayer=null;
+    selectedCard=next;
+    $('wkCoverFields').hidden=next!==0;
+    $('wkClosingFields').hidden=next!==last;
+    for(const [i,node] of [...$('wkCards').children].entries())node.hidden=i+1!==next;
+    for(const [i,node] of [...$('wkPreviews').children].entries())node.hidden=i!==next;
+    const strip=$('wkFilmstrip');
+    for(const [i,tab] of [...strip.children].entries())tab.setAttribute('aria-pressed',String(i===next));
+    const thumb=strip.children[next];
+    if(thumb){
+      const box=strip.getBoundingClientRect(), item=thumb.getBoundingClientRect();
+      if(item.left<box.left)strip.scrollLeft+=item.left-box.left;
+      else if(item.right>box.right)strip.scrollLeft+=item.right-box.right;
+    }
+    syncLayerEditor();
+    $('wkPageNumber').textContent=(next+1)+' / '+(last+1);
+    $('wkStageTitle').textContent=next===0?'표지':next===last?'뒷표지':draft.cards[next-1]?.title||'공연 카드';
+    $('wkStageTitle').title=$('wkStageTitle').textContent;
+  }
+
+  let performances=[],drafts=[],draft=null,pEdit=null,pFile=null,sourceCursor=null,sourceBusy=false,busy=false,dirty=false,generation=0,rendered=[],urls=[],assetCache=new Map();
+  const status=(text,error=false)=>{$('wkStatus').textContent=text;$('wkStatus').dataset.error=String(error);};
+  async function api(action,fields={},binary=false){
+    if(!window.gdrive?.isAllowed())throw Error('로그인이 필요합니다.');
+    const epoch=generation,fd=new FormData();fd.set('action',action);
+    for(const [k,v]of Object.entries(fields)){if(Array.isArray(v))v.forEach(f=>fd.append(k,f));else fd.set(k,v);}
+    const r=await fetch('/api/weekly',{method:'POST',body:fd,...(['asset','source'].includes(action)?{signal:AbortSignal.timeout(20000)}:{})});
+    if(epoch!==generation)throw Error('로그인 상태가 변경되었습니다.');
+    if(binary&&r.ok)return r.blob();const data=await r.json();
+    if(!r.ok||!data.ok)throw Error(messages[data.error]||({'instagram_access_blocked':'Meta API 접근이 차단되었습니다. 다운로드 후 수동 게시할 수 있습니다.','instagram_draft_conflict':'서버에 고정된 이미지와 다릅니다. 초안을 다시 열어 저장된 미리보기를 확인하세요.'}[data.error])||'요청 실패: '+(data.error||r.status));return data;
+  }
+  async function run(fn){if(busy)return;busy=true;controls();try{await fn();}catch(e){status(e.message,true);}finally{busy=false;controls();}}
+  function controls(){
+    $('wkCalendarView').classList.toggle('has-unsaved-moves', calendarChanges.size > 0);
+    $('wkUnsavedMoves').hidden = calendarChanges.size === 0;
+    $('wkCalendarSave').disabled=busy||!calendarChanges.size;$('wkCalendarCancel').disabled=busy||!calendarChanges.size;
+    templateControls();
+    const locked=!!draft?.jobId;
+    $('wkEditor').disabled=busy||locked;$('wkSave').disabled=busy||locked;$('wkPrepare').disabled=busy||locked;
+    $('wkWeek').disabled=busy||locked;$('wkDraftList').disabled=busy;$('wkNewDraft').disabled=busy;
+    $('wkLayerDownload').hidden=!isLayerDraft();$('wkLayerDownload').disabled=busy||!!draft?.jobId;$('wkLayerCanvas').setAttribute('aria-disabled',String(busy||!!draft?.jobId));$('wkRender').disabled=busy;$('wkDownload').disabled=busy||!rendered.length;
+    $('wkPublish').hidden=!locked||!['prepared','processing'].includes(draft?.status);
+    $('wkPublish').disabled=busy||!$('wkConfirm').checked||!rendered.length;
+    $('wkPublish').textContent=draft?.status==='processing'?'확인한 게시 처리 계속':'확인한 내용 지금 게시';
+    $('wkJobStatus').hidden=!locked;$('wkJobStatus').disabled=busy;
+    $('wkUnlock').hidden=!['prepared','failed'].includes(draft?.status);$('wkUnlock').disabled=busy;
+    for(const n of $('wkCandidates').querySelectorAll('input'))n.disabled=busy||locked;
+    $('wkPRestore').disabled=posterWorking||busy||!pEdit?.sourcePostId;$('wkPSave').disabled=busy||posterWorking;$('wkPDelete').disabled=busy;
+    $('wkMoreSources').disabled=busy;
+    for(const id of ['wkRefresh','wkCalendarRefresh','wkImport'])$(id).disabled=busy;
+    studioControls();
+  }
+  function clearRender(){urls.forEach(URL.revokeObjectURL);urls=[];rendered=[];$('wkPreviews').replaceChildren();$('wkFilmstrip').replaceChildren();$('wkReview').hidden=true;$('wkConfirm').checked=false;controls();}
+  function changed(){dirty=true;rendered=[];$('wkReview').hidden=true;$('wkConfirm').checked=false;$('wkStageState').textContent='수정됨 · 미리보기 갱신';controls();}
+  function pull(){if(!draft)return;for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))draft[key]=$(id).value;}
+  function blankDraft(){const w=week($('wkWeek').value||today());draft={id:crypto.randomUUID(),version:0,template:'paper-editorial',design:window.EnticketWeeklyDesign.normalizeDesign(),week:w.start,weekEnd:w.end,title:'공연이\n있는\n일주일.',subtitle:window.EnticketWeeklyDesign.weekLabel(w.start),closing:WD.DEFAULT_CLOSING_COPY,caption:'',cards:[],status:'draft'};dirty=false;fillDraft();}
+  function fillDraft(){
+    if(WD.refreshClosingCopy(draft))dirty=true;
+    if(WD.refreshWeeklySchedules(draft))dirty=true;
+    selectedCard=0;selectedLayer=null;clearRender();$('wkWeek').value=draft.week;
+    for(const [key,id]of Object.entries({title:'wkTitle',subtitle:'wkSubtitle',closing:'wkClosing',caption:'wkCaption'}))$(id).value=draft[key];
+    $('wkDraftList').value=drafts.some(d=>d.id===draft.id)?draft.id:'';renderCandidates();renderCards();selectCard(0);controls();
+    status(draft.jobId?(labels[draft.status]||draft.status)+' · 게시 상태와 저장된 이미지를 확인해 주세요.':'초안을 편집한 뒤 저장해 주세요.');
+  }
+  const weekSessions=p=>p.sessions.filter(s=>s.date>=draft.week&&s.date<=draft.weekEnd);
+  const scheduleText=p=>WD.weeklyScheduleText(weekSessions(p));
+  function renderCandidates(){
+    $('wkRange').textContent=draft.week.replaceAll('-','.')+' – '+draft.weekEnd.slice(5).replace('-','.');$('wkCandidates').replaceChildren();
+    const candidates=performances.filter(p=>p.status!=='hidden'&&weekSessions(p).length);
+    if(!candidates.length)$('wkCandidates').append(el('p','이 주에 등록된 공연이 없습니다.','ig-hint'));
+    for(const p of candidates){const row=el('label',undefined,'wk-candidate'),check=el('input');check.type='checkbox';check.checked=draft.cards.some(c=>c.performanceId===p.id);check.disabled=!!draft.jobId;
+      check.addEventListener('change',()=>{pull();if(check.checked){if(draft.cards.length>=8){check.checked=false;status('공연은 최대 8개까지 선택할 수 있습니다.',true);return;}draft.cards.push({performanceId:p.id,assetId:p.assetId,title:p.title,schedule:scheduleText(p),venue:p.venue,price:p.priceKind==='free'?'무료':p.priceKind==='paid'?p.price:''});}else draft.cards=draft.cards.filter(c=>c.performanceId!==p.id);changed();renderCards();selectCard(check.checked?draft.cards.length:0);run(render);});
+      const info=el('span',undefined,'wk-performance-info');
+      const name=el('strong',p.title);
+      name.title=p.title;
+      info.append(name,el('small',scheduleText(p)));
+      if(p.status!=='verified')info.append(el('small','정보 확인 필요','wk-needs-review'));
+      const thumb=el('img'), epoch=generation;
+      thumb.alt='';
+      asset(p.assetId).then(blob=>{
+        if(epoch!==generation||!thumb.isConnected)return;
+        if(!thumbUrls.has(p.assetId))thumbUrls.set(p.assetId,URL.createObjectURL(blob));
+        thumb.src=thumbUrls.get(p.assetId);
+      }).catch(()=>thumb.remove());
+      row.append(check,thumb,info);
+      $('wkCandidates').append(row);
+    }
+    $('wkCount').textContent=(draft.cards.length+2)+'장';
+    $('wkSelectedCount').textContent=draft.cards.length+' / 8';
+  }
+  function renderCards(){
+    if(draft.design?.pages){const active=new Set(['closing',...draft.cards.map(c=>'performance:'+c.performanceId)]);for(const key of Object.keys(draft.design.pages))if(!active.has(key))delete draft.design.pages[key];}
+    $('wkCards').replaceChildren();draft.cards.forEach((card,i)=>{const box=el('div',undefined,'wk-card-editor');box.draggable=!draft.jobId;
+      box.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',String(i)));box.addEventListener('dragover',e=>e.preventDefault());box.addEventListener('drop',e=>{e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(draft.jobId||!Number.isInteger(from)||from<0||from>=draft.cards.length)return;draft.cards.splice(i,0,draft.cards.splice(from,1)[0]);changed();renderCards();run(render);});
+      const head=el('div',undefined,'wk-toolbar');head.append(el('strong',(i+1)+'. 공연 카드'));
+      for(const [name,delta]of [['위로',-1],['아래로',1],['제외',0]]){const button=el('button',name,'btn ghost sm');button.type='button';button.disabled=!!draft.jobId||(delta!==0&&(i+delta<0||i+delta>=draft.cards.length));button.addEventListener('click',()=>{pull();const [c]=draft.cards.splice(i,1);if(delta)draft.cards.splice(i+delta,0,c);changed();renderCards();renderCandidates();run(render);});head.append(button);}box.append(head);
+      for(const [key,label]of [['title','카드 공연명'],['schedule','이 주의 공연 일시'],['venue','장소'],['price','가격 · 선택']]){const field=el('label',label,'ig-field'),input=el('input');input.type='text';input.value=card[key];input.maxLength=key==='schedule'?WD.MAX_SCHEDULE_LENGTH:220;input.addEventListener('input',()=>{card[key]=input.value;changed();});field.append(input);box.append(field);} box.hidden=i+1!==selectedCard;$('wkCards').append(box);});
+    $('wkCount').textContent=(draft.cards.length+2)+'장';
+    $('wkSelectedCount').textContent=draft.cards.length+' / 8';
+  }
+  function highlightPerformance(id){id=id||document.activeElement?.closest('#wkCalendar .wk-event, #wkUnscheduled .wk-event')?.dataset.performanceId;for(const button of document.querySelectorAll('#wkCalendar .wk-event, #wkUnscheduled .wk-event'))button.classList.toggle('wk-linked-highlight',!!id&&button.dataset.performanceId===id);}
+  const tip=el('div');
+  tip.id='wkPerformanceTip'; tip.setAttribute('role','tooltip'); tip.hidden=true;
+  $('wkCalendarView').append(tip);
+  let tipTimer, tipOwner;
+  function hideTip(){
+    clearTimeout(tipTimer); tip.hidden=true;
+    tipOwner?.removeAttribute('aria-describedby'); tipOwner=null;
+  }
+  function queueTip(button,p){
+    hideTip(); tipOwner=button;
+    tipTimer=setTimeout(()=>{
+      if(calendarDrag || !button.getClientRects().length)return;
+      const date=button.dataset.fromDate;
+      const timing=date ? date+' · '+button.querySelector('small').textContent :
+        p.sessions.map(s=>[s.date,s.time].filter(Boolean).join(' ')).join(', ') || '일정 미정';
+      tip.replaceChildren(el('strong',p.title),el('div',p.venue || '공연장 미정'),el('small',timing));
+      tip.hidden=false; button.setAttribute('aria-describedby',tip.id);
+      const rect=button.getBoundingClientRect();
+      tip.style.left=Math.max(8,Math.min(rect.left,innerWidth-tip.offsetWidth-8))+'px';
+      tip.style.top=(rect.bottom+8+tip.offsetHeight<=innerHeight ? rect.bottom+8 : Math.max(8,rect.top-tip.offsetHeight-8))+'px';
+    },320);
+  }
+  document.addEventListener('scroll',hideTip,true);
+  window.addEventListener('resize',hideTip);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTip();});
+  function performanceButton(p){
+    const b=el('button',undefined,'wk-event'+(p.status==='verified'?' verified':' pending'));
+    b.append(el('span',p.title,'wk-event-title')); b.type='button'; b.dataset.performanceId=p.id;
+    b.addEventListener('pointerenter',e=>{highlightPerformance(p.id);if(e.pointerType!=='touch' && !e.buttons)queueTip(b,p);});
+    b.addEventListener('focus',()=>{highlightPerformance(p.id);if(b.matches(':focus-visible'))queueTip(b,p);});
+    for(const event of ['pointerleave','blur'])b.addEventListener(event,()=>{highlightPerformance(null);if(tipOwner===b)hideTip();});
+    b.addEventListener('pointerdown',hideTip);
+    b.addEventListener('click',()=>{hideTip();run(()=>openPerformance(p));});
+    return b;
+  }
+  function renderCalendar(){
+    hideTip();
+    const items=performances.map(p=>calendarChanges.has(p.id)?{...p,sessions:calendarChanges.get(p.id).sessions}:p);
+    const month=$('wkMonth').value,first=new Date(month+'-01T00:00:00Z');if(!Number.isFinite(+first))return;
+    $('wkMonthTitle').textContent=first.getUTCFullYear()+'년 '+(first.getUTCMonth()+1)+'월';$('wkPendingCount').textContent=items.filter(p=>!p.sessions.length||p.status==='hidden').length;const grid=$('wkCalendar');grid.replaceChildren();for(const day of ['월','화','수','목','금','토','일'])grid.append(el('strong',day,'wk-day-name'));
+    const offset=(first.getUTCDay()+6)%7;for(let i=0;i<offset;i++){const prior=new Date(+first-(offset-i)*86400000);const cell=el('div',String(prior.getUTCDate()),'wk-day wk-outside');cell.dataset.date=prior.toISOString().slice(0,10);grid.append(cell);}
+    const count=new Date(first.getUTCFullYear(),first.getUTCMonth()+1,0).getDate();
+    for(let i=1;i<=count;i++){const date=month+'-'+String(i).padStart(2,'0'),cell=el('div',undefined,'wk-day');const dateButton=el('button',String(i),'wk-day-date'+(date===today()?' wk-today':''));dateButton.title=date+' 공연 등록';dateButton.addEventListener('click',()=>run(async()=>{await openPerformance();setPerformanceSessions(date);}));cell.dataset.date=date;cell.append(dateButton);
+      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===date))){const button=performanceButton(p);const times=p.sessions.filter(s=>s.date===date).map(s=>s.time||'시간 미정').join(', ');button.append(el('small',times));
+        button.dataset.performanceId=p.id;button.dataset.fromDate=date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);}grid.append(cell);}
+    for(let i=1;i<=(7-(offset+count)%7)%7;i++){const cell=el('div',String(i),'wk-day wk-outside');cell.dataset.date=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,i)).toISOString().slice(0,10);grid.append(cell);}
+    for(const cell of grid.querySelectorAll('.wk-outside')){
+      for(const p of items.filter(p=>p.status!=='hidden'&&p.sessions.some(s=>s.date===cell.dataset.date))){
+        const button=performanceButton(p),times=p.sessions.filter(s=>s.date===cell.dataset.date).map(s=>s.time||'시간 미정').join(', ');
+        button.append(el('small',times));button.dataset.performanceId=p.id;button.dataset.fromDate=cell.dataset.date;button.classList.add('wk-draggable');if(calendarChanges.has(p.id))button.classList.add('wk-moved');cell.append(button);
+      }
+    }
+    for(const cell of grid.querySelectorAll('.wk-day')){const content=el('div',undefined,'wk-day-content');content.append(...cell.childNodes);cell.append(content);}
+    controls();
+    $('wkUnscheduled').replaceChildren();for(const p of items.filter(p=>!p.sessions.length||p.status==='hidden'))$('wkUnscheduled').append(performanceButton(p));
+  }
+  function stageCalendarMove(id,from,to){
+    if(busy||from===to)return;
+    const original=performances.find(p=>p.id===id);if(!original)return;
+    const current=calendarChanges.get(id)?.sessions||original.sessions;
+    const sessions=current.map(s=>s.date===from?{...s,date:to}:{...s}).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    if(new Set(sessions.map(s=>s.date+s.time)).size!==sessions.length){status('그 날짜에 같은 시간의 회차가 있습니다. 다른 날짜로 옮겨 주세요.',true);return;}
+    const canonical=s=>JSON.stringify([...s].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)));
+    if(canonical(sessions)===canonical(original.sessions))calendarChanges.delete(id);
+    else calendarChanges.set(id,{id,version:original.version,sessions});
+    renderCalendar();status('');
+  }
+  function endCalendarDrag(commit=false){
+    const d=calendarDrag;if(!d)return;calendarDrag=null;
+    cancelAnimationFrame(d.scrollFrame);d.ghost?.remove();d.button.classList.remove('wk-dragging');d.target?.classList.remove('wk-drop-target');
+    if(d.active){suppressCalendarClick=true;setTimeout(()=>suppressCalendarClick=false,0);if(commit&&d.target)stageCalendarMove(d.id,d.from,d.target.dataset.date);}
+  }
+  $('wkCalendar').addEventListener('click',e=>{if(suppressCalendarClick){e.preventDefault();e.stopImmediatePropagation();}},true);
+  $('wkCalendar').addEventListener('pointerdown',e=>{
+    const button=e.target.closest('.wk-draggable');if(!button||busy||e.button!==0)return;
+    calendarDrag={button,id:button.dataset.performanceId,from:button.dataset.fromDate,x:e.clientX,y:e.clientY,pointer:e.pointerId,active:false};
+    button.setPointerCapture(e.pointerId);
+  });
+  function trackCalendarDrop(d){
+    if(calendarDrag!==d)return;
+    const dy=d.clientY<70?-12:d.clientY>innerHeight-70?12:0;
+    if(dy)window.scrollBy(0,dy);
+    const target=document.elementFromPoint(d.clientX,d.clientY)?.closest('#wkCalendar [data-date]');
+    if(d.target!==target){d.target?.classList.remove('wk-drop-target');d.target=target;target?.classList.add('wk-drop-target');}
+    d.scrollFrame=requestAnimationFrame(()=>trackCalendarDrop(d));
+  }
+  $('wkCalendar').addEventListener('pointermove',e=>{
+    const d=calendarDrag;if(!d||d.pointer!==e.pointerId)return;
+    if(!d.active&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<6)return;
+    e.preventDefault();d.clientX=e.clientX;d.clientY=e.clientY;
+    if(!d.active){d.active=true;d.button.classList.add('wk-dragging');d.ghost=d.button.cloneNode(true);d.ghost.classList.add('wk-drag-ghost');d.ghost.style.width=d.button.getBoundingClientRect().width+'px';document.body.append(d.ghost);trackCalendarDrop(d);}
+    d.ghost.style.left=(e.clientX+12)+'px';d.ghost.style.top=(e.clientY+12)+'px';
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('#wkCalendar [data-date]');
+    if(d.target!==target){d.target?.classList.remove('wk-drop-target');d.target=target;target?.classList.add('wk-drop-target');}
+  });
+  $('wkCalendar').addEventListener('pointerup',()=>endCalendarDrag(true));
+  $('wkCalendar').addEventListener('pointercancel',()=>endCalendarDrag());
+  $('wkCalendar').addEventListener('lostpointercapture',()=>endCalendarDrag());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')endCalendarDrag();});
+  $('wkCalendarCancel').addEventListener('click',()=>{if(busy)return;calendarChanges.clear();renderCalendar();status('일정 이동을 취소했습니다.');});
+  $('wkCalendarSave').addEventListener('click',()=>run(async()=>{
+    if(!calendarChanges.size)return;
+    const result=await api('calendar-save',{data:JSON.stringify([...calendarChanges.values()])});
+    for(const p of result.performances){const i=performances.findIndex(x=>x.id===p.id);if(i>=0)performances[i]=p;}
+    calendarChanges.clear();renderCalendar();renderCandidates();status('변경한 일정을 저장했습니다.');
+  }));
+  function renderDraftList(){const select=$('wkDraftList');select.replaceChildren(new Option('새 초안',''));for(const d of drafts)select.append(new Option(d.title+' · '+(labels[d.status]||d.status),d.id));select.value=draft?.id||'';}
+  async function load(){if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');const data=await api('list');performances=data.performances;drafts=data.drafts;renderCalendar();renderDraftList();if(!draft)blankDraft();else renderCandidates();status('');}
+  function cacheDraft(d){draft=d;drafts=[d,...drafts.filter(x=>x.id!==d.id)];dirty=false;renderDraftList();controls();}
+  async function save(){commitInline();pull();if(isLayerDraft()){await Promise.all([ensurePaperAssets(),paperPosters(draft.cards)]);for(let i=0;i<draft.cards.length+2;i++)WD.validateScene(canvasContext(),WD.pageScene(draft,i,canvasContext(),paperImages));}const result=await api('draft',{id:draft.id,data:JSON.stringify(draft)});cacheDraft(result.draft);status('초안을 저장했습니다.');}
+  // Old feed JPGs contain a centered poster over a blurred, enlarged copy.
+  // Check both seams and reconstruct that background before trimming a display copy.
+  async function unframeFeedPoster(blob){
+    const img=await image(blob),w=img.width,h=img.height;
+    if(w<160||Math.min(Math.abs(w/h-.8),Math.abs(w/h-.75))>.004)return blob;
+    const sample=document.createElement('canvas');sample.width=w;sample.height=64;
+    const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,w,64);
+    const pixels=ctx.getImageData(0,0,w,64).data;
+    function seam(x){
+      let sum=0;
+      for(let y=2;y<62;y++){const k=4*(y*w+x);
+        for(let c=0;c<3;c++)sum+=Math.abs(pixels[k+c]-pixels[k+c-4]);
+      }
+      return sum/180;
+    }
+    let inset=0,best=5;
+    for(let x=Math.max(4,Math.round(w*.009));x<w*.27;x++){
+      const strength=Math.min(seam(x),Math.max(seam(w-x),seam(w-x-1),seam(w-x+1)));
+      if(strength>best){inset=x;best=strength;}
+    }
+    if(!inset)return blob;
+    const thumb=document.createElement('canvas');thumb.width=180;thumb.height=Math.round(180*h/w);
+    const small=thumb.getContext('2d',{willReadFrequently:true});
+    small.drawImage(img,0,0,thumb.width,thumb.height);
+    const actual=small.getImageData(0,0,thumb.width,thumb.height).data;
+    const scale=180/w,pad=96*180/1080;
+    const zoom=Math.max((180+2*pad)/(w-2*inset),(thumb.height+2*pad)/h);
+    const bw=(w-2*inset)*zoom,bh=h*zoom;
+    small.filter='blur('+32*180/1080+'px)';
+    small.drawImage(img,inset,0,w-2*inset,h,(180-bw)/2,(thumb.height-bh)/2,bw,bh);
+    const expected=small.getImageData(0,0,180,thumb.height).data;
+    let error=0,count=0,variation=0;
+    for(let y=3;y<thumb.height-3;y+=2)for(let x=0;x<Math.max(1,inset*scale-1);x++)for(const sx of [x,179-x]){
+      const k=4*(y*180+sx);
+      for(let c=0;c<3;c++){error+=Math.abs(actual[k+c]-expected[k+c]);variation+=Math.abs(actual[k+c]-actual[4*(180+sx)+c]);count++;}
+    }
+    if(error/count>13||variation/count<3)return blob;
+    const crop=document.createElement('canvas');crop.width=w-2*inset;crop.height=h;
+    crop.getContext('2d').drawImage(img,-inset,0);
+    return await new Promise(resolve=>crop.toBlob(resolve,'image/jpeg',.97))||blob;
+  }
+  async function sourcePoster(fields){
+    return normalize(await api('source',fields,true));
+  }
+  async function asset(id,forCarousel=false){
+    const crop=forCarousel&&performances.some(p=>p.assetId===id&&p.sourcePostId);
+    const key=crop?'carousel:'+id:id;
+    if(!assetCache.has(key)){
+      const promise=crop?asset(id).then(unframeFeedPoster):api('asset',{id},true);
+      assetCache.set(key,promise);
+      try{await promise;}catch(e){if(assetCache.get(key)===promise)assetCache.delete(key);throw e;}
+    }
+    return assetCache.get(key);
+  }
+  async function image(blob){const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();return img;}finally{URL.revokeObjectURL(url);}}
+  async function normalize(file){if(file.size>15*1024*1024)throw Error('원본 포스터는 15MB 이하로 선택해 주세요.');const img=await image(file);if(img.width*img.height>40000000)throw Error('이미지가 너무 큽니다.');const c=document.createElement('canvas'),scale=Math.min(1,2000/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);const result=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.9));if(!result||result.size>2*1024*1024)throw Error('포스터 용량을 줄여 다시 선택해 주세요.');return result;}
+  function syncSessionRows(){const values=[];for(const row of $('wkSessionRows').children){const d=row.querySelector('[type="date"]'),t=row.querySelector('[type="time"]');d.required=!!t.value;if(d.value)values.push(d.value+(t.value?' '+t.value:''));}$('wkPSessions').value=values.join('\n');}
+  function addSessionRow(date='',time=''){
+    const row=el('div',undefined,'wk-session-row'),dateLabel=el('label'),timeLabel=el('label'),d=el('input'),t=el('input'),remove=el('button','×','wk-session-remove');
+    dateLabel.append(el('span','공연 날짜','sr-only'));timeLabel.append(el('span','공연 시간 · 선택','sr-only'));d.type='date';d.value=date;t.type='time';t.value=time;d.addEventListener('input',syncSessionRows);t.addEventListener('input',syncSessionRows);dateLabel.append(d);timeLabel.append(t);remove.type='button';remove.setAttribute('aria-label','이 회차 삭제');remove.addEventListener('click',()=>{row.remove();syncSessionRows();if(!$('wkSessionRows').children.length)addSessionRow();});row.append(dateLabel,timeLabel,remove);$('wkSessionRows').append(row);return d;
+  }
+  function setPerformanceSessions(value){$('wkPSessions').value=value;$('wkSessionRows').replaceChildren();for(const line of value.split('\n').filter(Boolean)){const [date,time='']=line.split(' ');addSessionRow(date,time);}if(!$('wkSessionRows').children.length)addSessionRow();}
+  $('wkAddSession').addEventListener('click',()=>{const rows=$('wkSessionRows').children;if(rows.length>=100)return;addSessionRow(rows.length?rows[rows.length-1].querySelector('[type="date"]').value:'').focus();});
+  function priceControls(){$('wkPPrice').disabled=$('wkPPriceKind').value!=='paid';}
+  $('wkPPriceKind').addEventListener('change',priceControls);
+  let pPreviewUrl=null,performanceEpoch=0,posterWorking=false;
+  async function loadEditorPoster(task){
+    const editor=performanceEpoch;posterWorking=true;controls();
+    try{const blob=await task();if(editor!==performanceEpoch||!$('wkPerformanceDialog').open)return;pFile=blob;posterPreview(blob);}
+    catch(e){if(editor===performanceEpoch&&$('wkPerformanceDialog').open)$('wkPMessage').textContent=e.message;}
+    finally{if(editor===performanceEpoch){posterWorking=false;controls();}}
+  }
+  function posterPreview(blob){if(pPreviewUrl)URL.revokeObjectURL(pPreviewUrl);pPreviewUrl=blob?URL.createObjectURL(blob):null;$('wkPPreview').hidden=!blob;$('wkPPosterEmpty').hidden=!!blob;if(blob)$('wkPPreview').src=pPreviewUrl;else $('wkPPreview').removeAttribute('src');}
+  async function openPerformance(p){if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');const editor=++performanceEpoch;posterWorking=false;pEdit=p?structuredClone(p):{id:crypto.randomUUID(),version:0,title:'',sessions:[],venue:'',priceKind:'unknown',price:'',bookingUrl:'',description:'',status:'needs_review',sourcePostId:'',sourceAsset:''};pFile=null;
+    for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',description:'wkPDescription',status:'wkPStatus'}))$(id).value=pEdit[key];
+    setPerformanceSessions(pEdit.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));priceControls();$('wkPExtra').open=false;$('wkPDialogTitle').textContent=pEdit.version?'공연 정보 수정':'새 공연';$('wkPSave').textContent=pEdit.version?'변경 저장':'공연 등록';$('wkPRestore').disabled=!pEdit.sourcePostId;$('wkPRestore').title=pEdit.sourcePostId?'인스타그램 게시물의 원본 이미지 불러오기':'연결된 인스타그램 게시물이 없습니다';$('wkPFile').value='';$('wkPMessage').textContent='';$('wkPDelete').hidden=!pEdit.version;posterPreview(null);$('wkPerformanceDialog').showModal();
+    if(pEdit.assetId)$('wkPMessage').textContent='저장된 포스터를 불러오는 중…';
+    // A poster request must never hold the application-wide action lock.
+    if(pEdit.assetId)asset(pEdit.assetId).then(blob=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open){posterPreview(blob);$('wkPMessage').textContent='';}}).catch(e=>{if(editor===performanceEpoch&&$('wkPerformanceDialog').open)$('wkPMessage').textContent='저장된 포스터를 불러오지 못했습니다. 인스타 원본 불러오기를 눌러 주세요.';});
+  }
+  const weeklyTemplates=[
+    {id:'paper-editorial',name:'공연이 있는 일주일',bg:'#fff1e1',ink:'#111111',accent:'#b80808'},
+    {id:'blue-score',name:'블루 스코어'},
+    {id:'stage-marquee',name:'마키 라이트'},
+    {id:'matinee-program',name:'마티네 프로그램'},
+    {id:'editorial',name:'크림 매거진',note:'차분한 여백 · 선명한 정보',bg:'#f4f0e7',ink:'#203c33',accent:'#c05b3a'},
+    {id:'midnight',name:'퍼플 나이트',note:'깊은 보라 · 라임 포인트',bg:'#19162c',ink:'#f2edff',accent:'#d9fa84'},
+    {id:'ticket',name:'오렌지 티켓',note:'티켓 모티프 · 경쾌한 구성',bg:'#ee6b42',ink:'#252b39',accent:'#ee6b42'},
+    {id:'gallery',name:'화이트 갤러리',note:'큰 포스터 · 절제된 타이포',bg:'#f8f9f6',ink:'#202722',accent:'#517263'},
+    {id:'classic',name:'기존 디자인',note:'이전 초안의 기본 서식',bg:'#f5f0fa',ink:'#251b35',accent:'#6c35a5'}
+  ];
+  function templateControls(){
+    for(const button of $('wkTemplates').querySelectorAll('[data-template]')){button.setAttribute('aria-pressed',String(button.dataset.template===(draft?.template||'classic')));button.disabled=busy||!!draft?.jobId;}
+    if(draft&&!isLayerDraft()&&draft.template!=='poster-news')$('wkPreviousTemplates').open=true;
+    $('wkTemplateName').textContent=weeklyTemplates.find(t=>t.id===(draft?.template||'classic'))?.name||(draft?.template==='poster-news'?'이전 큐레이션 초안':'기존 디자인');
+  }
+  function initTemplates(){
+    for(const t of weeklyTemplates){
+      const layered=WD.isLayerTemplate(t.id);
+      const button=el('button',undefined,'wk-template');button.type='button';button.dataset.template=t.id;button.setAttribute('aria-pressed','false');
+      const img=el('img');img.alt='';
+      const info=el('span',undefined,'wk-template-info');info.append(el('strong',t.name));
+      if(t.note)info.append(el('span',t.note));
+      button.append(img,info);
+      button.addEventListener('click',()=>run(async()=>{
+        if(!draft||draft.jobId)return;
+        pull();preserveTemplateAnchors(t.id);draft.template=t.id;
+        if(layered&&!draft.design){
+          draft.design=WD.normalizeDesign();
+          if(['이번 주\n인천에서 볼 공연','이번 주\n공연 모음'].includes(draft.title)){
+            draft.title='공연이\n있는\n일주일.';$('wkTitle').value=draft.title;
+            if(draft.subtitle==='이번 주, 공연장에서 만나요'){
+              draft.subtitle=WD.weekLabel(draft.week);$('wkSubtitle').value=draft.subtitle;
+            }
+          }
+        }
+        changed();templateControls();await render();
+      }));
+      $(layered?'wkFeaturedTemplate':'wkLegacyTemplates').append(button);
+    }
+  }
+  async function renderTemplatePreviews(){
+    const picker=$('wkTemplates');
+    if(!picker.querySelector('img:not([src])'))return;
+    await ensurePaperAssets();
+    const dates=week(today()),canvas=document.createElement('canvas');
+    canvas.width=324;canvas.height=405;
+    const ctx=canvas.getContext('2d');ctx.scale(canvas.width/1080,canvas.height/1350);
+    for(const img of picker.querySelectorAll('img:not([src])')){
+      const template=img.closest('button').dataset.template;
+      const sample={template,title:WD.isLayerTemplate(template)?'공연이\n있는\n일주일.':'이번 주\n공연 모음',subtitle:WD.weekLabel(dates.start),
+        week:dates.start,weekEnd:dates.end,closing:WD.DEFAULT_CLOSING_COPY,cards:Array.from({length:5},()=>({}))};
+      ctx.save();paintTemplate(ctx,template,sample,0,[]);ctx.restore();
+      img.src=canvas.toDataURL('image/jpeg',.86);
+    }
+  }
+  // Each template uses the same 1080 × 1350 canvas, uncropped posters and bounded text boxes.
+  function paintTemplate(ctx,id,d,index,posters){
+    if(WD.isLayerTemplate(id)){paintPaperTemplate(ctx,d,index);ctx.textBaseline='alphabetic';return;}
+    const t=weeklyTemplates.find(t=>t.id===id)||weeklyTemplates[0],last=index===d.cards.length+1,cover=index===0,card=!cover&&!last?d.cards[index-1]:null;
+    const rect=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
+    const line=(x,y,x2,y2,color=t.ink,dash=[])=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);};
+    const text=(value,x,y,w,h,size=40,color=t.ink,weight=600,family='system-ui, sans-serif',minSize=20,leading=1.32)=>{
+      value=String(value||'');if(!value)return 0;let lines=[],fontSize=size;const min=Math.min(minSize,size);
+      for(;fontSize>=min;fontSize--){ctx.font=`${weight} ${fontSize}px ${family}`;lines=[];
+        for(const para of value.split('\n')){let row='';for(const char of para){if(row&&ctx.measureText(row+char).width>w){lines.push(row);row='';}row+=char;}lines.push(row);}
+        if(lines.length*fontSize*leading<=h)break;
+      }
+      if(fontSize<min)throw Error('카드 문구가 너무 깁니다. 제목이나 일시·장소를 짧게 다듬어 주세요.');
+      ctx.fillStyle=color;ctx.textBaseline='top';lines.forEach((row,i)=>ctx.fillText(row,x,y+i*fontSize*leading));return lines.length*fontSize*leading;
+    };
+    const poster=(img,x,y,w,h,bg)=>{rect(x,y,w,h,bg);if(img){const scale=Math.min(w/img.width,h/img.height);ctx.drawImage(img,x+(w-img.width*scale)/2,y+(h-img.height*scale)/2,img.width*scale,img.height*scale);}else{ctx.fillStyle=t.accent;ctx.beginPath();ctx.arc(x+w/2,y+h*.4,w*.25,Math.PI,0);ctx.lineTo(x+w*.75,y+h*.78);ctx.lineTo(x+w*.25,y+h*.78);ctx.fill();line(x+w*.12,y+h*.87,x+w*.88,y+h*.87,t.ink);}};
+    const date=d.week.slice(5).replace('-','.')+' — '+d.weekEnd.slice(5).replace('-','.');
+    const title=d.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2');
+    const page=String(index+1).padStart(2,'0')+' / '+String(d.cards.length+2).padStart(2,'0');
+    const info=(x,y,w,color=t.ink)=>{
+      const scheduleHeight=text(card.schedule,x,y,w,238,29,color,500);
+      const venueY=y+Math.max(104,scheduleHeight+10);
+      text(card.venue,x,venueY,w,80,29,color,600);
+      text(card.price,x,venueY+87,w,66,25,color,500);
+    };
+    rect(0,0,1080,1350,t.bg);
+    if(id==='poster-news'){
+      const ink='#17171b',paper='#f4f3ee',violet='#5c28a4';
+      const newsText=(value,x,y,w,h,size=40,color=ink,weight=700)=>text(value,x,y,w,h,size,color,weight,'system-ui, sans-serif',Math.min(size,32),1.16);
+      const arrow=(x,y,color)=>{ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+58,y);ctx.moveTo(x+39,y-18);ctx.lineTo(x+58,y);ctx.lineTo(x+39,y+18);ctx.stroke();};
+      const fullPoster=(img,x,y,w,h)=>{
+        ctx.save();ctx.shadowColor='#00000028';ctx.shadowBlur=26;ctx.shadowOffsetY=12;
+        if(img){const scale=Math.min(w/img.width,h/img.height),pw=img.width*scale,ph=img.height*scale;ctx.drawImage(img,x+(w-pw)/2,y+(h-ph)/2,pw,ph);}ctx.restore();
+      };
+      rect(0,0,1080,1350,paper);
+      if(cover){
+        newsText('ENTICKET',56,48,400,48,30,ink,900);newsText(date,678,50,350,48,30,ink,600);
+        const heading=/^\d{4}년 \d+월 .+ 주 공연$/.test(d.title)?'이번 주\n인천에서 볼 공연':d.title;
+        newsText(heading,56,153,968,285,108,ink,900);
+        newsText(d.subtitle,60,450,950,76,32,'#5b5a60',500);
+        const count=Math.min(posters.length,3);
+        if(count===1)fullPoster(posters[0],220,558,640,660);
+        else if(count===2){fullPoster(posters[0],56,558,463,660);fullPoster(posters[1],561,558,463,660);}
+        else if(count===3){fullPoster(posters[0],36,660,304,558);fullPoster(posters[2],740,660,304,558);fullPoster(posters[1],354,558,372,660);}
+        else{ctx.strokeStyle='#c6c2ca';ctx.lineWidth=2;ctx.setLineDash([8,8]);ctx.strokeRect(56,558,968,660);ctx.setLineDash([]);newsText('공연을 선택하면\n포스터가 여기에 모입니다.',180,820,760,130,42,'#77727e',500);}
+        rect(0,1252,1080,98,violet);newsText(count?'공연 '+d.cards.length+'편':'이번 주 공연 모음',56,1280,850,52,32,'#fff',700);arrow(952,1300,'#fff');
+      }else if(last){
+        rect(0,0,1080,1350,violet);newsText('ENTICKET',56,52,800,60,32,'#fff',900);
+        newsText('마음에 든 공연,\n저장해 두세요.',56,210,968,300,98,'#fff',900);
+        newsText(d.closing,60,560,950,230,40,'#e9def7',500);
+        line(56,1240,1024,1240,'#ffffff60');newsText('@en__ticket',56,1278,750,45,28,'#fff',700);arrow(952,1300,'#fff');
+      }else{
+        const img=posters[index-1];
+        rect(0,0,1080,888,paper);
+        if(img)fullPoster(img,40,28,1000,832);
+        rect(0,888,1080,462,'#fff');rect(56,926,8,50,violet);
+        newsText(card.title,88,922,936,132,56,ink,900);
+        line(56,1070,1024,1070,'#e1dfe4');
+        newsText('일시',56,1096,90,48,28,'#747078',500);text(card.schedule,165,1092,859,88,38,ink,700,'system-ui, sans-serif',22,1.16);
+        newsText('장소',56,1192,90,48,28,'#747078',500);newsText(card.venue,165,1188,859,88,38,ink,700);
+        if(card.price){newsText('가격',56,1282,90,42,26,'#747078',500);newsText(card.price,165,1278,665,55,30,ink,600);}
+        newsText(String(index).padStart(2,'0')+' / '+String(d.cards.length).padStart(2,'0'),887,1290,140,35,23,'#747078',500);
+      }
+      ctx.textBaseline='alphabetic';return;
+    }
+
+    if(id==='classic'){
+      rect(0,0,1080,18,t.accent);text('ENTICKET  /  WEEKLY',64,62,950,45,26,t.accent);text(title,64,320,950,380,92,t.ink);text(d.subtitle,64,830,950,150,36,t.ink);text(d.week+' — '+d.weekEnd,64,1130,950,70,36,t.ink);text('en__ticket',64,1295,800,35,20,t.accent);ctx.textBaseline='alphabetic';return;
+    }
+    if(id==='midnight'){
+      const g=ctx.createRadialGradient(1050,480,20,900,570,800);g.addColorStop(0,'#61519b');g.addColorStop(1,'#19162c');ctx.fillStyle=g;ctx.fillRect(0,0,1080,1350);
+      ctx.strokeStyle='#ffffff16';ctx.lineWidth=2;for(const r of [260,420,580]){ctx.beginPath();ctx.arc(1050,540,r,0,Math.PI*2);ctx.stroke();}
+      text('ENTICKET',64,62,500,54,30,t.accent,800);text('WEEKLY / LIVE',750,68,280,40,20,t.ink,500);
+      if(cover){text(title,64,240,920,440,102,t.ink,800);rect(64,718,84,7,t.accent);text(d.subtitle,64,770,830,160,38,t.ink,400);rect(64,1020,952,190,t.accent);text(date,100,1050,800,65,50,'#19162c',700);text('공연 '+d.cards.length+'편',100,1130,830,50,26,'#19162c',500);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,240,930,370,118,t.accent,800);text(d.closing,64,800,900,330,44,t.ink,500);}
+      else{ text('공연 '+String(index).padStart(2,'0'),64,128,800,40,22,t.accent);poster(posters[index-1],64,190,952,710,'#100f1e');text(card.title,64,930,940,112,45,t.ink,700);text(card.schedule,64,1063,940,77,27,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1155,940,96,27,t.ink,500);}
+      line(64,1274,1016,1274,'#ffffff45');if(!card)text('@en__ticket',64,1292,600,32,20,t.ink,500);text(page,890,1292,150,32,20,t.accent,600);
+    }else if(id==='ticket'){
+      rect(48,48,984,1254,'#fff7e7');text('ENTICKET',90,90,600,60,40,t.ink,800);text('ADMIT / WEEKLY',748,105,240,35,19,t.ink,500);line(90,180,990,180);
+      if(cover){text(title,90,340,880,390,88,t.ink,800);text(d.subtitle,90,800,880,160,36,t.ink,500);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,90,270,880,320,92,t.ink,800);text(d.closing,90,710,880,270,38,t.ink,500);}
+      else{poster(posters[index-1],90,220,530,730,'#f1e7d3');text(String(index).padStart(2,'0'),674,236,290,150,112,t.accent,800);text(card.title,674,430,290,300,42,t.ink,700);text(card.venue,674,766,290,174,27,t.ink,500);}
+      line(48,1016,1032,1016,'#b8a993',[12,9]);for(const x of [48,1032]){ctx.fillStyle=t.bg;ctx.beginPath();ctx.arc(x,1016,25,0,Math.PI*2);ctx.fill();}
+      if(card){text(card.schedule,90,1062,900,96,32,t.ink,600);text(card.price,90,1170,900,62,27,t.ink,500);}else{text(date,90,1062,880,70,52,t.ink,700);if(cover)text('공연 '+d.cards.length+'편',90,1150,880,60,29,t.ink,500);}
+      if(!card)text('@en__ticket',90,1250,500,32,20,t.ink,500);text(page,860,1250,150,32,20,t.ink,600);
+    }else if(id==='gallery'){
+      text('ENTICKET',64,62,600,55,34,t.ink,800);text('공연 아카이브 / WEEKLY',690,75,340,35,22,t.ink,400);line(64,142,1016,142);
+      if(cover){text(title,64,220,952,340,90,t.ink,600);text(d.subtitle,64,603,952,112,34,t.ink,400);const count=Math.min(posters.length||3,3);for(let j=0;j<count;j++)poster(posters[j],64+(952-(count*326-26))/2+j*326,795,300,330,j===1?'#e1e8dd':'#eeeee7');text(date,64,1168,900,70,44,t.ink,400);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,250,952,320,90,t.ink,500);line(64,708,220,708);text(d.closing,64,800,930,330,42,t.ink,400);}
+      else{poster(posters[index-1],64,182,952,770,'#edeee9');text(card.title,64,982,952,102,40,t.ink,700);text(card.schedule,64,1100,952,72,25,t.ink,500);text(card.venue+(card.price?' · '+card.price:''),64,1188,952,62,25,t.ink,400);}
+      line(64,1270,1016,1270);if(!card)text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.ink,500);
+    }else{
+      // Editorial: warm paper, forest-green typography, generous margins.
+      text('ENTICKET',64,62,500,60,40,t.ink,800);text('THE WEEKLY EDIT',744,78,300,35,21,t.ink,500);line(64,150,1016,150);
+      if(cover){text(title,64,335,952,360,96,t.ink,700);text(d.subtitle,64,740,930,120,36,t.ink,400);rect(64,940,952,276,t.ink);text(date,100,985,860,80,60,'#f4f0e7',600);text('공연 '+d.cards.length+'편',100,1106,860,60,30,'#f4f0e7',400);}
+      else if(last){text(WD.DEFAULT_CLOSING_TITLE,64,270,952,330,98,t.ink,600);rect(64,727,90,7,t.accent);text(d.closing,64,820,930,340,44,t.ink,400);}
+      else{ text(card.title,64,207,952,160,56,t.ink,700);poster(posters[index-1],64,412,550,770,'#e7e3d7');text('ON STAGE',660,428,360,40,23,t.accent,600);text(String(index).padStart(2,'0'),654,506,360,160,120,t.ink,500);line(660,715,1016,715,'#a6aea3');info(660,756,356);}
+      line(64,1270,1016,1270,'#b7bdb1');if(!card)text('@en__ticket',64,1293,600,32,20,t.ink,500);text(page,890,1293,150,32,20,t.accent,600);
+    }
+    ctx.textBaseline='alphabetic';
+  }
+
+  function textBlock(ctx,text,x,y,width,maxLines,size,min=24,color='#251b35'){
+    let lines=[];
+    for(;size>=min;size-=2){ctx.font=`600 ${size}px system-ui, sans-serif`;lines=[];for(const paragraph of text.split('\n')){let line='';for(const char of paragraph){if(ctx.measureText(line+char).width>width&&line){lines.push(line);line='';}line+=char;}lines.push(line);}if(lines.length<=maxLines)break;}
+    if(lines.length>maxLines)throw Error('카드 문구가 너무 깁니다. 제목이나 일시·장소를 짧게 다듬어 주세요.');ctx.fillStyle=color;lines.forEach((line,i)=>ctx.fillText(line,x,y+i*size*1.4));return lines.length*size*1.4;
+  }
+  async function render(){
+    const renderEpoch=generation,renderDraft=draft;const checkCurrent=()=>{if(renderEpoch!==generation||draft!==renderDraft)throw Error('로그인 상태 또는 초안이 변경되었습니다.');};
+    clearRender();pull();
+    try{
+    if(draft.jobId){for(let i=0;i<draft.cards.length+2;i++){const blob=await api('rendered',{id:draft.id,index:String(i)},true);checkCurrent();rendered.push(blob);}}
+    else{
+      if(isLayerDraft())await ensurePaperAssets();
+      await document.fonts.ready;checkCurrent();
+      const template=draft.template||'classic';const posters=template==='classic'?[]:isLayerDraft()?await paperPosters(draft.cards):await Promise.all(draft.cards.map(async c=>image(await asset(c.assetId,true))));
+      checkCurrent();
+      for(let i=0;i<draft.cards.length+2;i++){
+        const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');if(template!=='classic'){paintTemplate(ctx,template,draft,i,posters);}else{ctx.fillStyle='#f5f0fa';ctx.fillRect(0,0,1080,1350);ctx.fillStyle='#6c35a5';ctx.fillRect(0,0,1080,18);
+        textBlock(ctx,'ENTICKET  /  WEEKLY',64,83,950,1,26,26,'#6c35a5');
+        if(i===0){textBlock(ctx,draft.title.replace(/^(\d{4}년 \d+월) (.+ 주 공연)$/,'$1\n$2'),64,390,950,3,92,48);textBlock(ctx,draft.subtitle,64,860,950,3,36,28);textBlock(ctx,draft.week+' — '+draft.weekEnd,64,1160,950,1,36,28);}
+        else if(i===draft.cards.length+1){textBlock(ctx,WD.DEFAULT_CLOSING_TITLE,64,400,950,3,100,48);textBlock(ctx,draft.closing,64,900,950,5,40,28);}
+        else{const card=draft.cards[i-1],img=await image(await asset(card.assetId,true));const scale=Math.min(952/img.width,860/img.height);ctx.fillStyle='#e9e0f1';ctx.fillRect(64,120,952,860);ctx.drawImage(img,64+(952-img.width*scale)/2,120+(860-img.height*scale)/2,img.width*scale,img.height*scale);
+          textBlock(ctx,card.title,64,1040,952,2,38,28);textBlock(ctx,card.schedule,64,1150,952,2,25,22);textBlock(ctx,card.venue+(card.price?' · '+card.price:''),64,1230,952,2,25,22);}
+        if(i===0||i===draft.cards.length+1)textBlock(ctx,'en__ticket',64,1320,800,1,20,20,'#6c35a5');textBlock(ctx,String(i+1).padStart(2,'0'),950,1320,80,1,20,20,'#6c35a5');}
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));checkCurrent();if(!blob)throw Error('이미지 생성에 실패했습니다.');rendered.push(blob);
+      }
+    }
+    for(let i=0;i<rendered.length;i++){
+      const url=URL.createObjectURL(rendered[i]);
+      urls.push(url);
+      const fig=el('figure'), img=el('img'), zoom=el('a');
+      img.src=url; img.alt=(i+1)+'번 실제 게시 이미지';
+      zoom.href=url; zoom.target='_blank'; zoom.rel='noopener'; zoom.title='원본 크기로 보기'; zoom.append(img);
+      const link=el('a',(i+1)+'번 이미지 내려받기');
+      link.href=url; link.download=String(i+1).padStart(2,'0')+'.jpg';
+      fig.append(zoom,link);
+      $('wkPreviews').append(fig);
+
+      const last=rendered.length-1;
+      const pageName=i===0?'표지':i===last?'뒷표지':draft.cards[i-1].title;
+      const tab=el('button');
+      tab.type='button';
+      if(i>0&&i<last){tab.dataset.page=String(i);tab.draggable=!draft.jobId;}
+      tab.title=tab.draggable?pageName+' · 끌어서 순서 변경':pageName;
+      tab.setAttribute('aria-label',(i+1)+'페이지 '+pageName+' 편집');
+      const thumb=el('img');
+      thumb.src=url; thumb.alt='';
+      tab.append(thumb,el('span',pageName));
+      tab.addEventListener('click',()=>selectCard(i));
+      $('wkFilmstrip').append(tab);
+    }
+    selectCard(selectedCard);$('wkStageState').textContent=dirty?'저장하지 않은 변경':'미리보기 최신';status('');controls();if(draft.jobId)showReview();
+    }catch(e){clearRender();$('wkStageState').textContent='미리보기를 다시 생성해 주세요.';throw e;}
+  }
+  function showReview(){selectCard(selectedCard);$('wkReview').hidden=false;$('wkAccount').textContent='게시 계정 @'+(draft.job?.account?.username||'확인 필요')+' · '+(labels[draft.status]||draft.status);$('wkFinalCaption').textContent=draft.caption;const old=$('wkPublishedLink');if(old)old.remove();if(draft.job?.permalink){const a=el('a','인스타그램에서 게시물 보기');a.id='wkPublishedLink';a.href=draft.job.permalink;a.target='_blank';a.rel='noopener noreferrer';$('wkReview').append(a);}$('wkConfirm').checked=false;controls();}
+  async function sourceList(more=false){
+    if(sourceBusy)return;sourceBusy=true;const epoch=generation;
+    let placed=0,undated=0,skipped=0,failed=0;const placedDates=[];
+    try{
+      const after=more?sourceCursor:'';const result=await api('sources',after?{after}:{});
+      if(!more)$('wkSources').replaceChildren();sourceCursor=result.nextCursor;$('wkMoreSources').hidden=!sourceCursor;
+      for(const post of result.items){
+        if(epoch!==generation)return;
+        const suggestion=post.suggestion||{title:'공연명 확인 필요',venue:'',sessions:[],reason:'공연 정보를 확인해 주세요.'};
+        if(suggestion.eligible===false){skipped++;continue;}
+        const images=post.assets.map((a,index)=>({...a,index})).filter(a=>a.type==='image');
+        if(!images.length){skipped++;continue;}
+        if(performances.some(p=>p.sourcePostId===post.id)){skipped++;continue;}
+        const candidate={id:crypto.randomUUID(),version:0,title:suggestion.title,venue:suggestion.venue,sessions:suggestion.sessions,priceKind:suggestion.priceKind||'unknown',price:suggestion.price||'',bookingUrl:'',description:post.caption||'',status:'needs_review',sourcePostId:post.id,sourceAsset:String(images[0].index)};
+        async function openCandidate(message){await openPerformance();pEdit={...candidate,sessions:[]};$('wkPTitle').value=candidate.title;$('wkPVenue').value=candidate.venue;setPerformanceSessions(candidate.sessions.map(s=>s.date+(s.time?' '+s.time:'')).join('\n'));$('wkPDescription').value=candidate.description;$('wkPMessage').textContent=message;void loadEditorPoster(async()=>sourcePoster({post:post.id,index:candidate.sourceAsset,after:after||''}));}
+        // A multi-image post may advertise several different performances; do not assign all to one date.
+        if(images.length>1){failed++;const button=el('button',candidate.title+' · 여러 이미지: 공연 확인','wk-source');button.addEventListener('click',()=>run(()=>openCandidate('여러 이미지가 있는 게시물입니다. 첫 이미지를 불러왔습니다. 공연별 날짜와 포스터를 확인해 주세요.')));$('wkSources').append(button);continue;}
+        status('공연을 가져오는 중… '+(placed+undated)+'개 저장');
+        try{
+          const file=await sourcePoster({post:post.id,index:candidate.sourceAsset,after:after||''});
+          if(epoch!==generation)return;
+          const saved=(await api('performance',{id:candidate.id,data:JSON.stringify(candidate),file})).performance;performances.push(saved);
+          if(candidate.sessions.length){placed++;placedDates.push(...candidate.sessions.map(s=>s.date));}else undated++;
+          renderCalendar();renderCandidates();
+        }catch(e){if(epoch!==generation)return;failed++;const button=el('button',candidate.title+' · 가져오기 실패: 눌러서 확인','wk-source');button.title=e.message;button.addEventListener('click',()=>run(()=>openCandidate(e.message)));$('wkSources').append(button);}
+      }
+      if(placedDates.length&&!placedDates.some(d=>d.startsWith($('wkMonth').value)))$('wkMonth').value=placedDates.sort()[0].slice(0,7);
+      await load();
+      status('가져오기 완료 · 날짜 배치 '+placed+'개 · 날짜 확인 필요 '+undated+'개'+(skipped?' · 기존/동영상 제외 '+skipped+'개':'')+(failed?' · 별도 확인 '+failed+'개':''));
+      if(undated)$('wkPending').open=true;
+    }finally{sourceBusy=false;}
+  }
+  $('wkPerformanceForm').addEventListener('submit',e=>{e.preventDefault();if(posterWorking){$('wkPMessage').textContent='포스터 준비가 끝난 뒤 저장해 주세요.';return;}run(async()=>{try{
+    syncSessionRows();const p={...pEdit};for(const [key,id]of Object.entries({title:'wkPTitle',venue:'wkPVenue',priceKind:'wkPPriceKind',price:'wkPPrice',description:'wkPDescription',status:'wkPStatus'}))p[key]=$(id).value;
+    p.sessions=$('wkPSessions').value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const m=/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?$/.exec(s);if(!m)throw Error(messages.weekly_invalid_sessions);return {date:m[1],time:m[2]||''};});
+    await api('performance',{id:p.id,data:JSON.stringify(p),...(pFile?{file:pFile}:{})});$('wkPerformanceDialog').close();await load();status('공연 정보를 저장했습니다. 기존 주간 초안의 카드 문구는 그대로 유지됩니다.');
+  }catch(e){$('wkPMessage').textContent=e.message;throw e;}});});
+  $('wkPChange').addEventListener('click',()=>$('wkPFile').click());
+  $('wkPRestore').addEventListener('click',()=>{const p=pEdit;let fetched;if(!p?.sourcePostId)return;++performanceEpoch;$('wkPMessage').textContent='인스타그램 이미지를 가져오는 중…';void loadEditorPoster(async()=>{const blob=await sourcePoster({post:p.sourcePostId,index:p.sourceAsset||'0',performance_id:p.id});fetched=blob;return blob;}).then(()=>{if(pEdit===p&&$('wkPerformanceDialog').open&&fetched&&pFile===fetched)$('wkPMessage').textContent='이미지를 불러왔습니다. 변경 저장을 누르면 포스터가 교체됩니다.';});});
+  $('wkPFile').addEventListener('change',()=>{const file=$('wkPFile').files[0];if(!file)return;++performanceEpoch;void loadEditorPoster(()=>normalize(file));});
+  $('wkPDelete').addEventListener('click',async()=>{if(await EnticketUI.confirm('공연 달력에서 삭제할까요? 인스타그램 원본 게시물은 유지됩니다.'))run(async()=>{await api('delete',{id:pEdit.id,data:JSON.stringify({version:pEdit.version})});$('wkPerformanceDialog').close();await load();});});
+  $('wkClosePerformance').addEventListener('click',()=>$('wkPerformanceDialog').close());$('wkPerformanceDialog').addEventListener('close',()=>{if($('wkPerformanceDialog').open)return;++performanceEpoch;posterWorking=false;posterPreview(null);controls();});
+  for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption'])$(id).addEventListener('input',changed);
+  $('wkCalendarRefresh').addEventListener('click',()=>run(load));$('wkMonth').addEventListener('change',renderCalendar);
+  $('wkImport').addEventListener('click',()=>run(()=>{if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');return sourceList();}));$('wkMoreSources').addEventListener('click',()=>run(()=>{if(calendarChanges.size)throw Error('옮긴 일정을 먼저 변경 저장하거나 취소해 주세요.');return sourceList(true);}));
+  $('wkRefresh').addEventListener('click',()=>run(load));
+  $('wkWeek').addEventListener('change',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 초안을 바꾸고 새 주를 선택할까요?')){$('wkWeek').value=draft.week;return;}blankDraft();run(render);});
+  $('wkNewDraft').addEventListener('click',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 내용을 버릴까요?'))return;if(drafts.some(d=>d.week===draft.week&&d.jobId)&&!await EnticketUI.confirm('이 주에 게시 작업이 있습니다. 기존 게시 결과를 확인했으며 별도 초안을 만들까요?'))return;blankDraft();run(render);});
+  $('wkDraftList').addEventListener('change',async()=>{if(dirty&&!await EnticketUI.confirm('저장하지 않은 내용을 버리고 초안을 열까요?')){$('wkDraftList').value=draft.id;return;}const d=drafts.find(x=>x.id===$('wkDraftList').value);if(d){draft=structuredClone(d);dirty=false;fillDraft();}else blankDraft();run(render);});
+  $('wkSave').addEventListener('click',()=>run(async()=>{await save();if(isLayerDraft())await render();status('디자인을 저장했습니다.');}));$('wkRender').addEventListener('click',()=>run(render));
+  $('wkCaptionGenerate').addEventListener('click',async()=>{if($('wkCaption').value&&!await EnticketUI.confirm('편집한 캡션을 선택 공연 기준으로 다시 채울까요?'))return;pull();$('wkCaption').value=draft.title+'\n'+draft.week+' ~ '+draft.weekEnd+'\n\n'+draft.cards.map(c=>[c.title,c.schedule,c.venue,c.price].filter(Boolean).join('\n')).join('\n\n')+'\n\n#엔티켓';changed();});
+  $('wkDownload').addEventListener('click',()=>run(async()=>{const files={'caption.txt':new TextEncoder().encode($('wkCaption').value)};for(let i=0;i<rendered.length;i++)files[String(i+1).padStart(2,'0')+'.jpg']=new Uint8Array(await rendered[i].arrayBuffer());const blob=new Blob([fflate.zipSync(files,{level:0})],{type:'application/zip'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=draft.week+'-enticket.zip';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}));
+  $('wkPrepare').addEventListener('click',()=>run(async()=>{
+    if(drafts.some(d=>d.id!==draft.id&&d.week===draft.week&&d.jobId)&&!await EnticketUI.confirm('같은 주의 다른 게시 작업이 있습니다. 중복 여부를 확인했나요?'))return;
+    if(!draft.cards.length)throw Error('게시할 공연을 하나 이상 선택해 주세요.');if(dirty||!draft.version)await save();await render();let result;try{result=await api('prepare',{id:draft.id,version:String(draft.version),file:rendered});}catch(e){const current=draft.id;await load();const saved=drafts.find(d=>d.id===current);if(saved)cacheDraft(saved);throw e;}cacheDraft(result.draft);showReview();status('이미지·순서·캡션을 고정했습니다. 확인 체크 후에만 실제 게시합니다.');
+  }));
+  $('wkConfirm').addEventListener('change',controls);
+  $('wkPublish').addEventListener('click',()=>run(async()=>{if(!$('wkConfirm').checked||!rendered.length)return;try{const result=await api('publish',{id:draft.id,confirm:'publish',fingerprint:draft.job.fingerprint});cacheDraft(result.draft);showReview();status(labels[draft.status]||draft.status);}catch(e){draft.status='unknown';$('wkConfirm').checked=false;status('게시 응답을 확인하지 못했습니다. 게시 상태 확인을 눌러 주세요.',true);throw e;}}));
+  $('wkJobStatus').addEventListener('click',()=>run(async()=>{const result=await api('status',{id:draft.id});cacheDraft(result.draft);if(rendered.length)showReview();status((labels[draft.status]||draft.status)+(draft.job?.mediaId?' · 게시 ID '+draft.job.mediaId:''));controls();}));
+  $('wkUnlock').addEventListener('click',()=>run(async()=>{if(!await EnticketUI.confirm('고정된 게시 준비를 취소하고 다시 편집할까요? 수정 후 최종 확인이 다시 필요합니다.'))return;cacheDraft((await api('unlock',{id:draft.id})).draft);fillDraft();}));
+  for(const button of document.querySelectorAll('[data-ig-view="weekly"],[data-ig-view="calendar"]'))button.addEventListener('click',()=>{const design=button.dataset.igView==='weekly';status('');$('wkCalendarView').hidden=design;$('wkDesignView').hidden=!design;$('wkDesignHeading').hidden=!design;if(window.gdrive?.isAllowed())run(async()=>{if(!draft)await load();if(design&&!rendered.length)await render();});});
+  for(const [id,delta]of [['wkPrevMonth',-1],['wkNextMonth',1]])$(id).addEventListener('click',()=>{const d=new Date($('wkMonth').value+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+delta);$('wkMonth').value=d.toISOString().slice(0,7);renderCalendar();});
+  document.addEventListener('enticket-auth',()=>{generation++;endCalendarDrag();calendarChanges.clear();performances=[];drafts=[];draft=null;dirty=false;pFile=null;assetCache.clear();thumbUrls.forEach(URL.revokeObjectURL);thumbUrls.clear();clearRender();$('wkPerformanceDialog').close();for(const id of ['wkCalendar','wkCandidates','wkCards','wkSources','wkPreviews','wkUnscheduled','wkSessionRows'])$(id).replaceChildren();for(const id of ['wkTitle','wkSubtitle','wkClosing','wkCaption','wkPTitle','wkPDescription','wkPSessions','wkPVenue','wkPPrice'])$(id).value='';$('wkFinalCaption').textContent='';$('wkStatus').textContent='';renderDraftList();if(window.gdrive?.isAllowed()&&!$('igWeeklyView').hidden)run(load);});
+  window.addEventListener('beforeunload',e=>{if(dirty||calendarChanges.size){e.preventDefault();e.returnValue='';}});
+  /* WEEKLY_LAYER_EDITOR */
+  initLayerEditor();initTemplates();$('wkMonth').value=today().slice(0,7);$('wkWeek').value=today();
+})();
+
+</script>
+<script>
+/* ===== 탭 전환 ===== */
+document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
+    const target=t.dataset.tab || t.dataset.subtab;
+    if(target==='settlement' || target==='oseal'){
+      document.querySelector('.tab[data-tab="settlement"]').classList.add('active');
+      document.querySelectorAll('.settlement-tab').forEach(button=>{
+        const selected=(button.dataset.tab || button.dataset.subtab)===target;
+        button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
+      });
+    }else t.classList.add("active");
+    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
+    t.scrollIntoView({block:"nearest",inline:"nearest"});
+    document.getElementById("panel-"+target).classList.add("active");
+    rememberMenu(target);
+
+  });
+});
+function rememberMenu(tab){
+  const view=tab==='instagram' ? document.querySelector('[data-ig-view].active')?.dataset.igView : null;
+  history.replaceState({...history.state,enticketMenu:{tab,view}},'');
+}
+for(const button of document.querySelectorAll('[data-ig-view]')){
+  button.addEventListener('click',()=>rememberMenu('instagram'));
+}
+(function restoreMenu(){
+  const saved=history.state?.enticketMenu;
+  if(!saved) return;
+  const button=[...document.querySelectorAll('.tab, .settlement-tab')].find(el=>el.dataset.tab===saved.tab);
+  if(!button || button.closest('[hidden]')) return;
+  button.click();
+  if(saved.tab==='instagram'){
+    const subtab=[...document.querySelectorAll('[data-ig-view]')].find(el=>el.dataset.igView===saved.view);
+    subtab?.click();
+  }
+})();
+document.documentElement.classList.remove('restoring-menu');
 </script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js" integrity="sha384-ETfVLWAUsU3zp3SpnQsPDbAyrF6jYv2w8aNYo6KtY2JuyxXhzYLOL7e0ATbLSIHP" crossorigin="anonymous"></script>
@@ -2421,29 +3302,10 @@ function setNavCollapsed(closed){
 }
 navToggle.onclick=()=>setNavCollapsed(navToggle.getAttribute('aria-expanded')==='true');
 navViewport.addEventListener('change',syncNavToggle);syncNavToggle();
-for(const button of document.querySelectorAll('.tab')){
+for(const button of document.querySelectorAll('.tab, .ig-subtab')){
   button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());
-  if(['settlement','instagram'].includes(button.dataset.tab))button.addEventListener('click',()=>{if(!navViewport.matches)setNavCollapsed(false);});
 }
 for(const id of ['gLoginBtn','gLogoutBtn']){const button=document.getElementById(id);button.title=button.textContent.trim();button.setAttribute('aria-label',button.textContent.trim());}
-/* ===== 탭 전환 ===== */
-document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
-  t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll(".panel-view").forEach(x=>x.classList.remove("active"));
-    const target=t.dataset.tab || t.dataset.subtab;
-    if(target==='settlement' || target==='oseal'){
-      document.querySelector('.tab[data-tab="settlement"]').classList.add('active');
-      document.querySelectorAll('.settlement-tab').forEach(button=>{
-        const selected=(button.dataset.tab || button.dataset.subtab)===target;
-        button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected));
-      });
-    }else t.classList.add("active");
-    for(const parent of document.querySelectorAll('.tab[aria-expanded]')) parent.setAttribute('aria-expanded',String(parent.classList.contains('active')));
-    t.scrollIntoView({block:"nearest",inline:"nearest"});
-    document.getElementById("panel-"+target).classList.add("active");
-  });
-});
 /* ===== 공용: 암호 걸린 Office 파일 복호화 (도구1·도구4 공유) ===== */
   // ── 암호 걸린 Office 파일(.xls/.xlsx, Agile 암호화) 브라우저 복호화 ──
   // 순수 JS AES-CBC(128·192·256) + Web Crypto 해시(SHA-1·256·384·512) + 최소 CFB(OLE) 파서
@@ -2586,6 +3448,21 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
     return { id:"", label:"알 수 없는 서식" };
   }
   function pwFromName(name){ const m=String(name).match(/(\d{6})(?=\.[^.]+$|\D*$)/); return m?m[1]:null; }
+function writeRosterFile(sheetName,aoa,widths){
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=widths.map(wch=>({wch}));
+  const edge={style:"thin",color:{rgb:"FFB7B7B7"}};
+  const border={left:edge,right:edge,top:edge,bottom:edge};
+  const body={font:{sz:10},alignment:{vertical:"center",wrapText:true},border};
+  const header={...body,font:{sz:10,bold:true}};
+  for(const address of Object.keys(ws)){
+    if(address.startsWith("!"))continue;
+    ws[address].s=XLSX.utils.decode_cell(address).r===0?header:body;
+  }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  return injectPageSetup(writeStyledWorkbook(wb),aoa.length,{sheetName,lastColumn:XLSX.utils.encode_col(widths.length-1),fitToHeight:0});
+}
 /* ===== 도구 1: 예매자 명단 정리 (노드식 다중 파일 추합) ===== */
 (function(){
   const TARGET_COLS=["공연명","공연일","공연시간","관람자명","연락처","예매번호"];
@@ -2828,21 +3705,26 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
     return { rows: out, missing, unit:(seatUnit?"좌석":"예매"), rawCount: rows.length,
              fmt: detectSourceFormat(headers) };
   }
+  let resetVersion=0;
   function addFiles(fileList){
+    const batch=resetVersion;
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
     if(!files.length) return;
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=async e=>{
+        if(batch!==resetVersion) return;
         try{
           let bytes=new Uint8Array(e.target.result);
           if(OfficeCrypto.isEncrypted(bytes)){
             let pw=pwFromName(file.name); let dec=null, lastErr="";
             for(let attempt=0;attempt<4;attempt++){
-              if(!pw){ pw=prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+              if(batch!==resetVersion) return;
+              if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
               try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
               catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
             }
+            if(batch!==resetVersion) return;
             if(!dec){ nodes.push({id:++seq,name:file.name,rows:[],missing:[],error:true,errMsg:"암호 해제 실패"}); render(); recompute(); return; }
             bytes=dec;
           }
@@ -2860,6 +3742,11 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
       reader.readAsArrayBuffer(file);
     });
   }
+  document.getElementById("xlReset").addEventListener("click",()=>{
+    resetVersion++; nodes=[];
+    maskPhoneChk.checked=false; inputEl.value="";
+    render(); recompute();
+  });
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
   function render(){
     nodesEl.innerHTML="";
@@ -2923,28 +3810,17 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
     const miss=new Set(); nodes.forEach(n=>n.missing&&n.missing.forEach(m=>miss.add(m)));
     warnBox.innerHTML=miss.size?`<div class="warn">일부 파일에서 못 찾은 컬럼: <b>${[...miss].map(esc).join(", ")}</b> · 해당 칸은 비워둡니다.</div>`:"";
   }
-  function buildWb(){
+  function buildRosterFile(){
     const rows=getViewRows();
-    const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]))];
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:18},{wch:12},{wch:9},{wch:7},{wch:10},{wch:15},{wch:12}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"예매자명단");
-    return wb;
+    const aoa=[OUTPUT_COLS, ...rows.map(r=>OUTPUT_COLS.map(c=>r[c]??""))];
+    return writeRosterFile("예매자명단",aoa,[26,12,9,7,11,16,17]);
   }
-  function download(){ if(!allRows().length) return; XLSX.writeFile(buildWb(),outFilename); }
-  async function saveToDrive(){
-    if(!allRows().length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    const btn=document.getElementById("xlDriveSave"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      const bytes=XLSX.write(buildWb(),{type:"array",bookType:"xlsx"});
-      const res=await window.gdrive.saveFile(["enticket","예매자명단", firstShowName()||"미지정"], outFilename,
-        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
+  function download(){
+    if(!allRows().length)return;
+    const blob=new Blob([buildRosterFile()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=outFilename;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),60000);
   }
   // 상시 드롭존: 드래그/선택 시마다 파일 추가
   inputEl.addEventListener("change",e=>{ if(e.target.files.length) addFiles(e.target.files); inputEl.value=""; });
@@ -2953,7 +3829,6 @@ document.querySelectorAll(".tab, .settlement-tab").forEach(t=>{
   dropEl.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
   maskPhoneChk.addEventListener("change",renderOutput);
   document.getElementById("xlDownload").addEventListener("click",download);
-  document.getElementById("xlDriveSave").addEventListener("click",saveToDrive);
 })();
 /* ===== 도구 2: 포스터 이미지 변환 ===== */
 (function(){
@@ -3126,6 +4001,7 @@ function S(o={}) {
     alignment: { horizontal: o.h||'center', vertical: o.v||'center', wrapText: !!o.wrap },
     border,
   };
+  if (o.shrinkToFit) s.alignment.shrinkToFit = true;
   if (o.fill) s.fill = { patternType:'solid', fgColor:{rgb:o.fill} };
   if (o.fmt) s.numFmt = o.fmt;
   return s;
@@ -3222,9 +4098,15 @@ row('AC11','AF11','=PLACEHOLDER',S({fill:FILL.white,fmt:F.won}),true);
 row('AG11','AK11','=IF(Z5="청구금액",M11+Q11,IF(Z5="지급금액",B11-M11-Q11))',S({fill:FILL.white,fmt:F.won}),true);
 // ================= 3) 2.회차·등급별 판매내역 (13행~) =================
 curBC=BC.t2;
-row('B13','AK13','2. 회차 및 등급별 판매내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
+row('B13','AK13',data.priceOnly?'2. 회차 및 금액별 판매내역':'2. 회차 및 등급별 판매내역',S({font:'나눔고딕',h:'left',fill:'FFFFFF',border:whiteB,color:'0000FF'}));
 const gh=(a,b,t)=>row(a,b,t,S({fill:FILL.green,font:'나눔고딕'}));
-gh('B14','C15','회차'); gh('D14','H15','공연일시'); gh('I14','L15','권종'); gh('M14','O15','판매(원)');
+const dateEndCol=data.priceOnly?'L':'G';
+gh('B14','C15','회차'); gh('D14',dateEndCol+'15','공연일시');
+if(!data.priceOnly){
+  gh('H14','I15','등급');
+  gh('J14','L15','권종');
+}
+gh('M14','O15','판매(원)');
 gh('P14','AD14','예매처별 판매수(장)'); gh('AE14','AG15','총판매수(장)'); gh('AH14','AK15','총판매금액(원)');
 // 채널 배치 규칙: 예매처(온라인)는 왼쪽 슬롯부터, 현장판매는 항상 맨 끝(슬롯4=AB)
 const ONSITE='현장판매';
@@ -3246,8 +4128,11 @@ data.rounds.forEach((rd,ri)=>{
   rd.items.forEach((it,idx)=>{
     // 회차·공연일시: 행별 가로병합, 값은 첫 행에만 (세로병합 안 함 - 원본 방식)
     row(`B${r}`,`C${r}`, idx===0?(ri+1):'', S({fill:FILL.greenL}));
-    row(`D${r}`,`H${r}`, idx===0?rd.dt:'', S({fill:FILL.greenL,fmt:F.dt}));
-    row(`I${r}`,`L${r}`,it.name,S({fill:FILL.greenL,h:'left'}));
+    row(`D${r}`,dateEndCol+r, idx===0?rd.dt:'', S({fill:FILL.greenL,fmt:F.dt,shrinkToFit:!data.priceOnly}));
+    if(!data.priceOnly){
+      row(`H${r}`,`I${r}`,it.grade,S({fill:FILL.greenL,shrinkToFit:true}));
+      row(`J${r}`,`L${r}`,it.name,S({fill:FILL.greenL,h:'left',shrinkToFit:true}));
+    }
     row(`M${r}`,`O${r}`,it.price,S({fill:FILL.greenL,fmt:F.won}));
     const ch=[['P','R'],['S','U'],['V','X'],['Y','AA'],['AB','AD']];
     // 채널별 판매수를 규칙 슬롯에 배치
@@ -3257,6 +4142,11 @@ data.rounds.forEach((rd,ri)=>{
     row(`AE${r}`,`AG${r}`,`SUM(P${r}:AD${r})`,S({fill:FILL.greenL,fmt:F.num}),true);
     if(it.fixedAmount!=null) row(`AH${r}`,`AK${r}`,it.fixedAmount,S({fill:FILL.greenL,fmt:F.wonS}));
     else row(`AH${r}`,`AK${r}`,`M${r}*AE${r}`,S({fill:FILL.greenL,fmt:F.wonS}),true);
+    if(it.gradeStart){
+      for(let col=COL.H; col<=COL.AK; col++){
+        ws[XLSX.utils.encode_cell({r:r-1,c:col})].s.border.top={style:'thin',color:{rgb:'555555'}};
+      }
+    }
     r++;
   });
   roundEndRows.push(r-1);  // 이 회차의 마지막 행
@@ -3445,9 +4335,9 @@ return wb;
 }
 // Current SheetJS CE handles all parsing and workbook serialization. Keep the
 // generated settlement's formatting without loading the obsolete style fork.
-// This adapter only serializes styles created by buildSettlementWorkbook above;
+// This adapter only serializes styles created by our workbook builders;
 // it is never used to parse or rewrite an uploaded workbook.
-function writeSettlementWorkbook(wb){
+function writeStyledWorkbook(wb){
   const files=fflate.unzipSync(new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'})));
   const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
   const parser=new DOMParser(), serializer=new XMLSerializer();
@@ -3535,7 +4425,7 @@ function writeSettlementWorkbook(wb){
  * @param {number} lastRow  인쇄영역 마지막 행 (A1:AL{lastRow})
  * @returns {Uint8Array} 페이지설정이 주입된 .xlsx
  */
-function injectPageSetup(xlsxBytes, lastRow) {
+function injectPageSetup(xlsxBytes, lastRow, {sheetName="정산서",lastColumn="AL",fitToHeight=1}={}) {
   // fflate는 전역 fflate.unzipSync / zipSync 사용
   const files = fflate.unzipSync(xlsxBytes);
   const dec = new TextDecoder();
@@ -3556,7 +4446,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
   xml = xml.replace(/<pageSetup[^/]*\/>/g, '');
   xml = xml.replace(/<pageMargins[^/]*\/>/g, '');
   const margins = '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>';
-  const pageSetup = '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="1" orientation="portrait"/>';
+  const pageSetup = `<pageSetup paperSize="9" fitToWidth="1" fitToHeight="${fitToHeight}" orientation="portrait"/>`;
   const printOpts = '<printOptions horizontalCentered="1"/>';
   // 3) printOptions/pageMargins/pageSetup 삽입
   // ⚠ OOXML 스키마는 sheet 자식 요소 순서가 엄격함:
@@ -3583,7 +4473,7 @@ function injectPageSetup(xlsxBytes, lastRow) {
   // 4) workbook.xml에 Print_Area 정의
   const wbPath = 'xl/workbook.xml';
   let wbXml = dec.decode(files[wbPath]);
-  const printArea = `<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">정산서!$A$1:$AL$${lastRow}</definedName></definedNames>`;
+  const printArea = `<definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">${sheetName}!$A$1:$${lastColumn}$${lastRow}</definedName></definedNames>`;
   if (!wbXml.includes('definedNames')) {
     // <sheets>...</sheets> 다음에 삽입
     wbXml = wbXml.replace('</sheets>', '</sheets>' + printArea);
@@ -3691,6 +4581,7 @@ function renderValidationCard(result) {
 /* ===== 도구 3: 정산서 도구 (통합: 집계 + 정산서 생성) ===== */
 (function(){
   const CHANNELS=["엔티켓","예술회관","폐쇄몰"];
+  const SEAT_GRADE_RANK = new Map([["VIP", 0], ["R", 1], ["S", 2], ["A", 3]]);
   const KW={
     권종:["권종","종류","구분","티켓명"],
     가격:["구매가격","판매가격","권종가격","단가","가격","금액"],
@@ -3700,6 +4591,7 @@ function renderValidationCard(result) {
     공연명:["공연명","공연제목","작품명","상품명","행사명","공연이름","제목"]
   };
   const SIM_COLORS=["var(--cobalt-400)","var(--teal-400)","var(--orange-400)","var(--pink-400)","var(--olive-400)","var(--green-400)"];
+  const priceMode = document.getElementById("settleByPrice");
   const sessionsEl=document.getElementById("sessions");
   const outputEl=document.getElementById("output");
   const mergeEl=document.getElementById("merge");
@@ -3773,6 +4665,7 @@ function renderValidationCard(result) {
       }
     }
     return { headers, rows, showTitle, map:{
+      좌석등급:headers.findIndex(h=>["좌석등급","등급"].includes(norm(h))),
       권종:findCol(headers,KW.권종), 가격:findCol(headers,KW.가격), 수:findCol(headers,KW.수),
       일:findCol(headers,KW.일), 시:findCol(headers,KW.시)
     }};
@@ -3823,8 +4716,9 @@ function renderValidationCard(result) {
     function loadFile(file){
       const reader=new FileReader();
       reader.onload=e=>{
+        if(!sessions.includes(session)) return;
         const parsed=parseWorkbook(new Uint8Array(e.target.result));
-        if(!parsed){ alert("읽을 데이터가 없어요."); return; }
+        if(!parsed){ EnticketUI.alert("읽을 데이터가 없어요."); return; }
         data.name=file.name; data.headers=parsed.headers; data.rows=parsed.rows; data.map=parsed.map;
         // 공연명 자동 추출 → 입력란이 비어 있을 때만 채움 (직원 입력 보호)
         if(parsed.showTitle){
@@ -3918,6 +4812,7 @@ function renderValidationCard(result) {
   }
   function aggregate(list){
     const map=new Map();
+    const priceOnly=priceMode.checked;
     list.forEach(s=>{
       CHANNELS.forEach(ch=>{
         const d=s.channels[ch];
@@ -3928,14 +4823,29 @@ function renderValidationCard(result) {
           if(classifyGrade(권종)!=="normal") return;  // 초대·홀딩은 권종 집계에서 제외
           const 가격=d.map.가격>=0?parseNum(r[d.map.가격]):0;
           const 수=d.map.수>=0?parseNum(r[d.map.수]):1;
-          const k=권종+"||"+가격;
-          if(!map.has(k)) map.set(k,{권종,가격,엔티켓:0,예술회관:0,폐쇄몰:0});
-          map.get(k)[ch]+=수;
+          const 등급 = priceOnly ? "" : String(r[d.map.좌석등급] ?? "").trim();
+          const gradeCode = norm(등급.normalize("NFKC")).toUpperCase().replace(/(?:좌석|등급|석)$/, "");
+          const gradeRank = SEAT_GRADE_RANK.get(gradeCode);
+          const key = priceOnly ? 가격 : JSON.stringify([gradeRank ?? 등급, 권종, 가격]);
+          if (!map.has(key)) {
+            map.set(key, {등급, 권종:priceOnly ? "" : 권종, 가격, gradeRank:gradeRank ?? SEAT_GRADE_RANK.size,
+              엔티켓:0, 예술회관:0, 폐쇄몰:0, 합계:0});
+          }
+          const group = map.get(key);
+          group[ch] += 수;
+          group.합계 += 수;
         });
       });
     });
-    return [...map.values()].map(o=>({...o, 합계:o.엔티켓+o.예술회관+o.폐쇄몰}))
-      .sort((a,b)=> (b.가격-a.가격) || a.권종.localeCompare(b.권종,"ko"));
+    const rows = [...map.values()].sort((a,b)=>
+      a.gradeRank-b.gradeRank || b.가격-a.가격 ||
+      a.권종.localeCompare(b.권종,"ko") || a.등급.localeCompare(b.등급,"ko"));
+    rows.forEach((row,i)=>{
+      const prev=rows[i-1];
+      row.gradeStart=!!prev && !priceOnly && (prev.gradeRank!==row.gradeRank ||
+        (row.gradeRank===SEAT_GRADE_RANK.size && prev.등급!==row.등급));
+    });
+    return rows;
   }
   // 초대좌석권 수량 집계 (초대·초대석 권종의 판매수 합) — 홀딩은 제외
   // 초대좌석권 = 초대 + 홀딩 수량 합 (둘 다 권종 행 집계에선 빠지지만 초대좌석권으로 모음)
@@ -3983,7 +4893,8 @@ function renderValidationCard(result) {
   function recompute(){
     window.__stRows=aggregate(sessions);
     renderOutput();
-    renderMerge(window.__stRows);
+    mergeEl.hidden = priceMode.checked;
+    if (!priceMode.checked) renderMerge(window.__stRows);
     updateSettlementLive();   // 정산 미리보기 갱신
   }
   function renderOutput(){
@@ -3991,9 +4902,12 @@ function renderValidationCard(result) {
     if(!withData.length){ outputEl.innerHTML=''; return; }
     const money=n=>`₩${won(n)}`;
     const dash=v=>v?won(v):"-";
+    const showTicketDetails=!priceMode.checked;
     let thead=`<thead>
       <tr>
-        <th rowspan="2">회차</th><th rowspan="2">공연일시</th><th rowspan="2" class="l">권종</th><th rowspan="2">판매(원)</th>
+        <th rowspan="2">회차</th><th rowspan="2">공연일시</th>
+        ${showTicketDetails?'<th rowspan="2">등급</th><th rowspan="2" class="l">권종</th>':''}
+        <th rowspan="2">판매(원)</th>
         <th colspan="3">예매처별 판매수(장)</th>
         <th rowspan="2">총판매수(장)</th><th rowspan="2">총판매금액(원)</th>
       </tr>
@@ -4008,14 +4922,15 @@ function renderValidationCard(result) {
       rows.forEach((r,ri)=>{
         const amt=r.가격*r.합계;
         g.엔티켓+=r.엔티켓; g.예술회관+=r.예술회관; g.폐쇄몰+=r.폐쇄몰; g.합계+=r.합계; g.금액+=amt;
-        body+="<tr>";
-        if(ri===0){ body+=`<td class="c" rowspan="${rows.length}">${idx}</td><td class="c" rowspan="${rows.length}">${esc(dt)}</td>`; }
-        body+=`<td class="l">${esc(r.권종)}</td><td>${money(r.가격)}</td>`;
+        body+=r.gradeStart ? '<tr class="grade-start">' : "<tr>";
+        if(ri===0){ body+=`<td class="c" rowspan="${rows.length}">${idx}</td><td class="c" rowspan="${rows.length}">${esc(dt).replace(/ (\d{2}:\d{2})$/, ' <span class="session-time">$1</span>')}</td>`; }
+        if(showTicketDetails) body+=`<td class="seat-grade">${esc(r.등급)}</td><td class="l" title="${esc(r.권종)}">${esc(r.권종)}</td>`;
+        body+=`<td>${money(r.가격)}</td>`;
         body+=`<td>${dash(r.엔티켓)}</td><td>${dash(r.예술회관)}</td><td>${dash(r.폐쇄몰)}</td>`;
         body+=`<td>${won(r.합계)}</td><td>${money(amt)}</td></tr>`;
       });
     });
-    let total=`<tr class="total"><td colspan="4">계</td><td>${dash(g.엔티켓)}</td><td>${dash(g.예술회관)}</td><td>${dash(g.폐쇄몰)}</td><td>${won(g.합계)}</td><td>${money(g.금액)}</td></tr>`;
+    let total=`<tr class="total"><td colspan="${showTicketDetails?5:3}">계</td><td>${dash(g.엔티켓)}</td><td>${dash(g.예술회관)}</td><td>${dash(g.폐쇄몰)}</td><td>${won(g.합계)}</td><td>${money(g.금액)}</td></tr>`;
     // 초대·홀딩 처리 현황 안내
     const sp=specialGradeStats(withData);
     let note="";
@@ -4129,7 +5044,8 @@ function renderValidationCard(result) {
     {key:'MMS',       label:'기타',      sub:'MMS문자홍보', defPrice:77},
     {key:'무료등록',  label:'',          sub:'무료공연등록비', defPrice:''},
   ];
-  const etcState={}; ETC_DEF.forEach(e=>etcState[e.key]={단가:(e.defPrice===''||e.defPrice==null)?'':String(e.defPrice),수량:''});
+  const etcState={};
+  function resetEtc(){ ETC_DEF.forEach(e=>etcState[e.key]={단가:String(e.defPrice ?? ""),수량:""}); renderEtc(); }
   function renderEtc(){
     const wrap=document.getElementById("etcWrap");
     wrap.innerHTML="";
@@ -4155,7 +5071,7 @@ function renderValidationCard(result) {
       const dt=sessionDateTime(s);
       const rows=aggregate([s]);
       const items=rows.map(r=>({
-        name:r.권종, price:r.가격,
+        grade:r.등급, gradeStart:r.gradeStart, name:r.권종, price:r.가격,
         s:[r.엔티켓, r.예술회관, r.폐쇄몰, null],   // 현장판매 빈 칸 (엑셀에서 수동 기입)
       }));
       return { dt: dt?parseDateTime(dt):null, items };
@@ -4167,7 +5083,7 @@ function renderValidationCard(result) {
       공연명: gv('sf_title'), 공연장소: gv('sf_place'), 기획사명: gv('sf_org'),
       담당자: gv('sf_mgr'), email: gv('sf_email'), 연락처: gv('sf_tel'),
       공연일시: rounds.map(r=>r.dt?fmtDt(r.dt):'').filter(Boolean).join('\n'),
-      channels, rounds, 초대좌석권: parseNum(gv('sf_invite')), 수수료율: rate, 기타거래: etc,
+      priceOnly: priceMode.checked, channels, rounds, 초대좌석권: parseNum(gv('sf_invite')), 수수료율: rate, 기타거래: etc,
     };
   }
   function gv(id){ return (document.getElementById(id).value||'').trim(); }
@@ -4181,7 +5097,6 @@ function renderValidationCard(result) {
   function updateSettlementLive(){
     const hasAgg=sessions.some(sessionHasData);
     const genBtn=document.getElementById("genSettlement");
-    const saveBtn=document.getElementById("saveSettlementDrive");
     // 초대좌석권 입력란 자동 채움 (직원이 수동 편집하지 않은 경우에만)
     const invField=document.getElementById("sf_invite");
     if(invField && !inviteEdited){
@@ -4191,13 +5106,13 @@ function renderValidationCard(result) {
     if(!hasAgg){
       document.getElementById("livePayout").textContent="₩0";
       document.getElementById("checkResult").innerHTML="";
-      genBtn.disabled=true; saveBtn.disabled=true; return;
+      genBtn.disabled=true; return;
     }
     const data=buildSettlementData();
     const r=validateSettlement(data, null);
     document.getElementById("livePayout").textContent=wonS(r.expected.지급금액);
     document.getElementById("checkResult").innerHTML=renderCheck(r);
-    genBtn.disabled=false; saveBtn.disabled=false;
+    genBtn.disabled=false;
   }
   function wonS(n){ return '₩'+(Math.round(n||0)).toLocaleString('ko-KR'); }
   function renderCheck(r){
@@ -4212,13 +5127,13 @@ function renderValidationCard(result) {
     if(r.issues.length) h+='<ul>'+r.issues.map(i=>`<li>${esc(i)}</li>`).join('')+'</ul>';
     h+='</div>'; return h;
   }
-  // 정산서 바이트 생성 (다운로드·드라이브 저장 공통)
+  // 정산서 다운로드 파일 생성
   function buildSettlementFile(){
     const data=buildSettlementData();
     const check=validateSettlement(data, null);
     if(typeof XLSX==='undefined' || !XLSX.write){ throw new Error('엑셀 라이브러리(XLSX)가 로드되지 않았습니다. 인터넷 연결 또는 사내망 CDN 차단을 확인해 주세요.'); }
     const wb=buildSettlementWorkbook(data);
-    const baseBytes=writeSettlementWorkbook(wb);
+    const baseBytes=writeStyledWorkbook(wb);
     if(!baseBytes || baseBytes.byteLength<2000){ throw new Error('정산서 데이터 생성에 실패했습니다 (빈 결과). 회차에 파일이 들어있는지 확인해 주세요.'); }
     let bytes=baseBytes;
     try{
@@ -4236,33 +5151,15 @@ function renderValidationCard(result) {
     return { bytes:(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes)), filename, data, check };
   }
   // 정산서 생성 (로컬 다운로드)
-  function generateSettlement(){
+  async function generateSettlement(){
     let built;
-    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); console.error(err); return; }
-    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 생성할까요?')) return; }
+    try{ built=buildSettlementFile(); }catch(err){ EnticketUI.alert('정산서 생성 중 오류: '+err.message); console.error(err); return; }
+    if(!built.check.ok){ if(!await EnticketUI.confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 생성할까요?')) return; }
     const blob=new Blob([built.bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob); a.download=built.filename;
     document.body.appendChild(a); a.click();
     setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
-  }
-  // 정산서 드라이브 저장
-  async function saveSettlementToDrive(){
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    let built;
-    try{ built=buildSettlementFile(); }catch(err){ alert('정산서 생성 중 오류: '+err.message); return; }
-    if(!built.check.ok){ if(!confirm('확인할 항목이 있습니다:\n\n'+built.check.issues.join('\n')+'\n\n그래도 저장할까요?')) return; }
-    const btn=document.getElementById("saveSettlementDrive"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      let year=new Date().getFullYear();
-      const withDt=built.data.rounds.find(r=>r.dt instanceof Date);
-      if(withDt) year=withDt.dt.getFullYear();
-      const res=await window.gdrive.saveFile(["enticket","정산서", String(year), built.data.공연명||"미지정"],
-        built.filename, built.bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
   }
   // 접이식 패널 토글
   document.getElementById("suppToggle").addEventListener("click",()=>{
@@ -4271,16 +5168,24 @@ function renderValidationCard(result) {
     document.getElementById("suppChev").style.transform=`rotate(${open?90:0}deg)`;
   });
   // 이벤트 바인딩
+  priceMode.addEventListener("change", recompute);
   document.getElementById("addSession").addEventListener("click",makeSession);
   document.getElementById("genSettlement").addEventListener("click",generateSettlement);
-  document.getElementById("saveSettlementDrive").addEventListener("click",saveSettlementToDrive);
   // 초대좌석권 입력란: 직원이 직접 입력하면 자동 채움 중단, 그 값 우선
   (function(){
     const inv=document.getElementById("sf_invite");
     inv.addEventListener("input",()=>{ inviteEdited=true; updateSettlementLive(); });
   })();
   // 초기화
-  renderEtc();
+  document.getElementById("settlementReset").addEventListener("click",()=>{
+    sessions=[]; mergeMap=Object.create(null); mergeOpen=false; inviteEdited=false; dragSource=null;
+    priceMode.checked=false;
+    document.querySelectorAll('#suppPanel input[id^="sf_"]').forEach(input=>input.value=input.defaultValue);
+    document.getElementById("suppBody").classList.remove("open");
+    document.getElementById("suppChev").style.transform="";
+    resetEtc(); makeSession();
+  });
+  resetEtc();
   makeSession();
 })();
 /* ===== 도구 4: 문자발송명단 (노드식 추합 + 중복제거) ===== */
@@ -4568,23 +5473,28 @@ function renderValidationCard(result) {
     return { headers, rows:dataRows, map:{ 이름, 전화 }, viewerBased, basis, pickBy, headerOk, fmt };
   }
   // 파일을 읽어 노드로 추가 (드래그/선택 시마다 호출)
+  let resetVersion=0;
   function addFiles(fileList){
+    const batch=resetVersion;
     const files=[...fileList].filter(f=>/\.(xls|xlsx)$/i.test(f.name));
     if(!files.length) return;
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=async e=>{
+        if(batch!==resetVersion) return;
         let bytes=new Uint8Array(e.target.result);
         // 암호화(Agile) 파일이면 복호화 시도: 파일명 YYMMDD → 실패 시 직접 입력
         if(OfficeCrypto.isEncrypted(bytes)){
           let pw=pwFromName(file.name);
           let dec=null, lastErr="";
           for(let attempt=0;attempt<4;attempt++){
-            if(!pw){ pw=prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
+            if(batch!==resetVersion) return;
+              if(!pw){ pw=await EnticketUI.prompt(`'${file.name}'\n암호가 걸린 파일입니다. 암호를 입력해 주세요${lastErr?` (${lastErr})`:""}:`); if(pw==null){ return; } }
             try{ dec=await OfficeCrypto.decrypt(bytes.buffer,pw); break; }
             catch(err){ lastErr=err.message||"복호화 실패"; pw=null; }
           }
-          if(!dec){ const node={ id:++seq, name:file.name, headers:[], rows:[], map:{이름:-1,전화:-1}, error:true, errMsg:"암호 해제 실패" }; nodes.push(node); render(); recompute(); return; }
+          if(batch!==resetVersion) return;
+            if(!dec){ const node={ id:++seq, name:file.name, headers:[], rows:[], map:{이름:-1,전화:-1}, error:true, errMsg:"암호 해제 실패" }; nodes.push(node); render(); recompute(); return; }
           bytes=dec;
         }
         const parsed=parseWorkbook(bytes);
@@ -4599,6 +5509,11 @@ function renderValidationCard(result) {
       reader.readAsArrayBuffer(file);
     });
   }
+  document.getElementById("smsReset").addEventListener("click",()=>{
+    resetVersion++; nodes=[];
+    document.getElementById("smsFileInput").value="";
+    render(); recompute();
+  });
   function removeNode(id){ nodes=nodes.filter(n=>n.id!==id); render(); recompute(); }
   function render(){
     nodesEl.innerHTML="";
@@ -4711,32 +5626,14 @@ function renderValidationCard(result) {
     const blob=new Blob([lines.join("\r\n")],{type:"text/plain;charset=utf-8"});
     triggerDownload(blob, fname("txt"));
   }
-  function buildSmsWb(){
-    const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름, x.전화])];
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"]=[{wch:14},{wch:18}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"문자발송명단");
-    return wb;
+  function buildSmsFile(){
+    const aoa=[["이름","전화번호"], ...lastResult.map(x=>[x.이름??"",x.전화])];
+    return writeRosterFile("문자발송명단",aoa,[16,20]);
   }
   // 다운로드: 엑셀 (이름·전화번호 2열)
   function dlXlsx(){
     if(!lastResult.length) return;
-    XLSX.writeFile(buildSmsWb(), fname("xlsx"));
-  }
-  // 드라이브 저장 (엑셀)
-  async function smsSaveToDrive(){
-    if(!lastResult.length){ alert("저장할 명단이 없습니다."); return; }
-    if(!window.gdrive || !window.gdrive.isLoggedIn()){ alert("먼저 로그인 버튼으로 로그인해 주세요."); return; }
-    const btn=document.getElementById("smsDriveSave"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent="저장 중...";
-    try{
-      const bytes=XLSX.write(buildSmsWb(),{type:"array",bookType:"xlsx"});
-      const res=await window.gdrive.saveFile(["enticket","문자발송명단"], fname("xlsx"),
-        new Uint8Array(bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      alert("드라이브에 저장됨:\n"+res.name+(res.webViewLink?("\n\n"+res.webViewLink):""));
-    }catch(e){ alert("드라이브 저장 실패: "+e.message); }
-    finally{ btn.disabled=false; btn.textContent=orig; }
+    triggerDownload(new Blob([buildSmsFile()],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),fname("xlsx"));
   }
   function fname(ext){
     const d=new Date(); const p=n=>String(n).padStart(2,"0");
@@ -4757,7 +5654,6 @@ function renderValidationCard(result) {
   smsDrop.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
   document.getElementById("smsDlTxt").addEventListener("click",dlTxt);
   document.getElementById("smsDlXlsx").addEventListener("click",dlXlsx);
-  document.getElementById("smsDriveSave").addEventListener("click",smsSaveToDrive);
 })();
 </script>
 <script>
@@ -5238,6 +6134,7 @@ window.OrigSeal = (function(){
     preview.innerHTML='';
     setStatus(""); updateGate();
   }
+  if(!window.gdrive?.isLocal) document.getElementById("osealReset").addEventListener("click", invalidate);
   document.addEventListener("enticket-auth", invalidate);
   document.addEventListener("enticket-stamp", invalidate);
   updateGate();
@@ -5250,7 +6147,7 @@ window.OrigSeal = (function(){
   async function handleFile(file){
     if(!file) return;
     if(!/\.xlsx$/i.test(file.name)){ setStatus("xlsx 파일만 지원합니다. (정산서 원본을 넣어 주세요)", true); return; }
-    if(!canUseStamp()){ updateGate(); alert(window.gdrive.isLocal ? "직인 이미지를 먼저 선택해 주세요." : "로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
+    if(!canUseStamp()){ updateGate(); EnticketUI.alert(window.gdrive.isLocal ? "직인 이미지를 먼저 선택해 주세요." : "로그인 후 허용된 직원 계정에서만 사용할 수 있습니다."); return; }
     const current = ++conversion;
     out=null; btnRow.style.display="none"; fnameEl.textContent="";
     preview.innerHTML='<div class="empty">변환 중…</div>';
@@ -5362,63 +6259,6 @@ window.OrigSeal = (function(){
   });
 })();
 </script>
-<script>
-(function(){
-  const dialog=document.createElement('dialog');dialog.className='ig-calendar';dialog.setAttribute('aria-label','예약 날짜와 시간 선택');
-  dialog.innerHTML='<div class="ig-calendar-head"><button type="button" class="ig-calendar-icon" data-prev aria-label="이전 달">‹</button><strong></strong><button type="button" class="ig-calendar-icon" data-next aria-label="다음 달">›</button><button type="button" class="ig-calendar-icon" data-close aria-label="닫기">×</button></div><div class="ig-calendar-grid"></div><div class="ig-calendar-time"><label>한국 시간</label><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="시 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="시" inputmode="numeric" type="text" maxlength="2" value="00" data-max="23"><button type="button" data-step="-1" aria-label="시 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><span>:</span><div class="ig-time-stepper"><button type="button" data-step="1" aria-label="분 증가"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 7.5 3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input aria-label="분" inputmode="numeric" type="text" maxlength="2" value="00" data-max="59"><button type="button" data-step="-1" aria-label="분 감소"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div><button type="button" class="ig-calendar-apply">선택 완료</button>';
-  document.body.append(dialog);
-  const grid=dialog.querySelector('.ig-calendar-grid'),[hour,minute]=dialog.querySelectorAll('.ig-time-stepper input');
-  const pad=n=>String(n).padStart(2,'0');
-  function normalizeTime(input){input.value=pad(Math.min(Number(input.dataset.max),Math.max(0,Number(input.value)||0)));}
-  for(const input of [hour,minute]){
-    const step=delta=>{normalizeTime(input);input.value=pad((Number(input.value)+delta+Number(input.dataset.max)+1)%(Number(input.dataset.max)+1));};
-    input.parentElement.querySelectorAll('button').forEach(button=>button.onclick=()=>step(Number(button.dataset.step)));
-    input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'').slice(0,2);});
-    input.addEventListener('blur',()=>normalizeTime(input));
-    input.addEventListener('focus',()=>input.select());
-    input.addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();step(event.key==='ArrowUp'?1:-1);}});
-  }
-  let target,selected,month;
-  const korea=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-  function render(){
-    const minMonth=korea().slice(0,7);
-    const maxMonth=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,7);
-    const current=month.toISOString().slice(0,7);
-    if(current<minMonth)month=new Date(minMonth+'-01T00:00:00Z');
-    if(current>maxMonth)month=new Date(maxMonth+'-01T00:00:00Z');
-    const visible=month.toISOString().slice(0,7);
-    dialog.querySelector('[data-prev]').disabled=visible<=minMonth;
-    dialog.querySelector('[data-next]').disabled=visible>=maxMonth;
-    const y=month.getUTCFullYear(),m=month.getUTCMonth();
-    dialog.querySelector('strong').textContent=`${y}년 ${m+1}월`;grid.replaceChildren();
-    for(const day of ['일','월','화','수','목','금','토']){const el=document.createElement('span');el.textContent=day;grid.append(el);}
-    for(let n=0;n<new Date(Date.UTC(y,m,1)).getUTCDay();n++)grid.append(document.createElement('i'));
-    const max=new Date(Date.now()+30*86400000+9*3600000).toISOString().slice(0,10);
-    for(let n=1;n<=new Date(Date.UTC(y,m+1,0)).getUTCDate();n++){
-      const date=`${y}-${pad(m+1)}-${pad(n)}`,button=document.createElement('button');button.type='button';button.className='ig-calendar-day';button.textContent=n;
-      button.setAttribute('aria-label',`${y}년 ${m+1}월 ${n}일`);button.setAttribute('aria-pressed',String(date===selected));button.disabled=date<korea()||date>max;
-      button.onclick=()=>{selected=date;render();};grid.append(button);
-    }
-  }
-  dialog.querySelector('[data-prev]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()-1);render();};
-  dialog.querySelector('[data-next]').onclick=()=>{month.setUTCMonth(month.getUTCMonth()+1);render();};
-  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
-  dialog.querySelector('.ig-calendar-apply').onclick=()=>{
-    normalizeTime(hour);normalizeTime(minute);
-    target.value=selected+'T'+hour.value+':'+minute.value;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));dialog.close();
-  };
-  function attach(input){
-    if(input.dataset.calendar)return;input.dataset.calendar='true';input.hidden=true;input.tabIndex=-1;
-    const button=document.createElement('button');button.type='button';button.className='ig-date-trigger';button.setAttribute('aria-label','예약 날짜와 시간 선택');input.after(button);
-    function sync(){button.disabled=input.disabled;button.textContent=(input.value?input.value.replace('T','  ').replaceAll('-','.'):'날짜와 시간 선택')+'  ▦';}
-    button.onclick=()=>{target=input;const value=input.value||new Date(Date.now()+10*3600000).toISOString().slice(0,16);selected=value.slice(0,10);month=new Date(selected.slice(0,7)+'-01T00:00:00Z');hour.value=value.slice(11,13);minute.value=value.slice(14,16);render();dialog.showModal();};
-    input.addEventListener('input',sync);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled']});sync();
-    // Mode changes may initialize the underlying value without an input event.
-    document.querySelectorAll('[data-publish-mode]').forEach(b=>b.addEventListener('click',sync));
-  }
-  function scan(){document.querySelectorAll('#panel-instagram input[type="datetime-local"]').forEach(attach);}
-  scan();new MutationObserver(scan).observe(document.getElementById('panel-instagram'),{childList:true,subtree:true});
-})();
-</script>
+
 </body>
 </html>

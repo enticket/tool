@@ -26,3 +26,9 @@ def wait_for_js(page, expression, timeout=10000):
             return
         page.wait_for_timeout(50)
     raise AssertionError('Browser condition timed out: ' + expression)
+
+
+def accept_app_messages(page):
+    """Explicit synthetic-test consent; production dialogs always wait for the user."""
+    page.add_locator_handler(page.locator('.ui-message[open]'),
+                             lambda dialog: dialog.locator('[data-accept]').click())

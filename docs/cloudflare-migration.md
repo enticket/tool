@@ -42,7 +42,7 @@ python3 tests/cloud-browser.py
 
 `browser-smoke.py`는 합성 파일의 XLSX/TXT/JPEG, 정산서 지급금액, 직인 XLSX/PDF, 직인 삭제/새로고침, 모바일 폭, 백엔드 호출 0건을 확인합니다. `cloud-browser.py`는 **모의 Google/API 응답**으로 로그인·세 종류 Drive 버튼·직인·만료/거부 계정을 확인합니다. Worker 테스트도 **모의 Google**을 사용하며 실제 Drive에 파일을 쓰지 않습니다. 실제 Google 연동 검증과 구분해야 합니다.
 
-빌드는 `dist/index.html`, `dist/_headers`만 만듭니다. 예상하지 못한 파일이 있으면 중단합니다. 서버 앱, 사용자 데이터, `.env`, 직인은 공개 파일에 포함되지 않습니다. 저장소 전체를 HTTP 또는 정적 사이트로 배포하지 마세요. 로컬 GitHub 버전 빌드는 `python3 scripts/build-static.py --mode local`입니다.
+빌드는 `dist/index.html`, `dist/_headers`와 `scripts/public_assets.py`에 명시한 공개 디자인 자산만 만듭니다. 현재 자산은 `assets/weekly/`의 종이 질감 PNG, 나눔명조 WOFF2와 OFL 라이선스입니다. 레이어 렌더러와 편집기 코드는 HTML에 포함하고 해당 바이트로 CSP 해시를 다시 계산합니다. 예상하지 못한 파일·디렉터리·심볼릭 링크가 있으면 중단합니다. 서버 앱, 사용자 데이터, `.env`, 직인은 공개 파일에 포함되지 않습니다. 저장소 전체를 HTTP 또는 정적 사이트로 배포하지 마세요. 로컬 GitHub 버전 빌드는 `python3 scripts/build-static.py --mode local`입니다.
 
 ## 기존 Cloudflare 설정 유지
 
@@ -120,3 +120,13 @@ Instagram 최종 운영 버전은 `e7452154-e02f-4c15-a2b2-061154130c51`이며, 
 - 코드 수정 후 반드시 `python scripts/build-static.py --mode cloud`로 HTML과 헤더를 함께 갱신합니다. HTML만 별도로 교체하면 CSP 해시가 달라져 실행이 차단됩니다. 로컬 서버도 같은 CSP를 적용합니다.
 
 추가 회귀 검사: `python tests/security-browser.py` (로컬 Cloudflare 개발 서버 필요). 합성 엑셀의 공격 문자열이 CSP 없이도 실행되지 않는지, 병합·해제가 유지되는지, CSP가 새 스크립트를 차단하고 SRI가 변조 응답을 거부하는지 확인합니다. `tests/browser-smoke.py`는 생성 정산서의 모든 서식 셀·수식·병합을 별도 XML 파서로 검사하고 PDF까지 생성합니다. 브라우저 인증·Drive·Meta 요청은 모의 응답으로 검증하며 실제 게시나 저장은 하지 않습니다.
+
+
+## 주간 공연 도구 개발 (2026-11-16, 미배포)
+
+사용자가 보안 업데이트 후 실제 Google 로그인의 정상 동작을 확인했다. `b265717` 기준으로 공연 달력과 주간 캐러셀 초안을 개발했다. 저장·게시 안전장치, 보관 정책, 검증과 운영 절차는 [주간 캐러셀](weekly-carousel.md)에 기록했다. 새 코드의 운영 배포와 실제 인스타그램 게시를 실행한 기록은 아니다.
+
+
+## 주간 공연 도구 운영 배포 (2026-11-16)
+
+사용자의 배포 요청으로 `codex/weekly-performance-carousel`의 `6323603`을 기존 Worker에 배포했다. 버전은 `e6cc7687-b13f-4a43-bd61-e2853d788fa6`이며 https://tools.enticket.kr/ 의 **인스타그램 → 공연 달력**에서 제공한다. 서버 46개 테스트·빌드, 운영 HTML/CSP 일치·healthz 200, 무효 인증 401·비허용 출처 403·비공개 경로 404를 확인했다. 기존 바인딩과 일반 설정 및 저장소 namespace를 보존했다. 실제 공연 자료 등록과 Instagram 게시는 실행하지 않았다. 상세 검증 범위는 [주간 캐러셀](weekly-carousel.md)을 참조한다.

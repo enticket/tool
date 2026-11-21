@@ -1,3 +1,4 @@
+from browser_support import accept_app_messages
 """Browser image/review flow with synthetic providers; never calls Meta or publishes."""
 import base64
 import os
@@ -15,6 +16,7 @@ with sync_playwright() as p:
     state = {'allowed': True, 'instagram_error': False, 'network_error': False, 'job': None, 'caption_error':False, 'publish_count': 0, 'published_image': b''}
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('dialog', lambda dialog: dialog.accept())
+    accept_app_messages(page)
     install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client', lambda route: route.fulfill(content_type='application/javascript', body='''
       window.google={accounts:{oauth2:{initTokenClient(opts){return {requestAccessToken(){opts.callback({access_token:'synthetic-google-token',expires_in:3600});}}},revoke(){}}}};
@@ -93,6 +95,13 @@ with sync_playwright() as p:
     page.locator('#igDetailNext').click()
     expect(page.locator('#igDetailPage')).to_have_text('2 / 2')
     expect(page.locator('#igDetailNext')).to_be_disabled()
+    page.locator('#igDetailCaption').click()
+    expect(page.locator('#igDetail')).to_be_visible()
+    page.mouse.click(2,2)
+    expect(page.locator('#igDetail')).not_to_be_visible()
+    expect(page.locator('#igMediaList button').first).to_be_focused()
+    page.locator('#igMediaList button').first.click()
+    expect(page.locator('#igDetailPage')).to_have_text('1 / 2')
     page.keyboard.press('Escape')
     expect(page.locator('#igDetail')).not_to_be_visible()
     expect(page.locator('#igMediaList button').first).to_be_focused()

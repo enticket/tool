@@ -1,3 +1,4 @@
+from browser_support import accept_app_messages
 """Local-only onboarding smoke checks; no authenticated service writes."""
 import base64
 import json
@@ -30,6 +31,7 @@ with sync_playwright() as p:
     page.route('https://accounts.google.com/**', block_backend)
     page.route('**/api/**', block_backend)
     page.on('dialog', lambda dialog: dialog.accept())
+    accept_app_messages(page)
     response = page.goto(os.environ.get('TOOL_URL', 'http://127.0.0.1:8000'), wait_until='networkidle')
     expect(page.locator('#gLoginBtn')).to_be_hidden()
     assert page.locator('[data-cloud-only]:visible').count() == 0
@@ -46,7 +48,7 @@ with sync_playwright() as p:
       const rows = [
         ['공연명','공연일','공연시간','좌석수','관람자명','연락처','예매번호'],
         ['환경검증','2026-10-13','19:00',1,'테스트가','01000000001','TEST001'],
-        ['환경검증','2026-10-13','19:00',1,'테스트나','01000000002','TEST002'],
+        ['환경검증','2026-10-13',null,1,'테스트나','01000000002','TEST002'],
         ['환경검증','2026-10-13','19:00',1,'테스트가','01000000001','TEST003']
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'fixture');
@@ -66,6 +68,18 @@ with sync_playwright() as p:
     }''', output)
     assert len(rows) == 4 and rows[0] == ['공연명','공연일','공연시간','좌석수','관람자명','연락처','예매번호'], rows
     assert all(row[0] == '환경검증' for row in rows[1:]), rows
+    from openpyxl import load_workbook
+    roster = load_workbook(ROOT / 'cleaned.xlsx').active
+    assert any(cell.value in (None, '') for cell in roster['C'][1:])
+    for row in roster:
+        for cell in row:
+            assert cell.font.sz == 10
+            for side in ('left', 'right', 'top', 'bottom'):
+                edge = getattr(cell.border, side)
+                assert edge.style == 'thin' and edge.color.rgb == 'FFB7B7B7', cell.coordinate
+    assert roster.sheet_properties.pageSetUpPr.fitToPage and int(roster.page_setup.paperSize) == 9
+    assert roster.page_setup.fitToWidth == 1 and roster.page_setup.fitToHeight == 0
+    assert '$A$1:$G$4' in str(roster.print_area) and roster['A2'].alignment.wrap_text
     print('PASS: booking XLSX upload, three-row conversion, XLSX download/readback')
 
     page.locator('[data-tab="sms"]').click()
@@ -77,6 +91,17 @@ with sync_playwright() as p:
     lines = (ROOT / 'sms.txt').read_text().splitlines()
     assert len(lines) == 2 and all('테스트' in line for line in lines), lines
     assert any('010-0000-0001' in line for line in lines), lines
+    with page.expect_download() as event:
+        page.locator('#smsDlXlsx').click()
+    event.value.save_as(ROOT / 'sms.xlsx')
+    sms = load_workbook(ROOT / 'sms.xlsx').active
+    assert sms.title == '문자발송명단' and sms.max_row == 3
+    assert sorted(cell.value for cell in sms['B'][1:]) == ['010-0000-0001', '010-0000-0002']
+    assert '$A$1:$B$3' in str(sms.print_area) and int(sms.page_setup.paperSize) == 9
+    assert sms.sheet_properties.pageSetUpPr.fitToPage and (sms.page_setup.fitToWidth,sms.page_setup.fitToHeight) == (1,0)
+    for row in sms:
+        for cell in row:
+            assert cell.font.sz == 10 and all(getattr(cell.border, side).style == 'thin' and getattr(cell.border, side).color.rgb == 'FFB7B7B7' for side in ('left','right','top','bottom'))
     print('PASS: SMS duplicate removal and TXT download')
 
     # Generate a synthetic canvas fixture, without editing user images.
@@ -95,30 +120,88 @@ with sync_playwright() as p:
     event.value.save_as(ROOT / 'poster.jpg')
     assert (ROOT / 'poster.jpg').read_bytes()[:2] == b'\xff\xd8'
     print('PASS: two poster sizes, aspect ratio, JPEG download')
+    reset_images = page.locator("#panel-poster .ig-footer #imClear")
+    reset_images.click()
+    expect(cards).to_have_count(0)
+    expect(reset_images).to_be_disabled()
     # Exercise actual settlement generation, then use its output for sealing.
     page.locator('[data-tab="settlement"]').click()
     settlement_fixture = page.evaluate("""() => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-        ['공연명','공연일','공연시간','권종','판매가격','수량'],
-        ['이관검증','2026-10-14','19:00','일반',10000,3]
+        ['공연명','공연일','공연시간','권종','판매가격','수량','좌석등급'],
+        ...[
+          ['일반',6000,'A석'], ['일반',4000,'S석'], ['일반',3000,'R석'],
+          ['일반',4000,'R석'], ['단체',4000,'R석'], ['할인',1000,'VIP'], ['일반',8000,'일반석']
+        ].map(([type,price,grade])=>['이관검증','2026-10-14','19:00',type,price,1,grade])
       ]), '판매');
       return XLSX.write(wb, {type:'base64', bookType:'xlsx'});
     }""")
     page.locator('#sessions input[type=file]').first.set_input_files({
         'name':'sales.xlsx', 'mimeType':file['mimeType'], 'buffer':base64.b64decode(settlement_fixture)})
     expect(page.locator('#genSettlement')).to_be_enabled()
+    price_mode = page.get_by_role('switch', name='금액별 정산')
+    table = page.locator('#output table')
+    headers = table.locator('thead tr').first.locator('th')
+    assert headers.all_text_contents()[1:5] == ['공연일시', '등급', '권종', '판매(원)']
+    expected_order = [
+        ['VIP','할인',1000], ['R석','단체',4000], ['R석','일반',4000], ['R석','일반',3000],
+        ['S석','일반',4000], ['A석','일반',6000], ['일반석','일반',8000],
+    ]
+    detail_rows = table.locator('tbody tr:not(.total)')
+    def preview_order():
+        return detail_rows.evaluate_all("""rows => rows.map(row => {
+          const type = row.querySelector('td.l');
+          return [type.previousElementSibling.textContent, type.textContent,
+                  Number(type.nextElementSibling.textContent.replace(/[₩,]/g,''))];
+        })""")
+    assert preview_order() == expected_order
+    boundaries = table.locator('tr.grade-start')
+    expect(boundaries).to_have_count(4)
+    assert boundaries.first.locator('td').first.evaluate(
+        'cell => getComputedStyle(cell).borderTop') == '1px solid rgb(85, 85, 85)'
+    first = detail_rows.first
+    merged = first.locator('td[rowspan]')
+    ticket = first.locator('td.l')
+    background = 'e => getComputedStyle(e).backgroundColor'
+    ticket.hover()
+    highlighted = ticket.evaluate(background)
+    for index in range(2):
+        cell = merged.nth(index)
+        assert cell.evaluate(background) != highlighted
+        cell.hover()
+        assert cell.evaluate(background) == highlighted
+        assert ticket.evaluate(background) != highlighted
+
+    price_mode.check()
+    assert headers.all_text_contents()[1:3] == ['공연일시', '판매(원)']
+    expect(table.get_by_role('columnheader', name='등급', exact=True)).to_have_count(0)
+    expect(table.get_by_role('columnheader', name='권종', exact=True)).to_have_count(0)
+    expect(detail_rows).to_have_count(5)
+    expect(detail_rows.first.locator('td').nth(2)).to_have_text('₩8,000')
+    expect(detail_rows.nth(2).locator('td').first).to_have_text('₩4,000')
+    expect(detail_rows.nth(2).locator('td').nth(1)).to_have_text('3')
+    expect(table).not_to_contain_text('R석')
     expect(page.locator('#livePayout')).to_have_text('₩28,020')
-    expect(page.locator('#saveSettlementDrive')).to_be_hidden()
+    price_mode.uncheck()
+    assert preview_order() == expected_order
+    expect(page.locator('#livePayout')).to_have_text('₩28,020')
+    expect(page.get_by_role('button',name='드라이브 저장',include_hidden=True)).to_have_count(0)
     page.evaluate('''()=>{
-      const write=writeSettlementWorkbook;
-      window.writeSettlementWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};
+      const write=writeStyledWorkbook;
+      window.writeStyledWorkbook=wb=>{window.__expectedSettlement=structuredClone(wb.Sheets[wb.SheetNames[0]]);return write(wb);};
     }''')
     with page.expect_download() as event:
         page.locator('#genSettlement').click()
     settlement_path = ROOT / 'settlement.xlsx'
     event.value.save_as(settlement_path)
     assert zipfile.is_zipfile(settlement_path)
+    encoded = base64.b64encode(settlement_path.read_bytes()).decode()
+    exported_order = page.evaluate("""([encoded,count])=>{
+      const wb = XLSX.read(encoded,{type:'base64'}), sheet = wb.Sheets[wb.SheetNames[0]];
+      return Array.from({length:count},(_,i)=>['H','J','M'].map(col=>sheet[col+(16+i)].v));
+    }""", [encoded,len(expected_order)])
+    assert exported_order == expected_order
     assert_settlement_styles(settlement_path, page.evaluate('window.__expectedSettlement'))
     print('PASS: settlement 30,000 gross / 28,020 payout, XLSX generation')
 
@@ -149,13 +232,25 @@ with sync_playwright() as p:
     assert (ROOT / 'sealed.pdf').read_bytes().startswith(b'%PDF-')
     print('PASS: local stamp + generated settlement -> sealed XLSX and PDF')
 
-    page.locator('#localStampClear').click()
+    page.locator('#panel-oseal .ig-footer #osealReset').click()
+    expect(page.locator('#osealPreview')).to_be_empty()
+    expect(page.locator('#osealStatus')).to_be_empty()
     expect(page.locator('#osealWork')).to_be_hidden()
     expect(page.locator('#osealBtnRow')).to_be_hidden()
     assert not page.evaluate('gdrive.hasLocalStamp()')
     page.locator('#localStampInput').set_input_files(stamp_file)
     expect(page.locator('#osealWork')).to_be_visible()
+    for tab, button, output in [('excel','xlReset','xlOutput'), ('sms','smsReset','smsOutput'),
+                                ('settlement','settlementReset','output')]:
+        page.locator(f'.tab[data-tab="{tab}"]').click()
+        assert page.locator('#'+output).inner_text().strip()
+        page.locator('#'+button).click()
+        expect(page.locator('#'+output)).to_be_empty()
+    expect(page.locator('#sessions .node')).to_have_count(1)
+    expect(page.locator('#genSettlement')).to_be_disabled()
+    page.locator('[data-tab="oseal"]').click()
     page.reload(wait_until='networkidle')
+    expect(page.locator('#panel-oseal')).to_be_visible()
     assert not page.evaluate('gdrive.hasLocalStamp()')
     assert page.evaluate("Object.keys(localStorage).every(key=>key==='enticket-nav-collapsed') && sessionStorage.length === 0")
     assert not backend_requests, backend_requests

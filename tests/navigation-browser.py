@@ -1,6 +1,6 @@
 from browser_support import install_library_routes, wait_for_js
 """Navigation state, persistence, grouped menu access and mobile collapse."""
-import urllib.request
+import os, urllib.request
 from playwright.sync_api import sync_playwright,expect
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium')
@@ -8,7 +8,7 @@ with sync_playwright() as p:
     install_library_routes(page)
     page.route('https://accounts.google.com/gsi/client',lambda r:r.fulfill(content_type='application/javascript',body="window.google={accounts:{oauth2:{initTokenClient(){return {requestAccessToken(){}}}}}}"))
     page.route('**/api/session',lambda r:r.fulfill(status=401,json={'error':'invalid_token'}))
-    page.goto('http://127.0.0.1:8787',wait_until='networkidle')
+    page.goto(os.environ.get('TOOL_URL','http://127.0.0.1:8787'),wait_until='networkidle')
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','true')
     page.locator('#navToggle').click()
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
@@ -20,6 +20,17 @@ with sync_playwright() as p:
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
     page.screenshot(path='/tmp/nav-collapsed.png')
     page.locator('[data-tab=settlement]').click()
+    expect(page.locator('#panel-settlement')).to_be_visible()
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
+    other = page.locator('[data-tab=oseal]')
+    other.hover()
+    assert other.evaluate("el=>getComputedStyle(el,'::before').content") == 'none'
+    assert other.evaluate("el=>getComputedStyle(el).backgroundColor") != 'rgba(0, 0, 0, 0)'
+    assert page.locator('[data-subtab=settlement]').evaluate("el=>getComputedStyle(el,'::before').width") == '2px'
+    page.locator('[data-tab=oseal]').click()
+    expect(page.locator('#panel-oseal')).to_be_visible()
+    expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','false')
+    page.locator('#navToggle').click()
     expect(page.locator('#navToggle')).to_have_attribute('aria-expanded','true')
     page.locator('[data-tab=oseal]').click()
     expect(page.locator('#panel-oseal')).to_be_visible()
